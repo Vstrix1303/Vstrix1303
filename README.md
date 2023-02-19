@@ -1,5 +1,5 @@
 ![logo](https://github.com/Vstrix1303/Vstrix1303/blob/main/Github%20Banner.png)
-<h1 align="left">Hi 👋, I'm Varun</h1>
+<h1 align="center">Hi 👋, I'm Varun</h1>
 <h3 align="left">Welcome to my Github</h3>
 <img align="right" alt="Data" width="400" src="https://gbunny.online/images/the_main_dashboard.gif">
 
