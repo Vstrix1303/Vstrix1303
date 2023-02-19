@@ -16,8 +16,6 @@
 
 - 📫 How to reach me **varun1303@hotmail.com**
 
-- 📄 Know about my experiences [varun-vattekat-a9829b162](varun-vattekat-a9829b162)
-
 <h3 align="left">Connect with me:</h3>
 <p align="left">
 <a href="https://linkedin.com/in/varun-vattekat-a9829b162" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/linked-in-alt.svg" alt="varun-vattekat-a9829b162" height="30" width="40" /></a>
