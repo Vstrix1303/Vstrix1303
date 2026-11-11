@@ -1,0 +1,15 @@
+{
+  "name": "kayal-1905",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KAYAL - Travancore, 1905. A single-player open-world adventure set in the backwaters of Kerala.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "three": "^0.170.0"
+  }
+}
