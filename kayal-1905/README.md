@@ -63,7 +63,7 @@ needs you (a lettered marker on the map).
 
 About 1.6 km × 1.6 km, with terrain to the horizon:
 
-- **Thekkumkara** — the home village, the family *tharavadu*, a temple with lamp tower and stepped tank, a toddy shop on the canal towpath.
+- **Thekkumkara** — the home village, the family *tharavadu* (a two-courtyard manor with its bathing pond), a temple with lamp tower and stepped tank, a toddy shop on the canal towpath. Houses can be entered.
 - **The kayal** — a great lake with an island shrine, drifting *kettuvallam* rice boats, lotus ponds, and **Lotus Falls** at the foot of the hills.
 - **Puthenthura** — a spice port: market, Kerala-style mosque, Syrian Christian church, Chinese fishing nets, the walled Company compound.
 - **The bar** — a sand-spit between lake and sea, cut by a tidal channel: the **Azhimukham lighthouse** and the fishing hamlet of **Azhikkal**.
@@ -100,6 +100,37 @@ chaya · visit the **tailor** in Puthenthura for new clothes. Money is kept in r
 - **Characters**: heavier-set proportions and baked shading.
 - **HUD**: status cluster top-right (what is in hand, stamina, health, purse), a square radar
   bottom-left, the place-name bottom-right, outlined type throughout.
+
+## Version 4 — walk inside, the reference sheets, new music
+
+Built from twelve hand-supplied reference sheets (cast, expressions, outfits, houses, props, street scenes).
+
+- **Buildings you can enter.** Walls are now real slabs with door and window openings, floors are
+  walkable plinths, and the camera pulls in under the roof. Every village house and hut has a furnished
+  room (hearth, mats, chest, pots, lamp).
+- **The family home is an *ettukettu*** — a two-courtyard manor with a pillared *poomukham* porch, carved
+  and painted gables, a slatted upper storey, a *tulsi* plinth in the court, a kitchen wing and granary,
+  a thatched gatehouse (*padippura*), a stone-lined bathing pond (*kulam*) with steps into the water, and a
+  serpent grove (*sarpa kavu*) left wild in the corner.
+- **New house types**: two *nalukettu* (single-courtyard houses) in the village, Moideen's two-storey
+  **spice warehouse** on the quay (open arcade, brass-studded strong-room door, carved teak screens),
+  a Syrian Christian house with its stone cross and pepper vines, mud-and-thatch fishermen's huts with
+  nets on drying frames.
+- **Cast redrawn from the sheet**: the patriarch with his stick, a Nair woman with a jasmine braid, a
+  Syrian Christian woman in white *chatta*, the Mappila trader in checked *lungi* with a shoulder bag,
+  a Namboothiri priest, a fisherwoman carrying her basket, the colonial officer in white drill and tall
+  boots, and children with slates.
+- **Madhavan** now matches his turnaround sheet (hair knot, moustache, charm on a cord, shoulder cloth,
+  long cream *mundu* with waist knot and centre pleat) and has the five outfits of the outfit sheet:
+  everyday, boatman, travel, monsoon (palm-leaf rain cape), festival.
+- **Facial expressions** — neutral, determined, laughing, worried, angry, grieving — plus talking mouths.
+  Faces follow the dialogue and the action (a fight, a wound, a storm, a passed mission).
+- **Props and street life**: brass oil lamps, clay pots, urns, *kindi*, fish baskets, rope coils, cast
+  nets, toolboxes, punting poles, palm-leaf umbrellas, barrels, shop awnings, creeper-hung compound
+  walls, mural panels. People sit out on verandahs; walkers put up umbrellas when it rains.
+- **Music rewritten.** The old generative drone is replaced by composed phrases in pentatonic modes
+  over a soft *tanpura*-style drone — a flute by day, a plucked string at night, a faster drum-led
+  pattern for chases — with a touch of reverb.
 
 ## A note on the setting
 

@@ -72,6 +72,22 @@ export function makeStick(len = 1.5, color = 0x6a4a2a) {
   m.castShadow = true;
   return m;
 }
+// a walking stick that hangs from the hand to the ground
+export function makeCane(len = 0.92, color = 0x3a2616, knob = 0xc9a13a) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(cyl(0.012, 0.016, len, 6), M(color, 0.6)); m.position.y = -len / 2 + 0.06; m.castShadow = true; g.add(m);
+  const k = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 6), M(knob, 0.4)); k.position.y = 0.07; g.add(k);
+  g.position.set(0, -0.06, 0.03); g.rotation.x = 0.12;
+  return g;
+}
+// a child's writing slate
+export function makeSlate() {
+  const g = new THREE.Group();
+  const f = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.26, 0.016), M(0x7a5a36, 0.8)); g.add(f);
+  const s = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.02), M(0x1c2024, 0.6)); g.add(s);
+  g.position.set(0.03, -0.14, 0.05); g.rotation.set(0.2, 0.3, 0);
+  return g;
+}
 export function makeLantern() {
   const g = new THREE.Group();
   g.position.y = -0.06;

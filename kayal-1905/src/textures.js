@@ -385,7 +385,48 @@ export function buildTextures() {
     grit(c, rng, 1.1, 30, 12);
     TEX.signs = tex(c, { repeat: false });
   }
+  // ---- carved and painted gable-board (mukhappu)
+  {
+    const [c, g] = mk(256, 128);
+    g.fillStyle = '#4a2c1a'; g.fillRect(0, 0, 256, 128);
+    g.strokeStyle = 'rgba(20,10,5,0.55)'; g.lineWidth = 2;
+    for (let x = -128; x < 384; x += 16) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 128, 128); g.moveTo(x + 128, 0); g.lineTo(x, 128); g.stroke(); }
+    const pet = (cx, cy, r, n, col) => { g.fillStyle = col; for (let i = 0; i < n; i++) { const a = i / n * 6.283; g.beginPath(); g.ellipse(cx + Math.cos(a) * r * 0.55, cy + Math.sin(a) * r * 0.55, r * 0.5, r * 0.24, a, 0, 7); g.fill(); } };
+    g.fillStyle = '#7a2a1c'; g.beginPath(); g.arc(128, 70, 40, 0, 7); g.fill();
+    pet(128, 70, 34, 10, '#c9762e'); pet(128, 70, 20, 8, '#e0b24a'); g.fillStyle = '#3e6a3a'; g.beginPath(); g.arc(128, 70, 7, 0, 7); g.fill();
+    for (const sx of [-1, 1]) {
+      g.strokeStyle = '#4e7a3e'; g.lineWidth = 5; g.beginPath(); g.moveTo(128 + sx * 44, 84); g.bezierCurveTo(128 + sx * 70, 60, 128 + sx * 86, 112, 128 + sx * 118, 96); g.stroke();
+      pet(128 + sx * 78, 86, 12, 6, '#c9562e'); pet(128 + sx * 104, 100, 9, 6, '#e0b24a');
+    }
+    g.fillStyle = '#c9a13a'; g.fillRect(0, 118, 256, 4); g.fillStyle = '#7a2a1c'; g.fillRect(0, 122, 256, 6);
+    TEX.gable = tex(c);
+  }
+  // ---- wall mural panel: ochre ground, red and green ornament
+  {
+    const [c, g] = mk(256, 256);
+    g.fillStyle = '#c98a4a'; g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = '#7a2218'; g.lineWidth = 9; g.strokeRect(8, 8, 240, 240);
+    g.strokeStyle = '#e6c46a'; g.lineWidth = 2.5; g.strokeRect(17, 17, 222, 222);
+    const leaf = (x, y, a, l, col) => { g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = col; g.beginPath(); g.ellipse(l / 2, 0, l / 2, l / 5, 0, 0, 7); g.fill(); g.restore(); };
+    g.strokeStyle = '#3e6a3a'; g.lineWidth = 5; g.beginPath(); g.moveTo(128, 232); g.bezierCurveTo(60, 190, 196, 120, 128, 30); g.stroke();
+    for (let i = 0; i < 9; i++) { const t = i / 8, y = 222 - t * 180, x = 128 + Math.sin(t * 6) * 34; leaf(x, y, i % 2 ? -0.5 : Math.PI + 0.5, 38, i % 3 ? '#3e6a3a' : '#2f5630'); }
+    for (const [x, y, r] of [[128, 56, 26], [70, 150, 20], [188, 130, 20]]) { g.fillStyle = '#8a2418'; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; g.beginPath(); g.ellipse(x + Math.cos(a) * r * 0.55, y + Math.sin(a) * r * 0.55, r * 0.5, r * 0.26, a, 0, 7); g.fill(); } g.fillStyle = '#e6c46a'; g.beginPath(); g.arc(x, y, r * 0.24, 0, 7); g.fill(); }
+    TEX.mural = tex(c, { repeat: false });
+  }
+  // ---- carved teak screen with a lancet opening (upper floors)
+  {
+    const [c, g] = mk(256, 256);
+    g.fillStyle = '#5a3a22'; g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = 'rgba(20,10,4,0.75)'; g.lineWidth = 3;
+    for (let i = -256; i < 512; i += 18) { g.beginPath(); g.moveTo(i, 40); g.lineTo(i + 176, 216); g.moveTo(i + 176, 40); g.lineTo(i, 216); g.stroke(); }
+    g.fillStyle = '#120a06'; g.beginPath(); g.moveTo(96, 200); g.lineTo(96, 110); g.quadraticCurveTo(128, 60, 160, 110); g.lineTo(160, 200); g.fill();
+    g.strokeStyle = '#8a5a30'; g.lineWidth = 5; g.beginPath(); g.moveTo(92, 204); g.lineTo(92, 108); g.quadraticCurveTo(128, 52, 164, 108); g.lineTo(164, 204); g.stroke();
+    g.fillStyle = '#3a2414'; g.fillRect(0, 0, 256, 36); g.fillRect(0, 220, 256, 36);
+    g.fillStyle = '#8a5a30'; for (let x = 6; x < 256; x += 14) { g.fillRect(x, 226, 5, 24); g.fillRect(x, 6, 5, 24); }
+    g.fillStyle = '#c9a13a'; g.fillRect(0, 34, 256, 3); g.fillRect(0, 218, 256, 3);
+    TEX.jali = tex(c);
+  }
   // weather every built surface
-  for (const [k, a, st, cr] of [['wall', 1.2, 26, 10], ['laterite', 1.1, 10, 4], ['roof', 1.0, 12, 0], ['thatch', 0.8, 0, 0], ['wood', 0.9, 0, 5], ['plank', 1.0, 6, 6], ['stone', 1.0, 10, 8], ['bark', 0.8, 0, 0], ['palmBark', 0.8, 0, 0], ['tin', 1.0, 16, 0], ['sack', 0.8, 0, 0]]) grit(TEX[k].image, rng, a, st, cr);
+  for (const [k, a, st, cr] of [['wall', 1.2, 26, 10], ['laterite', 1.1, 10, 4], ['roof', 1.0, 12, 0], ['thatch', 0.8, 0, 0], ['wood', 0.9, 0, 5], ['plank', 1.0, 6, 6], ['stone', 1.0, 10, 8], ['bark', 0.8, 0, 0], ['palmBark', 0.8, 0, 0], ['tin', 1.0, 16, 0], ['sack', 0.8, 0, 0], ['gable', 0.7, 0, 0], ['mural', 0.9, 8, 5], ['jali', 0.7, 0, 0]]) grit(TEX[k].image, rng, a, st, cr);
   return TEX;
 }

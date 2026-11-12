@@ -29,6 +29,7 @@ export const LOC = {
   falls: { x: 204, z: 190 },
   toddy: { x: 62, z: 172 },
   kavu: { x: 268, z: 36 },
+  kulam: { x: 20.83, z: 47.92 },
   hamletJetty: { x: -590, z: 150 },   // refined at init
   villageJetty: { x: -200, z: 40 },   // refined at init
   portJetty: { x: -400, z: -310 },    // refined at init
@@ -88,6 +89,8 @@ export function heightFn(x, z) {
   // lotus pond
   d = Math.hypot(x - LOC.lotus.x, z - LOC.lotus.z);
   if (d < 22) h = lerp(h, -1.8, smoothstep(21, 12, d));
+  // the family bathing pond (kulam) beside the tharavadu — snapped to the grid so its stone lining fits
+  if (x > 12.4 && x < 29.3 && z > 37.4 && z < 58.4) h = -1.5;
   // temple tank
   d = Math.max(Math.abs(x - LOC.tank.x), Math.abs(z - LOC.tank.z));
   if (d < 15) h = lerp(h, -1.7, smoothstep(14.5, 9.5, d));

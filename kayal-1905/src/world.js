@@ -10,9 +10,9 @@ import { Water } from './water.js';
 import { buildFlora } from './flora.js';
 import { NPC } from './npc.js';
 import { Horse, Boat } from './entities.js';
-import { CAST, Quadruped, Elephant, Bird, makeVallam, makeKettuvallam } from './characters.js';
+import { CAST, Quadruped, Elephant, Bird, makeVallam, makeKettuvallam, SKIN } from './characters.js';
 import { makeRng, TAU, damp, angleDamp } from './util.js';
-import { groundAt } from './physics.js';
+import { groundAt, interiorAt } from './physics.js';
 import { FX } from './fx.js';
 import { setupActivities } from './activities.js';
 import { heightTex, GLSL_HUV } from './terrain.js';
@@ -66,8 +66,10 @@ function buildLamps(scene, lamps) {
   for (let i = 0; i < n; i++) { const pl = new THREE.PointLight(0xffa350, 0, 26, 1.6); scene.add(pl); pool.push(pl); }
   let timer = 0;
   G.updaters.push((dt, t) => {
-    const night = G.env.night, k = Math.max(night, G.env.rain * 0.5);
-    mat.color.setRGB(2.4 * k, 1.5 * k, 0.55 * k);
+    const pq = G.player.worldPos();
+    const night = G.env.night, k = Math.max(night, G.env.rain * 0.5, interiorAt(pq.x, pq.z) ? 0.62 : 0);
+    const ks = Math.max(night, G.env.rain * 0.5, k > night ? 0.22 : 0);
+    mat.color.setRGB(2.4 * ks, 1.5 * ks, 0.55 * ks);
     pts.visible = k > 0.03;
     timer -= dt;
     if (timer <= 0) {
@@ -164,7 +166,7 @@ export async function buildWorld(scene, progress) {
   // ---- named cast
   const C = W.cast;
   const VM_ = CAST.villagerM, VF_ = CAST.villagerF;
-  C.ammavan = new NPC(scene, 'Raman Ammavan', CAST.ammavan, SPOTS.ammavan.x, SPOTS.ammavan.z, Math.PI, { facePlayer: true, title: 'Ammavan', lines: ['The land remembers who tends it, Madhava.', 'Your grandfather planted these vines. I will not be the one to lose them.'] });
+  C.ammavan = new NPC(scene, 'Raman Ammavan', CAST.ammavan, SPOTS.ammavan.x, SPOTS.ammavan.z, Math.PI, { facePlayer: true, cane: true, title: 'Ammavan', lines: ['The land remembers who tends it, Madhava.', 'Your grandfather planted these vines. I will not be the one to lose them.'] });
   C.devaki = new NPC(scene, 'Devaki', CAST.devaki, SPOTS.devaki.x, SPOTS.devaki.z, Math.PI, { facePlayer: true, lines: ['Numbers do not lie, chetta. Only the men who write them.', 'I taught myself from the mission school primers. Do not tell Ammavan how many I borrowed.'] });
   C.ouseph = new NPC(scene, 'Ouseph', CAST.ouseph, SPOTS.ouseph.x, SPOTS.ouseph.z, Math.PI / 2, { facePlayer: true, lines: ['Forty years on this water and she still surprises me.', 'The kayal gives fish to the patient and trouble to the proud.'] });
   C.moideen = new NPC(scene, 'Moideen Hajji', CAST.moideen, SPOTS.moideen.x, SPOTS.moideen.z, Math.PI / 2, { facePlayer: true, title: 'Moideen Hajji', lines: ['Tellicherry pepper, Alleppey green cardamom. The Arabs sailed here for these before Vasco da Gama was born.', 'An honest scale is the best advertisement.'] });
@@ -187,7 +189,7 @@ export async function buildWorld(scene, progress) {
   });
   C.harrow = new NPC(scene, 'Sir Edmund Harrow', CAST.harrow, SPOTS.cutcherryYard.x - 4, SPOTS.cutcherryYard.z - 6, 1, { facePlayer: true }); C.harrow.setActive(false);
   C.dacre = new NPC(scene, 'Captain Dacre', CAST.dacre, SPOTS.duel.x, SPOTS.duel.z, 0, { guard: true, noLantern: true, facePlayer: true, health: 340, boss: { block: 0.38, heavy: 0.42, dmg: 15, heavyDmg: 34 } }); C.dacre.setActive(false);
-  C.carmichael = new NPC(scene, 'Mr. Carmichael', CAST.carmichael, SPOTS.peishkar.x + 2, SPOTS.peishkar.z, 0, { y: SPOTS.peishkar.y, facePlayer: true }); C.carmichael.setActive(false);
+  C.carmichael = new NPC(scene, 'Mr. Carmichael', CAST.carmichael, SPOTS.peishkar.x + 2, SPOTS.peishkar.z, 0, { y: SPOTS.peishkar.y, facePlayer: true, cane: 0.98 }); C.carmichael.setActive(false);
   C.velu = new NPC(scene, 'Velu', CAST.velu, SPOTS.veluCell.x, SPOTS.veluCell.z, 0, { facePlayer: true, lines: ['Every name, every anna. I wrote it down because nobody else would.', 'Kannimala tea is the best in the hills. It deserves a better master.'] }); C.velu.setActive(false);
   const FM = [['Kunjipennu', VF_[2]], ['Pathrose', VM_[2]], ['Alikutty', VM_[3]]];
   C.farmers = SPOTS.farms.map((f, i) => new NPC(scene, FM[i][0], FM[i][1], f.x, f.z, Math.atan2(-f.x, -f.z), { facePlayer: true, lines: ['The rain is kind this year. The Company was not.', 'Come and eat when the hearing is done, mone.'] }));
@@ -199,8 +201,22 @@ export async function buildWorld(scene, progress) {
   amb('Villager', VM[4], SPOTS.teaShop.x - 3.4, SPOTS.teaShop.z - 1.2, 1.4, { lines: BARKS.village });
   amb('Woman at the well', VF[0], -31.6, -6.4, 1.2, { lines: BARKS.well, pose: 'talk' });
   amb('Woman at the well', VF[1], -28.6, -9.4, -2, { lines: BARKS.well });
-  amb('Villager', VM[0], -100, 26, 1, { route: [new THREE.Vector3(-150, 0, 33), new THREE.Vector3(-95, 0, 22), new THREE.Vector3(-42, 0, 11), new THREE.Vector3(18, 0, 1), new THREE.Vector3(-42, 0, 11), new THREE.Vector3(-95, 0, 22)], lines: BARKS.village });
-  amb('Villager', VF[2], 30, -2, 1, { route: [new THREE.Vector3(66, 0, -11), new THREE.Vector3(20, 0, 0), new THREE.Vector3(-38, 0, 9), new THREE.Vector3(-33, 0, 76), new THREE.Vector3(-38, 0, 9), new THREE.Vector3(20, 0, 0)], lines: BARKS.village, speed: 1.2 });
+  amb('Villager', VM[0], -100, 26, 1, { umbrella: true, route: [new THREE.Vector3(-150, 0, 33), new THREE.Vector3(-95, 0, 22), new THREE.Vector3(-42, 0, 11), new THREE.Vector3(18, 0, 1), new THREE.Vector3(-42, 0, 11), new THREE.Vector3(-95, 0, 22)], lines: BARKS.village });
+  amb('Villager', VF[2], 30, -2, 1, { umbrella: true, route: [new THREE.Vector3(66, 0, -11), new THREE.Vector3(20, 0, 0), new THREE.Vector3(-38, 0, 9), new THREE.Vector3(-33, 0, 76), new THREE.Vector3(-38, 0, 9), new THREE.Vector3(20, 0, 0)], lines: BARKS.village, speed: 1.2 });
+  // people from the cast sheet
+  amb('Mariamma', CAST.nasraniWoman, -470.2, -415.4, 0.3, { facePlayer: true, lines: ['My grandfather\'s grandfather was trading pepper here before the Portuguese came with their Latin. We keep the old Syriac prayers still.', 'The vines by the wall are forty years old. Pepper pays for candles and for school slates both.', 'Finch sahib sits in the front pew on Sundays. I notice he does not stay for the sermon on usury.'] });
+  amb('Fish-seller', CAST.fisherwoman, -398, -352, 0, { headLoad: true, umbrella: false, route: [new THREE.Vector3(-399, 0, LOC.portJetty.z + 10), new THREE.Vector3(-400, 0, -372), new THREE.Vector3(-384, 0, -388), new THREE.Vector3(-400, 0, -372)], lines: ['Karimeen! Pearl-spot, caught before the sun was up!', 'My man takes the boat out, I take the catch to the quay. That is how a house is kept.'], speed: 1.25 });
+  amb('Unni', CAST.child, -28, 18, 0, { wander: 9, slate: true, speed: 2.1, lines: ['I can write my name. And yours, if you tell me the letters.', 'Asan says I must learn fifty-one letters. FIFTY-ONE.', 'Is it true you went on a steamer bigger than the temple?'] });
+  amb('Ammu', CAST.childF, -70, 22, 2, { wander: 8, speed: 2.0, lines: ['Devaki chechi taught me sums. I can count all the ducks on the canal.', 'Don\'t tell Amma I was at the well.'] });
+  amb('Kuttan', { ...CAST.child, skin: SKIN[3] }, LOC.hamlet.x + 6, LOC.hamlet.z + 8, 1, { wander: 10, speed: 2.2, lines: ['When I am big I will have my own vallam. A red one.', 'The sea took my slate. I told Achan a crab did it.'] });
+  // sitting out on the verandah edge, watching the street
+  {
+    const seat = (hx, hz, ry, lx, lz) => { const c = Math.cos(ry), sn = Math.sin(ry); const x = hx + lx * c + lz * sn, z = hz - lx * sn + lz * c; return [x, z, ry, { y: getHeight(hx, hz) + 0.5 - 0.85, pose: 'bench', lines: BARKS.village }]; };
+    amb('Old man', VM[2], ...seat(-152, 17, 0, 2.7, 4.3));
+    amb('Villager', VF[2], ...seat(-128, 46, Math.PI, -2.9, 4.3));
+    amb('Villager', VM[4], ...seat(-12, -12, 0.2, 3.0, 4.3));
+    amb('Trader', VM[3], ...seat(-380, -399, 0, -2.2, 3.9));
+  }
   amb('Priest', CAST.priest, SPOTS.templeGate.x, SPOTS.templeGate.z + 2, Math.PI / 2, { facePlayer: true, lines: BARKS.priest });
   for (let i = 0; i < 6; i++) {
     const x = -100 + i * 34 + rng() * 10, z = 250 + rng() * 60 + (i % 2) * 70;
@@ -212,8 +228,8 @@ export async function buildWorld(scene, progress) {
   amb('Spice-seller', VM[3], -372, -390.6, 0, { facePlayer: true, lines: BARKS.port });
   amb('Spice-seller', VF[2], -423, -390.2, 0, { facePlayer: true, lines: BARKS.port });
   amb('Fishmonger', VM[1], -391, -372, Math.PI / 2, { facePlayer: true, lines: BARKS.port });
-  amb('Porter', VM[0], -400, -360, 0, { route: [new THREE.Vector3(-400, 0, pj + 8), new THREE.Vector3(-400, 0, -376), new THREE.Vector3(-409, 0, -357), new THREE.Vector3(-400, 0, -376)], lines: BARKS.port, speed: 1.5 });
-  amb('Townsman', VM[4], -390, -383, 1, { route: [new THREE.Vector3(-350, 0, -390), new THREE.Vector3(-400, 0, -382), new THREE.Vector3(-445, 0, -385), new THREE.Vector3(-400, 0, -382)], lines: BARKS.port });
+  amb('Porter', VM[0], -400, -360, 0, { umbrella: true, route: [new THREE.Vector3(-400, 0, pj + 8), new THREE.Vector3(-400, 0, -376), new THREE.Vector3(-409, 0, -357), new THREE.Vector3(-400, 0, -376)], lines: BARKS.port, speed: 1.5 });
+  amb('Townsman', VM[4], -390, -383, 1, { umbrella: true, route: [new THREE.Vector3(-350, 0, -390), new THREE.Vector3(-400, 0, -382), new THREE.Vector3(-445, 0, -385), new THREE.Vector3(-400, 0, -382)], lines: BARKS.port });
   amb('Townswoman', VF[0], -428.5, -373.2, 0.4, { lines: BARKS.port, pose: 'talk' });
   amb('Boatman', VM[2], -401.2, pj + 14, 0, { facePlayer: true, lines: ['Storm or no storm, the kettuvallams sail for Alleppey at dawn.'] });
   amb('Court clerk', { ...VM[3], headgear: 'turban', gearColor: 0xe9d9a8 }, SPOTS.cutcherryYard.x - 7, SPOTS.cutcherryYard.z - 4, 0.5, { facePlayer: true, lines: BARKS.hill });
@@ -223,7 +239,7 @@ export async function buildWorld(scene, progress) {
   const tp = (i) => ({ ...VF[i % 4], dirty: true });
   for (let i = 0; i < 5; i++) amb('Tea-plucker', tp(i), LOC.estate.x - 46 + i * 9 + rng() * 4, LOC.estate.z + 52 + rng() * 14, rng() * TAU, { pose: 'work', lines: ['Two leaves and a bud, two leaves and a bud. The kangani counts every basket.'] });
   amb('Fisherman', VM[1], LOC.hamlet.x + 3, LOC.hamlet.z + 3, 1, { pose: 'work', lines: ['The bar is deep on the ebb and wicked on the flood. Keep to the middle.', 'Mackerel when the monsoon breaks, sardine after. The sea keeps its own calendar.'] });
-  amb('Fisherwoman', VF[1], LOC.hamlet.x - 4, LOC.hamlet.z - 6, 2, { lines: ['The light at Azhimukham has saved more boats than all the prayers in Azhikkal.'], pose: 'talk' });
+  amb('Fisherwoman', CAST.fisherwoman, LOC.hamlet.x - 4, LOC.hamlet.z - 6, 2, { lines: ['The light at Azhimukham has saved more boats than all the prayers in Azhikkal.'], headLoad: true });
   amb('Lighthouse keeper', VM[2], SPOTS.lighthouse.x + 2.5, SPOTS.lighthouse.z + 1, 0.4, { facePlayer: true, lines: ['Steamers for Cochin and Colombo stand off here for the pilot. I count their smoke for the Port Officer.', 'A hundred and eleven steps. I have counted them every evening for nineteen years.'] });
   amb('Toddy-tapper', VM[6], SPOTS.toddy.x - 2.4, SPOTS.toddy.z, 1.6, { pose: 'bench', lines: ['Sweet in the morning, strong by evening. Like most things.', 'Sit. The canal is not going anywhere.'] });
   amb('Toddy-tapper', VM[0], SPOTS.toddy.x + 2.2, SPOTS.toddy.z, -1.6, { pose: 'bench', lines: ['They say the Company\'s new man came by carriage from Quilon. A carriage! On our roads!'] });

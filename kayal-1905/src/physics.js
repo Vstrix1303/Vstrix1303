@@ -113,3 +113,18 @@ export function segmentBlocked(ax, az, bx, bz) {
   }
   return false;
 }
+
+// Roofed interiors: the camera pulls in close and stays under the ceiling.
+export const interiors = [];
+export function addInterior(x, z, hw, hd, rot, ceil) {
+  interiors.push({ x, z, hw, hd, c: Math.cos(rot), s: Math.sin(rot), ceil });
+}
+export function interiorAt(x, z) {
+  for (let i = 0; i < interiors.length; i++) {
+    const b = interiors[i];
+    if (Math.abs(x - b.x) > 40 || Math.abs(z - b.z) > 40) continue;
+    const [lx, lz] = toLocal(b, x, z);
+    if (Math.abs(lx) < b.hw && Math.abs(lz) < b.hd) return b;
+  }
+  return null;
+}

@@ -1,3 +1,4 @@
+import { CAST } from './human.js';
 // Open-world mission framework. Between missions the player roams free;
 // each mission is a cancellable async script started from a marker in the
 // world. Act I and Act II scripts live in missions.js.
@@ -21,7 +22,7 @@ export function fmtMoney(a) {
   const r = Math.floor(a / 16), an = a % 16;
   return `Rs ${r}` + (an ? ` · ${an} as` : '');
 }
-const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], outfit: 'boatman', outfits: ['boatman'], fish: 0, jobs: 0, wins: 0 });
+const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], outfit: 'everyday', outfits: ['everyday', 'boatman'], fish: 0, jobs: 0, wins: 0 });
 
 export function makePickup(scene, pos, kind = 'sack') {
   const g = new THREE.Group();
@@ -55,6 +56,16 @@ export function makePickup(scene, pos, kind = 'sack') {
   return g;
 }
 
+// read the mood of a line so faces follow the talk without hand-tagging every one
+function moodOf(t) {
+  if (/\b(hah|ha!|heh|laugh)/i.test(t)) return 'laughing';
+  if (/\b(dead|died|lost|gone|grave|ashes|ruin|forgive|weep|mourn|took the vines|cannot read)\b/i.test(t)) return 'grieving';
+  if (/!/.test(t) && /\b(thief|thieves|cheat|liar|lie|dare|never|rogue|dog|swine|burn|curse|damn|out|seize|stop)\b/i.test(t)) return 'angry';
+  if (/!/.test(t)) return 'determined';
+  if (/\?\s*$/.test(t) || /\b(afraid|fear|careful|bailiff|danger|watch(ed)?|trouble)\b/i.test(t)) return 'worried';
+  return 'neutral';
+}
+
 export class Story {
   constructor() {
     this.state = freshState();
@@ -81,8 +92,8 @@ export class Story {
   }
   canPay(a) { return this.state.annas >= a; }
 
-  newGame() { this.state = freshState(); this.save(); G.ui.setMoney(fmtMoney(0)); this.startMission(0); }
-  continueGame(s) { this.state = { ...freshState(), ...s }; G.ui.setMoney(fmtMoney(this.state.annas)); G.player.setOutfit(this.state.outfit); this.enterFree({ fresh: true }); }
+  newGame() { this.state = freshState(); G.player.setOutfit(this.state.outfit); this.save(); G.ui.setMoney(fmtMoney(0)); this.startMission(0); }
+  continueGame(s) { this.state = { ...freshState(), ...s }; { const st = this.state, O = CAST.outfits; st.outfits = [...new Set(['everyday', 'boatman', ...st.outfits.filter((k) => O[k])])]; if (!O[st.outfit]) st.outfit = 'everyday'; } G.ui.setMoney(fmtMoney(this.state.annas)); G.player.setOutfit(this.state.outfit); this.enterFree({ fresh: true }); }
 
   cancel() {
     if (this.tk) this.tk.cancelled = true;
@@ -186,6 +197,7 @@ export class Story {
       this.state.done = Math.max(this.state.done, i + 1);
       this.save();
       G.audio?.sfx('passed');
+      G.player.h.setExpression('laughing', 5);
       G.ui.banner('MISSION PASSED', def.name, first && def.reward ? `+ ${fmtMoney(def.reward)}` : '');
       if (first && def.reward) this.addMoney(def.reward);
       this.enterFree();
@@ -264,12 +276,17 @@ export class Story {
       chk();
       S.busy = true; p.locked = true; ui.letterbox(true); ui.prompt(null);
       let other = o.other || lines.find((l) => l[0] !== 'M')?.[0];
-      for (const [who, text] of lines) {
-        const me = p.worldPos();
-        if (who === 'M') { if (other) focus(me, other.pos); await ui.say('Madhavan', text); }
-        else { other = who; who.talkT = 6; focus(who.pos, me); await ui.say(who.name, text); }
+      const faces = new Set();
+      for (const [who, text, ex] of lines) {
+        const me = p.worldPos(), h = who === 'M' ? p.h : who.h;
+        if (h) { faces.add(h); h.setExpression(ex || moodOf(text)); h.talking = true; }
+        try {
+          if (who === 'M') { if (other) focus(me, other.pos); await ui.say('Madhavan', text); }
+          else { other = who; who.talkT = 6; focus(who.pos, me); await ui.say(who.name, text); }
+        } finally { if (h) h.talking = false; }
         chk();
       }
+      for (const h of faces) h.setExpression('neutral');
       ui.letterbox(false); p.locked = false; S.busy = false; p.setCine(null);
     };
     const title = async (line) => {

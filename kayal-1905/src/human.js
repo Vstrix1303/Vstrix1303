@@ -3,6 +3,7 @@
 // face, hair, bare skin or shirt, mundu / trousers. Garments are part of the
 // body surface — there is no skin underneath to poke through — and the mundu
 // is weighted to both thighs so it swings with the stride.
+import { TEX } from './textures.js';
 import * as THREE from 'three';
 import { SGB } from './geo.js';
 import { damp, clamp, lerp, makeRng } from './util.js';
@@ -19,6 +20,7 @@ function shade(c, k) {
   const r = clamp(((c >> 16) & 255) * k, 0, 255) | 0, g = clamp(((c >> 8) & 255) * k, 0, 255) | 0, b = clamp((c & 255) * k, 0, 255) | 0;
   return `rgb(${r},${g},${b})`;
 }
+function shadeN(c, k) { return (Math.min(255, ((c >> 16) & 255) * k) << 16) | (Math.min(255, ((c >> 8) & 255) * k) << 8) | Math.min(255, (c & 255) * k); }
 function rgba(c, a) { return `rgba(${(c >> 16) & 255},${(c >> 8) & 255},${c & 255},${a})`; }
 
 // =====================================================================
@@ -47,8 +49,19 @@ function folds(g, R, rng, n, alpha = 0.12, vertical = true) {
   g.restore();
 }
 
+// facial expressions: brow offsets (inner / middle / outer), eye openness,
+// mouth-corner drop (mc) and how far the mouth opens (mo)
+export const EXPR = {
+  neutral: { bi: 0, bm: 0, bo: 0, eye: 1, mc: 0, mo: 0 },
+  determined: { bi: 2.8, bm: 1.2, bo: -0.6, eye: 0.8, mc: 0.9, mo: 0, furrow: 1 },
+  laughing: { bi: -2.2, bm: -3.2, bo: -1.4, eye: 0.3, smile: 1, mc: -4.6, mo: 6.5, teeth: 1 },
+  worried: { bi: -4.4, bm: -1.6, bo: 1.8, eye: 1.2, mc: 1.8, mo: 1.4, furrow: 1 },
+  angry: { bi: 5.2, bm: 1.8, bo: -2.8, eye: 0.72, mc: 3.4, mo: 0, furrow: 2, snarl: 1 },
+  grieving: { bi: -5.4, bm: -1, bo: 3.4, eye: 0.48, mc: 3.8, mo: 2.4, furrow: 1, tear: 1 },
+};
 function paintHead(g, o, rng) {
   const [x0, y0] = R_HEAD, cx = x0 + 128;
+  const e = EXPR[o.expr] || EXPR.neutral;
   const skin = o.skin, hairC = o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e);
   paintSkin(g, R_HEAD, skin, rng);
   // soft modelling: cheeks, temples, jaw and neck in shadow
@@ -97,18 +110,28 @@ function paintHead(g, o, rng) {
   // ---- brows
   const browC = o.grey ? 0x8d8a82 : (o.hair ?? 0x15110e);
   g.strokeStyle = hex(browC); g.lineCap = 'round'; g.lineWidth = o.female ? 2.4 : 3.6;
-  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(cx + s * 6.5, y0 + 61.5 + (o.stern ? 2 : 0)); g.quadraticCurveTo(cx + s * 15, y0 + 56.5, cx + s * 24, y0 + 60.5); g.stroke(); }
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(cx + s * 6.5, y0 + 61.5 + (o.stern ? 2 : 0) + e.bi); g.quadraticCurveTo(cx + s * 15, y0 + 56.5 + e.bm, cx + s * 24, y0 + 60.5 + e.bo); g.stroke(); }
+  if (e.furrow) { g.strokeStyle = 'rgba(0,0,0,0.34)'; g.lineWidth = 1.2; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(cx + s * 2.2, y0 + 55); g.lineTo(cx + s * (e.furrow > 1 ? 3.6 : 1.6), y0 + 64); g.stroke(); } }
   // ---- eyes
   for (const s of [-1, 1]) {
     const ex = cx + s * 15, ey = y0 + 72;
     g.fillStyle = 'rgba(0,0,0,0.22)'; g.beginPath(); g.ellipse(ex, ey + 1, 9.5, 6.5, 0, 0, 7); g.fill();          // socket
-    g.fillStyle = '#e9e3d8'; g.beginPath(); g.ellipse(ex, ey, 6.8, 3.5, 0, 0, 7); g.fill();
+    if (e.smile) {         // eyes creased shut with laughter
+      g.strokeStyle = '#120b08'; g.lineWidth = 2.3; g.beginPath(); g.moveTo(ex - 7, ey + 1.6); g.quadraticCurveTo(ex, ey - 3.8, ex + 7, ey + 1.6); g.stroke();
+      g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1; for (const k of [-1, 0, 1]) { g.beginPath(); g.moveTo(ex + s * 8.5, ey + k * 1.6); g.lineTo(ex + s * 12.5, ey + k * 3.4 - 0.6); g.stroke(); }
+      continue;
+    }
+    const ry = 3.5 * e.eye;
+    g.fillStyle = '#e9e3d8'; g.beginPath(); g.ellipse(ex, ey, 6.8, ry, 0, 0, 7); g.fill();
+    g.save(); g.beginPath(); g.ellipse(ex, ey, 6.8, ry, 0, 0, 7); g.clip();
     g.fillStyle = hex(o.eye ?? 0x2b1a0f); g.beginPath(); g.arc(ex + s * 0.4, ey, 3.1, 0, 7); g.fill();
     g.fillStyle = '#060404'; g.beginPath(); g.arc(ex + s * 0.4, ey, 1.5, 0, 7); g.fill();
     g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(ex - 1.4, ey - 1.8, 1.3, 1.3);
-    g.strokeStyle = '#120b08'; g.lineWidth = 1.7; g.beginPath(); g.ellipse(ex, ey, 7, 3.9, 0, Math.PI * 1.02, Math.PI * 1.98); g.stroke();
+    g.restore();
+    g.strokeStyle = '#120b08'; g.lineWidth = e.eye < 0.9 ? 2.2 : 1.7; g.beginPath(); g.ellipse(ex, ey, 7, ry + 0.4, 0, Math.PI * 1.02, Math.PI * 1.98); g.stroke();
     g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1; g.beginPath(); g.ellipse(ex, ey - 1.5, 7.6, 5, 0, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
-    if (o.female) { g.strokeStyle = '#0c0808'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(ex, ey, 7, 3.6, 0, 0.1, Math.PI * 0.95); g.stroke(); }
+    if (o.female) { g.strokeStyle = '#0c0808'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(ex, ey, 7, ry + 0.1, 0, 0.1, Math.PI * 0.95); g.stroke(); }
+    if (e.tear) { g.strokeStyle = 'rgba(214,232,255,0.6)'; g.lineWidth = 1.7; g.beginPath(); g.moveTo(ex - s * 3, ey + 4); g.quadraticCurveTo(ex - s * 4.5, ey + 16, ex - s * 2.5, ey + 27); g.stroke(); }
   }
   // ---- nose
   g.strokeStyle = 'rgba(0,0,0,0.22)'; g.lineWidth = 2;
@@ -120,9 +143,17 @@ function paintHead(g, o, rng) {
   g.fillStyle = 'rgba(0,0,0,0.16)'; g.beginPath(); g.ellipse(cx, y0 + 101, 9, 3, 0, 0, 7); g.fill();
   // ---- mouth
   const lip = o.female ? 0x8a3a34 : 0x5a2c22;
+  const mo = Math.max(e.mo, o.mouthOpen ? 4.2 : 0), my = y0 + 122, cy = my + (o.stern ? -0.6 : 0.4) + e.mc, mw = e.smile ? 13 : 11.5;
   g.fillStyle = rgba(lip, 0.75); g.beginPath(); g.ellipse(cx, y0 + 121.5, 10.5, 2.4, 0, Math.PI, Math.PI * 2); g.fill();
-  g.fillStyle = rgba(lip, 0.6); g.beginPath(); g.ellipse(cx, y0 + 123, 9.5, 3.6, 0, 0, Math.PI); g.fill();
-  g.strokeStyle = '#1c0d09'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(cx - 11.5, y0 + 122 + (o.stern ? -0.6 : 0.4)); g.quadraticCurveTo(cx, y0 + 123.4, cx + 11.5, y0 + 122 + (o.stern ? -0.6 : 0.4)); g.stroke();
+  if (mo > 0.5) {
+    g.fillStyle = '#1a0806'; g.beginPath(); g.moveTo(cx - mw, cy); g.quadraticCurveTo(cx, my + 0.5, cx + mw, cy); g.quadraticCurveTo(cx, my + 1.5 + mo * 2, cx - mw, cy); g.fill();
+    if (e.teeth || mo > 3) { const ty = cy + (my - cy) * 0.4 + 0.5; g.fillStyle = 'rgba(236,230,214,0.92)'; g.beginPath(); g.moveTo(cx - mw * 0.72, ty); g.quadraticCurveTo(cx, my + 0.7, cx + mw * 0.72, ty); g.quadraticCurveTo(cx, my + 1.4 + mo * 0.55, cx - mw * 0.72, ty); g.fill(); }
+    g.fillStyle = rgba(lip, 0.6); g.beginPath(); g.ellipse(cx, my + 1.2 + mo, 8.5, 2.6, 0, 0, Math.PI); g.fill();
+  } else {
+    g.fillStyle = rgba(lip, 0.6); g.beginPath(); g.ellipse(cx, y0 + 123, 9.5, 3.6, 0, 0, Math.PI); g.fill();
+    g.strokeStyle = '#1c0d09'; g.lineWidth = e.snarl ? 1.9 : 1.3; g.beginPath(); g.moveTo(cx - mw, cy); g.quadraticCurveTo(cx, y0 + 123.4 - (e.mc > 2 ? 1.2 : 0), cx + mw, cy); g.stroke();
+  }
+  if (e.smile || e.snarl) { g.strokeStyle = 'rgba(0,0,0,0.24)'; g.lineWidth = 1.3; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(cx + s * 10, y0 + 100); g.quadraticCurveTo(cx + s * 17, y0 + 110, cx + s * 15.5, y0 + 122); g.stroke(); } }
   g.fillStyle = 'rgba(0,0,0,0.14)'; g.beginPath(); g.ellipse(cx, y0 + 131, 9, 2.6, 0, 0, 7); g.fill();
   // ---- facial hair
   const fh = o.grey ? 0xbdb9ae : (o.hair ?? 0x15110e);
@@ -165,7 +196,7 @@ function paintTorso(g, o, rng) {
     grd.addColorStop(0, d(0.18)); grd.addColorStop(0.2, d(0.3)); grd.addColorStop(0.36, d(0)); grd.addColorStop(0.64, d(0)); grd.addColorStop(0.8, d(0.3)); grd.addColorStop(1, d(0.18));
     g.fillStyle = grd; g.fillRect(x0, y0, 256, H);
     if (!o.female) {
-      const m = o.belly ? 0.5 : 1;
+      const m = o.belly ? 0.5 : o.muscle ? 1.5 : 1;
       g.fillStyle = l(0.10 * m); g.beginPath(); g.ellipse(cx - 24, Y(1.335), 21, 15, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(cx + 24, Y(1.335), 21, 15, 0, 0, 7); g.fill();
       g.strokeStyle = d(0.3 * m); g.lineWidth = 2.6;
       g.beginPath(); g.arc(cx - 23, Y(1.345), 23, 0.25, 2.6); g.stroke(); g.beginPath(); g.arc(cx + 23, Y(1.345), 23, 0.54, 2.9); g.stroke();
@@ -183,6 +214,13 @@ function paintTorso(g, o, rng) {
     for (const bx of [x0 + 1, x1 - 1]) { g.beginPath(); g.moveTo(bx, Y(1.44)); g.lineTo(bx, Y(0.95)); g.stroke(); }
     g.lineWidth = 2; g.beginPath(); g.arc(x0 + 30, Y(1.33), 18, 1.2, 3.6); g.stroke(); g.beginPath(); g.arc(x1 - 30, Y(1.33), 18, -0.45, 1.95); g.stroke();
     if (o.thread) { g.strokeStyle = 'rgba(235,228,205,0.9)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(cx + 44, Y(1.45)); g.lineTo(cx - 40, Y(1.0)); g.stroke(); }
+    if (o.muscle) { g.strokeStyle = d(0.16); g.lineWidth = 1.5; for (const s of [-1, 1]) for (const hh of [1.24, 1.19, 1.14]) { g.beginPath(); g.moveTo(cx + s * 34, Y(hh)); g.lineTo(cx + s * 46, Y(hh - 0.035)); g.stroke(); } }
+    if (o.pendant) {         // a charm on a black cord
+      g.strokeStyle = 'rgba(18,12,9,0.92)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(cx - 21, Y(1.487)); g.quadraticCurveTo(cx - 9, Y(1.39), cx, Y(1.365)); g.quadraticCurveTo(cx + 9, Y(1.39), cx + 21, Y(1.487)); g.stroke();
+      g.fillStyle = '#c9a13a'; g.beginPath(); g.moveTo(cx, Y(1.372)); g.lineTo(cx + 4, Y(1.345)); g.lineTo(cx, Y(1.318)); g.lineTo(cx - 4, Y(1.345)); g.fill();
+      g.fillStyle = 'rgba(255,240,190,0.7)'; g.fillRect(cx - 1, Y(1.352), 1.6, 3);
+    }
+    if (o.bag != null) { g.strokeStyle = hex(shadeN(o.bag, 0.8)); g.lineWidth = 7; g.beginPath(); g.moveTo(cx - 46, Y(1.47)); g.lineTo(cx + 50, Y(0.98)); g.stroke(); g.beginPath(); g.moveTo(x0 + 18, Y(1.47)); g.lineTo(x0, Y(1.38)); g.stroke(); g.beginPath(); g.moveTo(x1, Y(1.38)); g.lineTo(x1 - 62, Y(0.98)); g.stroke(); }
     if (o.female) { g.fillStyle = hex(o.blouse ?? 0x7a2f3a); g.fillRect(x0, Y(1.47), 256, Y(1.17) - Y(1.47)); }
     return;
   }
@@ -223,6 +261,23 @@ function paintTorso(g, o, rng) {
     g.strokeStyle = line; g.lineWidth = 1.3; g.beginPath(); g.moveTo(cx, Y(1.47)); g.lineTo(cx, Y(1.2)); g.stroke();
     g.fillStyle = shade(c, 0.72); for (const hh of [1.42, 1.35, 1.28]) { g.beginPath(); g.arc(cx, Y(hh), 2, 0, 7); g.fill(); }
     g.strokeStyle = shade(c, 0.78); g.lineWidth = 3; g.beginPath(); g.arc(cx, Y(1.49), 15, 0.15, Math.PI - 0.15); g.stroke();
+    if (o.bag != null) { g.strokeStyle = hex(shadeN(o.bag, 0.8)); g.lineWidth = 7; g.beginPath(); g.moveTo(cx - 46, Y(1.47)); g.lineTo(cx + 50, Y(0.98)); g.stroke(); g.beginPath(); g.moveTo(x0 + 18, Y(1.47)); g.lineTo(x0, Y(1.38)); g.stroke(); g.beginPath(); g.moveTo(x1, Y(1.38)); g.lineTo(x1 - 62, Y(0.98)); g.stroke(); }
+  } else if (o.style === 'chatta') {
+    // the Nasrani woman's white chatta: loose, V-necked, worn over the mundu
+    g.fillStyle = hex(o.skin); g.beginPath(); g.moveTo(cx - 14, Y(1.49)); g.lineTo(cx, Y(1.36)); g.lineTo(cx + 14, Y(1.49)); g.fill();
+    g.strokeStyle = shade(c, 0.72); g.lineWidth = 2.4; g.beginPath(); g.moveTo(cx - 14, Y(1.49)); g.lineTo(cx, Y(1.36)); g.lineTo(cx + 14, Y(1.49)); g.stroke();
+    g.strokeStyle = 'rgba(0,0,0,0.16)'; g.lineWidth = 1.2; g.strokeRect(x0 - 2, Y(0.86), 260, 3);
+    if (o.rosary) {
+      g.fillStyle = '#2a1a12';
+      for (let i = 0; i <= 22; i++) { const u = i / 22, a = u * Math.PI; g.beginPath(); g.arc(cx - Math.cos(a) * 19, Y(1.48) + Math.sin(a) * (Y(1.2) - Y(1.48)), 1.5, 0, 7); g.fill(); }
+      g.fillStyle = '#c9a13a'; g.fillRect(cx - 1.4, Y(1.2), 2.8, 13); g.fillRect(cx - 4.5, Y(1.2) + 3, 9, 2.6);
+    }
+  } else if (o.style === 'wrap') {
+    // a single dark cloth wound round the body and thrown over the left shoulder
+    g.fillStyle = hex(o.skin);
+    g.beginPath(); g.moveTo(cx + 10, Y(1.49)); g.lineTo(cx - 64, Y(1.30)); g.lineTo(x0, Y(1.40)); g.lineTo(x0, Y(1.49)); g.fill();
+    g.strokeStyle = shade(c, 1.35); g.lineWidth = 3.5; g.beginPath(); g.moveTo(cx + 10, Y(1.49)); g.lineTo(cx - 64, Y(1.30)); g.lineTo(x0, Y(1.40)); g.stroke();
+    g.strokeStyle = 'rgba(0,0,0,0.2)'; g.lineWidth = 2; for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo(cx + 10 + i * 9, Y(1.49)); g.lineTo(cx - 64 + i * 14, Y(1.26 - i * 0.03)); g.stroke(); }
   } else if (o.style === 'blouse') {
     // short blouse, bare midriff, neriyathu draped to the left shoulder
     paintSkin(g, [x0, Y(1.16) | 0, x1, y1], o.skin, rng);
@@ -291,7 +346,7 @@ function paintLeg(g, o, rng) {
     g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x0 + Wd / 2, y0); g.lineTo(x0 + Wd / 2, y1); g.stroke();
     g.fillStyle = 'rgba(0,0,0,0.14)'; g.fillRect(x0, Y(0.52), Wd, 9);
     if (o.puttees != null) { g.fillStyle = hex(o.puttees); g.fillRect(x0, Y(0.42), Wd, y1 - Y(0.42)); g.strokeStyle = 'rgba(0,0,0,0.25)'; for (let yy = Y(0.42); yy < y1; yy += 9) { g.beginPath(); g.moveTo(x0, yy); g.lineTo(x1, yy + 5); g.stroke(); } }
-    if (o.boots != null) { g.fillStyle = hex(o.boots); g.fillRect(x0, Y(0.30), Wd, y1 - Y(0.30)); g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(x0 + Wd * 0.4, Y(0.30), 8, y1 - Y(0.30)); }
+    if (o.boots != null) { const bt = o.tallBoots ? 0.5 : 0.30; g.fillStyle = hex(o.boots); g.fillRect(x0, Y(bt), Wd, y1 - Y(bt)); g.fillStyle = 'rgba(255,255,255,0.1)'; g.fillRect(x0 + Wd * 0.4, Y(bt), 8, y1 - Y(bt)); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(x0, Y(bt), Wd, 3); }
   } else {
     paintSkin(g, R_LEG, o.skin, rng);
     let grd = g.createLinearGradient(x0, 0, x1, 0);
@@ -303,7 +358,7 @@ function paintLeg(g, o, rng) {
   }
   // foot swatch
   if (o.boots != null) { g.fillStyle = hex(o.boots); g.fillRect(64, 448, 64, 64); g.fillStyle = 'rgba(255,255,255,0.1)'; g.fillRect(64, 448, 64, 10); }
-  else { paintSkin(g, [64, 448, 128, 512], o.skin, rng); g.fillStyle = 'rgba(60,40,20,0.28)'; g.fillRect(64, 448, 64, 64); }
+  else { paintSkin(g, [64, 448, 128, 512], o.skin, rng); g.fillStyle = 'rgba(60,40,20,0.28)'; g.fillRect(64, 448, 64, 64); if (o.sandals) { g.fillStyle = '#2a1a10'; g.fillRect(64, 468, 64, 6); g.fillRect(64, 492, 64, 5); g.fillRect(93, 448, 6, 64); } }
 }
 
 function paintSkirt(g, o, rng) {
@@ -334,6 +389,15 @@ function paintSkirt(g, o, rng) {
     g.fillStyle = '#c9a13a'; g.fillRect(x0, y1 - 13, Wd, 8); g.fillRect(x0 + Wd * 0.41 + 2, y0 + 10, 7, H - 10);
     g.fillStyle = '#8a6a1c'; g.fillRect(x0, y1 - 14, Wd, 1.5); g.fillRect(x0, y1 - 5, Wd, 1.5);
   } else if (!o.lungi) { g.fillStyle = shade(c, 0.72); g.fillRect(x0, y1 - 7, Wd, 3); }
+  if (o.knot) {
+    const kx = x0 + Wd * 0.5;
+    g.fillStyle = shade(c, 0.93); g.fillRect(kx - 10, y0 + 10, 20, H - 12);
+    g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1.4; for (const dx of [-10, -3.5, 3.5, 10]) { g.beginPath(); g.moveTo(kx + dx, y0 + 14); g.lineTo(kx + dx * 1.25, y1 - 3); g.stroke(); }
+    g.fillStyle = 'rgba(0,0,0,0.28)'; g.beginPath(); g.ellipse(kx, y0 + 15, 15, 8, 0, 0, 7); g.fill();
+    g.fillStyle = hex(c); g.beginPath(); g.ellipse(kx, y0 + 11, 14, 7.5, 0, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(0,0,0,0.32)'; g.lineWidth = 1.3; g.beginPath(); g.ellipse(kx, y0 + 11, 14, 7.5, 0, 0, 7); g.stroke(); g.beginPath(); g.moveTo(kx - 8, y0 + 8); g.quadraticCurveTo(kx, y0 + 14, kx + 8, y0 + 8); g.stroke();
+    if (o.kasavu) { g.fillStyle = '#c9a13a'; g.fillRect(kx + 6, y0 + 18, 4, H - 22); }
+  }
   if (!o.munduLong) { g.strokeStyle = 'rgba(0,0,0,0.22)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x0, y0 + H * 0.2); g.lineTo(x1, y0 + H * 0.22); g.stroke(); }
   if (o.dirty) { g.fillStyle = 'rgba(80,50,22,0.2)'; g.fillRect(x0, y1 - 40, Wd, 40); for (let i = 0; i < 16; i++) { g.beginPath(); g.arc(x0 + rng() * Wd, y1 - rng() * 60, 4 + rng() * 10, 0, 7); g.fill(); } }
   g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x0, y1 - 2.5, Wd, 2.5);
@@ -368,6 +432,26 @@ function makeTexture(o) {
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   // a little self-illumination keeps faces readable in shade, as hand-lit game characters were
   const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.16 });
+  m.userData = { canvas: c, seed, key };
+  texCache.set(key, m);
+  return m;
+}
+// the same character with another face: only the head region is repainted
+function faceMaterial(o, expr, open) {
+  const base = makeTexture(o);
+  if ((!expr || expr === 'neutral') && !open) return base;
+  const key = base.userData.key + '|' + expr + (open ? '|o' : '');
+  if (texCache.has(key)) return texCache.get(key);
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d');
+  g.drawImage(base.userData.canvas, 0, 0);
+  g.save(); g.beginPath(); g.rect(R_HEAD[0], R_HEAD[1], R_HEAD[2] - R_HEAD[0], R_HEAD[3] - R_HEAD[1]); g.clip();
+  paintHead(g, { ...o, expr, mouthOpen: open }, makeRng(base.userData.seed));
+  g.globalAlpha = 0.5; g.globalCompositeOperation = 'overlay'; g.drawImage(grainCanvas(), 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.restore();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const m = base.clone(); m.map = t; m.emissiveMap = t;
   texCache.set(key, m);
   return m;
 }
@@ -381,7 +465,7 @@ function bodyGeometry(o) {
   const fem = !!o.female, belly = !!o.belly, skirt = o.trousers == null, long = !!o.munduLong;
   const shirtOver = o.shirt != null && o.style !== 'blouse';
   const bk = (o.build ?? 1) * (fem ? 1.05 : 1.17);
-  const key = [fem, belly, skirt, long, shirtOver, o.boots != null, !!o.shoulderCloth, o.style === 'frock', bk].join('|');
+  const key = [fem, belly, skirt, long, shirtOver, o.boots != null, !!o.shoulderCloth, o.style === 'frock', bk, !!o.child].join('|');
   if (geoCache.has(key)) return geoCache.get(key);
   const g = new SGB(512);
   const ring = (y, rx, zf, zb, w, v, cx = 0, cz = 0, mod) => ({ c: [cx, y, cz], ax: [rx, 0, 0], az: [0, 0, zf], azB: [0, 0, zb], w, v, mod });
@@ -422,25 +506,25 @@ function bodyGeometry(o) {
     const a = wrap(th), s = Math.abs(a) - Math.PI / 2;
     return 1 + nose * Math.exp(-(a * a) / 0.045) + ear * Math.exp(-(s * s) / 0.03) + chin * Math.exp(-(a * a) / 0.2);
   };
-  const hs = fem ? 1.07 : 1.14, yTop = 1.776, yBot = 1.49;
+  const hs = (fem ? 1.1 : 1.19) * (o.child ? 1.2 : 1), yTop = 1.776, yBot = 1.49;
   const Hd = [
     [1.49, 0.050, 0.052, 0.052, [[B.chest, 0.4], [B.head, 0.6]], null],
     [1.535, 0.050, 0.056, 0.053, [[B.head, 1]], null],
-    [1.555, 0.058, 0.076, 0.060, [[B.head, 1]], face(0, 0, 0.05)],
-    [1.585, 0.068, 0.088, 0.074, [[B.head, 1]], face(0.02, 0)],
-    [1.612, 0.073, 0.092, 0.084, [[B.head, 1]], face(0.05, 0.05)],
+    [1.555, 0.050, 0.074, 0.058, [[B.head, 1]], face(0, 0, 0.05)],
+    [1.585, 0.062, 0.088, 0.072, [[B.head, 1]], face(0.02, 0)],
+    [1.612, 0.070, 0.092, 0.084, [[B.head, 1]], face(0.05, 0.05)],
     [1.640, 0.076, 0.093, 0.090, [[B.head, 1]], face(0.17, 0.12)],
     [1.665, 0.077, 0.092, 0.093, [[B.head, 1]], face(0.07, 0.12)],
     [1.700, 0.078, 0.091, 0.096, [[B.head, 1]], face(0.02, 0.03)],
-    [1.735, 0.074, 0.083, 0.094, [[B.head, 1]], null],
-    [1.762, 0.058, 0.063, 0.075, [[B.head, 1]], null],
+    [1.735, 0.071, 0.081, 0.092, [[B.head, 1]], null],
+    [1.762, 0.052, 0.058, 0.070, [[B.head, 1]], null],
   ];
   g.loft(Hd.map(([y, rx, zf, zb, w, mod]) => ring(y, rx * hs, zf * hs, zb * hs, w, (yTop - y) / (yTop - yBot), 0, 0.004, mod)), 18, R_HEAD, { capEnd: 0.014 });
 
   // ---------------- arms
   for (const s of [-1, 1]) {
     const up = s < 0 ? B.armL : B.armR, fo = s < 0 ? B.foreL : B.foreR, ha = s < 0 ? B.handL : B.handR;
-    const k = (fem ? 1.0 : 1.2) * (o.build ?? 1), sx = 0.2 * (fem ? 0.9 : 1.1);
+    const k = (fem ? 1.0 : 1.2) * (o.build ?? 1), sx = 0.2 * (fem ? 0.9 : 1.06);
     const A = [
       [1.47, 0.02, 0.024, [[B.chest, 0.5], [up, 0.5]]],
       [1.458, 0.038, 0.042, [[B.chest, 0.5], [up, 0.5]]],
@@ -534,6 +618,13 @@ function addMesh(parent, geo, mat, x, y, z, sx = 1, sy = sx, sz = sx) {
 }
 const G_SPH = new THREE.SphereGeometry(1, 14, 10), G_HEMI = new THREE.SphereGeometry(1, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2);
 const G_CYL = new THREE.CylinderGeometry(1, 1, 1, 14), G_TORUS = new THREE.TorusGeometry(1, 0.42, 8, 16);
+const G_BOX = new THREE.BoxGeometry(1, 1, 1);
+const G_CAPE = new THREE.CylinderGeometry(0.21, 0.37, 1, 12, 3, true, Math.PI * 0.4, Math.PI * 1.2);
+const G_HOOD = new THREE.ConeGeometry(0.2, 0.34, 12, 2, true);
+const G_BASKET = new THREE.LatheGeometry([[0.001, 0], [0.13, 0.01], [0.2, 0.13], [0.215, 0.15]].map(([r, h]) => new THREE.Vector2(r, h)), 12);
+const G_CANOPY = new THREE.ConeGeometry(0.62, 0.2, 14, 1, true);
+let _leafMat = null;
+function leafMat() { return _leafMat || (_leafMat = new THREE.MeshStandardMaterial({ color: 0xc2ab72, map: TEX.thatch || null, roughness: 1, side: THREE.DoubleSide })); }
 
 // =====================================================================
 //  THE CHARACTER
@@ -543,11 +634,12 @@ export class Human {
     o = { skin: 0x8d5b3c, ...o };
     this.preset = o;
     const { scale, ...look } = o;
+    this.look = look; this.expr = 'neutral'; this.mouthOpen = false; this.talking = false; this.exprT = 0;
     this.root = new THREE.Group();
     this.root.scale.setScalar(scale ?? 1);
     this.body = new THREE.Group(); this.root.add(this.body);
     const bone = (parent, x, y, z) => { const b = new THREE.Bone(); b.position.set(x, y, z); parent.add(b); return b; };
-    const fem = !!o.female, sx = 0.2 * (fem ? 0.9 : 1.1);
+    const fem = !!o.female, sx = 0.2 * (fem ? 0.9 : 1.06);
     const hips = this.hips = bone(this.body, 0, 0.94, 0);
     const spine = this.spine = bone(hips, 0, 0.09, 0);
     const chest = this.chest = bone(spine, 0, 0.21, 0);
@@ -593,6 +685,21 @@ export class Human {
     } else if (o.headgear === 'fez') {
       addMesh(hd, new THREE.CylinderGeometry(0.066, 0.08, 0.1, 14), AM(gc ?? 0x8a1c1c, 0.9), 0, 0.105, -0.006);
     }
+    if (o.tuft) addMesh(hd, G_SPH, hairM, 0, 0.012, 0.062, 0.03, 0.03, 0.036);            // the Namboothiri's forelock
+    if (o.braid) {
+      for (let i = 0; i < 9; i++) addMesh(chest, G_SPH, hairM, Math.sin(i * 1.9) * 0.006, 0.3 - i * 0.052, -0.118 - Math.sin(i * 0.4) * 0.012, 0.026 - i * 0.0012, 0.036, 0.024);
+      addMesh(hd, G_SPH, hairM, 0, -0.06, -0.1, 0.05, 0.06, 0.04);
+      if (o.flowers) for (let i = 0; i < 3; i++) addMesh(chest, G_TORUS, AM(0xf6f2e6, 0.9), 0, 0.33 - i * 0.075, -0.124, 0.03, 0.03, 0.022).rotation.x = Math.PI / 2;
+    }
+    if (o.bag != null) {
+      addMesh(this.hips, G_BOX, AM(o.bag, 0.95), 0.215, 0.0, 0.02, 0.07, 0.23, 0.2);
+      addMesh(this.hips, G_BOX, AM(shadeN(o.bag, 0.75), 0.95), 0.222, 0.075, 0.02, 0.072, 0.09, 0.205);
+    }
+    if (o.cape) {          // the woven palm-leaf rain cape of the monsoon
+      const cp = addMesh(chest, G_CAPE, leafMat(), 0, -0.2, -0.005, 1, 0.98, 1); cp.rotation.x = 0.07;
+      const hood = addMesh(hd, G_HOOD, leafMat(), 0, 0.085, -0.03, 1, 1, 1.12); hood.rotation.x = -0.32;
+    }
+    if (o.basketHead) { addMesh(hd, G_BASKET, leafMat(), 0, 0.045, 0, 1); addMesh(hd, G_TORUS, AM(0x8a7a5a, 1), 0, 0.04, 0, 0.07, 0.07, 0.03).rotation.x = Math.PI / 2; }
     if (o.earrings) for (const s of [-1, 1]) addMesh(hd, G_SPH, AM(0xd9a93a, 0.35, { metalness: 0.5 }), s * 0.081, -0.085, 0.0, 0.009);
     if (o.necklace) { const n = addMesh(chest, G_TORUS, AM(0xd9a93a, 0.35, { metalness: 0.5 }), 0, 0.205, 0.022, 0.062, 0.062, 0.02); n.rotation.x = Math.PI / 2 - 0.5; }
 
@@ -602,6 +709,25 @@ export class Human {
     this.j = { legL: 0, legR: 0, kneeL: 0, kneeR: 0, armL: 0, armR: 0, elL: 0, elR: 0, spine: 0, hipY: 0.94, armLz: 0, armRz: 0, legLz: 0, legRz: 0, bodyX: 0, bodyY: 0, twist: 0, head: 0, headY: 0, sway: 0 };
   }
 
+  // facial expression: 'neutral' | 'determined' | 'laughing' | 'worried' | 'angry' | 'grieving'
+  setExpression(e = 'neutral', hold = 0) {
+    if (!EXPR[e]) e = 'neutral';
+    this.exprT = hold;
+    if (e === this.expr) return;
+    this.expr = e; this.mesh.material = faceMaterial(this.look, this.expr, this.mouthOpen);
+  }
+  // a palm-leaf umbrella (olakkuda) carried when it rains
+  setUmbrella(on) {
+    if (on && !this.umb) {
+      const u = this.umb = new THREE.Group();
+      const sh = new THREE.Mesh(G_CYL, AM(0x4a3a26, 0.9)); sh.scale.set(0.011, 0.74, 0.011); sh.position.set(0.185, 0.45, 0.22); sh.rotation.set(-0.27, 0, 0.18); u.add(sh);
+      const cn = new THREE.Mesh(G_CANOPY, leafMat()); cn.position.set(0.12, 0.84, 0.12); cn.castShadow = true; u.add(cn);
+      const tip = new THREE.Mesh(G_SPH, AM(0x4a3a26, 0.9)); tip.scale.setScalar(0.022); tip.position.set(0.12, 0.95, 0.12); u.add(tip);
+      this.chest.add(u);
+    }
+    if (this.umb) this.umb.visible = !!on;
+    this.umbrella = !!on;
+  }
   hold(obj, right = true) { (right ? this.armR : this.armL).hand.add(obj); return obj; }
 
   update(dt) {
@@ -668,6 +794,11 @@ export class Human {
     } else if (s === 'pray') {
       g.armL = g.armR = -0.95; g.elL = g.elR = -1.75; g.armLz = 0.42; g.armRz = -0.42; g.head = 0.22; g.spine = 0.08;
     }
+    if (this.exprT > 0) { this.exprT -= dt; if (this.exprT <= 0) this.setExpression('neutral'); }
+    const mo = this.talking && (Math.sin(t * 17) + Math.sin(t * 7.3)) > 0.15;
+    if (mo !== this.mouthOpen) { this.mouthOpen = mo; this.mesh.material = faceMaterial(this.look, this.expr, mo); }
+    if (this.umbrella && (s === 'idle' || s === 'move' || s === 'talk')) { g.armR = -0.75; g.elR = -1.9; g.armRz = 0.1; }
+    if (this.headLoad && (s === 'idle' || s === 'move')) { g.armL = -3.02; g.elL = -0.22; g.armLz = 0.16; g.sway *= 0.4; g.headY = 0; }
     if (this.carry && (s === 'idle' || s === 'move')) { g.armL = -0.1; g.elL = -0.25; g.armLz = -0.22; }
     if (this.blocking && this.strikeT < 0) { g.armR = -1.35; g.elR = -1.5; g.armRz = -0.3; g.armL = -1.2; g.elL = -1.4; g.armLz = 0.3; g.spine += 0.12; k = 26; }
     if (this.strikeT >= 0) {
@@ -702,46 +833,54 @@ export class Human {
 // =====================================================================
 export const SKIN = [0x8d5b3c, 0x7a4b30, 0x9b6a48, 0x6e432b, 0x84553a, 0xa67650];
 export const CAST = {
-  madhavan: { skin: SKIN[0], mundu: 0xe4dcc6, moustache: true, headgear: 'thorthu', gearColor: 0xb8402c, build: 1.06 },
-  ammavan: { skin: SKIN[1], mundu: 0xefe9d8, munduLong: true, kasavu: true, grey: true, receding: true, moustache: 'big', belly: true, age: true, shoulderCloth: 0xefe9d8, mark: 'chandanam', thread: true, scale: 0.98 },
-  devaki: { female: true, skin: SKIN[2], mundu: 0xf0ead8, munduLong: true, kasavu: true, shirt: 0x8a2f3a, style: 'blouse', bun: true, flowers: true, mark: 'pottu', bangles: true, earrings: true, necklace: true, scale: 0.93 },
-  ouseph: { skin: SKIN[3], mundu: 0x4a6a8a, lungi: 0x24384c, beard: true, grey: true, age: true, headgear: 'thorthu', gearColor: 0xd8d0b8 },
-  moideen: { skin: SKIN[4], mundu: 0xe8e2d2, munduLong: true, shirt: 0xeae6da, style: 'kurta', longSleeves: true, beard: true, headgear: 'cap', belly: true, age: true },
+  // Madhavan, after the turnaround sheet: lean, hair knotted behind, moustache, charm on a cord,
+  // a cloth on the left shoulder and a long cream mundu knotted at the waist
+  madhavan: { skin: SKIN[0], mundu: 0xe9e0c8, munduLong: true, knot: true, moustache: true, bun: true, pendant: true, muscle: true, shoulderCloth: 0xe4dac0, build: 1.04 },
+  ammavan: { skin: SKIN[1], mundu: 0xefe9d8, munduLong: true, kasavu: true, knot: true, grey: true, receding: true, moustache: 'big', belly: true, age: true, shoulderCloth: 0xefe9d8, mark: 'chandanam', thread: true, pendant: true, scale: 0.98 },
+  devaki: { female: true, skin: SKIN[2], mundu: 0xf3edda, munduLong: true, kasavu: true, shirt: 0xf1ead6, style: 'blouse', neriyathu: 0xf3edda, braid: true, flowers: true, mark: 'pottu', bangles: true, earrings: true, necklace: true, scale: 0.93 },
+  ouseph: { skin: SKIN[3], mundu: 0x4a6a8a, lungi: 0x24384c, beard: true, grey: true, age: true, headgear: 'thorthu', gearColor: 0xd8d0b8, pendant: true },
+  moideen: { skin: SKIN[4], mundu: 0xd9d6c4, lungi: 0x2f5a4a, munduLong: true, shirt: 0xeae6da, style: 'kurta', longSleeves: true, beard: true, headgear: 'cap', belly: true, age: true, bag: 0x7a5a36, sandals: true },
   finch: { skin: 0xd9a98c, trousers: 0xcbbf9f, shirt: 0xd5cab0, style: 'jacket', longSleeves: true, moustache: 'big', hair: 0x8a6a3a, eye: 0x4a6a80, headgear: 'topi', boots: 0x3a2416, scale: 1.04 },
   harrow: { skin: 0xd6ad98, trousers: 0x2a2830, shirt: 0x23222a, style: 'frock', waistcoat: 0x5a5560, tie: 0x6a1420, longSleeves: true, grey: true, chops: true, moustache: true, age: true, stern: true, eye: 0x5a6a78, headgear: 'tophat', boots: 0x141214, belly: true, scale: 1.05 },
   dacre: { skin: 0xc99a80, trousers: 0x5a4c36, puttees: 0x6a5c44, shirt: 0x4a4436, style: 'jacket', tie: 0x2a2a20, longSleeves: true, hair: 0x3a2a1a, beard: 'stubble', moustache: true, stern: true, eye: 0x4a5a4a, headgear: 'slouch', boots: 0x2a1c10, scale: 1.09 },
-  carmichael: { skin: 0xddb49c, trousers: 0xe6e0d0, shirt: 0xe9e3d2, style: 'jacket', tie: 0x1c2a44, longSleeves: true, hair: 0x6a4a2a, moustache: true, eye: 0x4a6a80, headgear: 'topi', boots: 0x3a2416, scale: 1.02 },
+  // the colonial officer of the sheet: white drill, pith helmet, tall brown boots
+  carmichael: { skin: 0xddb49c, trousers: 0xece7d8, shirt: 0xeee9da, style: 'uniform', longSleeves: true, hair: 0x6a4a2a, moustache: 'big', eye: 0x4a6a80, headgear: 'topi', gearColor: 0xe9e3d0, boots: 0x4a2c16, tallBoots: true, scale: 1.03 },
   peishkar: { skin: SKIN[2], trousers: 0xe8e4d8, shirt: 0x24303e, style: 'frock', waistcoat: 0x24303e, tie: 0xe8e4d8, longSleeves: true, moustache: 'big', headgear: 'turban', gearColor: 0xe9d9a8, boots: 0x20140c, mark: 'chandanam', age: true },
   guard: { skin: SKIN[1], mundu: 0x8a7d5a, shirt: 0x8a7d5a, style: 'uniform', longSleeves: true, moustache: 'big', headgear: 'turban', gearColor: 0x9c2a20, stern: true },
   thug: { skin: SKIN[3], mundu: 0x5a4a3c, lungi: 0x2c241c, shirt: 0x3d3a34, dirty: true, moustache: 'big', beard: 'stubble', stern: true, headgear: 'thorthu', gearColor: 0x3a3028 },
   velu: { skin: SKIN[3], mundu: 0xd9d2bd, shirt: 0x9a9078, style: 'kurta', dirty: true, moustache: true, headgear: 'turban', gearColor: 0xd8d0b8 },
-  priest: { skin: SKIN[0], mundu: 0xf2ecdc, munduLong: true, kasavu: true, grey: true, bald: true, age: true, shoulderCloth: 0xf2ecdc, mark: 'bhasmam', thread: true },
+  // Namboothiri: bare chest, sacred thread, ash stripes, the forelock, a kasavu mundu
+  priest: { skin: SKIN[5], mundu: 0xf2ecdc, munduLong: true, kasavu: true, knot: true, bald: true, tuft: true, mark: 'bhasmam', thread: true, belly: true },
+  nasraniWoman: { female: true, skin: SKIN[2], mundu: 0xf4f0e4, munduLong: true, shirt: 0xf4f0e4, style: 'chatta', longSleeves: true, rosary: true, bun: true, earrings: true, age: true, scale: 0.92 },
+  fisherwoman: { female: true, skin: SKIN[3], mundu: 0x2c3140, munduLong: true, shirt: 0x2c3140, style: 'wrap', sleeves: false, bun: true, bangles: true, basketHead: true, scale: 0.92 },
+  child: { skin: SKIN[0], mundu: 0xd9cfb4, child: true, scale: 0.6 },
+  childF: { female: true, skin: SKIN[2], mundu: 0x8a3a3a, munduLong: true, shirt: 0xe8dcc0, style: 'chatta', child: true, braid: true, scale: 0.58 },
   oarsman: [
     { skin: SKIN[0], mundu: 0xe6dfcb, headgear: 'thorthu', gearColor: 0xb8402c },
     { skin: SKIN[3], mundu: 0xe6dfcb, moustache: true, headgear: 'thorthu', gearColor: 0xb8402c },
   ],
   rival: { skin: SKIN[1], mundu: 0x2c3a52, shirt: 0x8a8272, sleeves: false, moustache: true, headgear: 'thorthu', gearColor: 0x1c2c4c },
   villagerM: [
-    { skin: SKIN[0], mundu: 0xe6dfcb, moustache: true },
+    { skin: SKIN[0], mundu: 0xe6dfcb, moustache: true, pendant: true },
     { skin: SKIN[3], mundu: 0xb8b09a, lungi: 0x6a3a2a, headgear: 'thorthu', dirty: true },
-    { skin: SKIN[1], mundu: 0xe9e2cf, munduLong: true, moustache: 'big', shoulderCloth: 0xe6dfcb, age: true, grey: true },
-    { skin: SKIN[4], mundu: 0xe8e2d2, munduLong: true, shirt: 0xe6e0d0, style: 'kurta', headgear: 'cap', beard: true },
+    { skin: SKIN[1], mundu: 0xe9e2cf, munduLong: true, knot: true, moustache: 'big', shoulderCloth: 0xe6dfcb, age: true, grey: true },
+    { skin: SKIN[4], mundu: 0xdcd6c2, lungi: 0x35506a, munduLong: true, shirt: 0xe6e0d0, style: 'kurta', headgear: 'cap', beard: true, sandals: true },
     { skin: SKIN[2], mundu: 0x35506a, lungi: 0x1c2c3c, grey: true, beard: true, age: true, receding: true },
     { skin: SKIN[5], mundu: 0xe2dac4, shirt: 0xcfc8b4, moustache: true, munduLong: true },
     { skin: SKIN[1], mundu: 0xd9d2bd, beard: 'stubble', headgear: 'thorthu', gearColor: 0x4a6a4a, dirty: true },
   ],
   villagerF: [
     { female: true, skin: SKIN[2], mundu: 0xefe9d8, munduLong: true, kasavu: true, shirt: 0x2f5a4a, style: 'blouse', bun: true, mark: 'pottu', bangles: true, earrings: true, scale: 0.92 },
-    { female: true, skin: SKIN[0], mundu: 0xe9e1cc, munduLong: true, shirt: 0x7a3a5a, style: 'blouse', bun: true, flowers: true, mark: 'pottu', bangles: true, scale: 0.9 },
+    { female: true, skin: SKIN[0], mundu: 0xe9e1cc, munduLong: true, shirt: 0x7a3a5a, style: 'blouse', braid: true, flowers: true, mark: 'pottu', bangles: true, scale: 0.9 },
     { female: true, skin: SKIN[4], mundu: 0xe5ddc8, munduLong: true, kasavu: true, shirt: 0xb0862a, style: 'blouse', bun: true, earrings: true, necklace: true, age: true, grey: true, scale: 0.9 },
     { female: true, skin: SKIN[5], mundu: 0xf0e8d4, munduLong: true, shirt: 0x3a4a7a, style: 'blouse', neriyathu: 0xe8dcc0, bun: true, bangles: true, scale: 0.93 },
   ],
-  // player wardrobe (sold by the tailor in Puthenthura)
+  // Madhavan's wardrobe, after the outfit sheet (the tailor in Puthenthura sells the rest)
   outfits: {
-    boatman: { name: 'Boatman', price: 0, look: { skin: SKIN[0], mundu: 0xe4dcc6, moustache: true, headgear: 'thorthu', gearColor: 0xb8402c } },
-    sunday: { name: 'Sunday best', price: 96, look: { skin: SKIN[0], mundu: 0xf2ecdc, munduLong: true, kasavu: true, shirt: 0xf0ebdd, style: 'kurta', longSleeves: true, moustache: true } },
-    bombay: { name: 'Bombay dockhand', price: 128, look: { skin: SKIN[0], trousers: 0x4a4a52, shirt: 0x8a3a2a, moustache: true, headgear: 'cap', gearColor: 0x3a3a40, boots: 0x2a1c10 } },
-    planter: { name: 'Planter\'s khaki', price: 240, look: { skin: SKIN[0], trousers: 0xb5a57e, puttees: 0x8a7c5c, shirt: 0xc2b48c, style: 'uniform', longSleeves: true, moustache: true, headgear: 'topi', boots: 0x3a2416 } },
-    festival: { name: 'Festival silk', price: 320, look: { skin: SKIN[0], mundu: 0xf6f0dc, munduLong: true, kasavu: true, shoulderCloth: 0xf6f0dc, moustache: true, mark: 'chandanam', thread: false } },
+    everyday: { name: 'Everyday', price: 0, look: { skin: SKIN[0], mundu: 0xe9e0c8, munduLong: true, knot: true, moustache: true, bun: true, pendant: true, muscle: true, shoulderCloth: 0xe4dac0 } },
+    boatman: { name: 'Boatman\'s daily wear', price: 0, look: { skin: SKIN[0], mundu: 0xe2d8be, knot: true, moustache: true, pendant: true, muscle: true, headgear: 'thorthu', gearColor: 0xe6dcc2 } },
+    travel: { name: 'Travel wear', price: 64, look: { skin: SKIN[0], mundu: 0xe6dcc4, munduLong: true, knot: true, moustache: true, bun: true, pendant: true, muscle: true, bag: 0x7a6238, shoulderCloth: 0x9a8a62 } },
+    monsoon: { name: 'Monsoon wear', price: 96, look: { skin: SKIN[0], mundu: 0x4a4c50, munduLong: true, knot: true, moustache: true, bun: true, pendant: true, muscle: true, cape: true } },
+    festival: { name: 'Festival wear', price: 320, look: { skin: SKIN[0], mundu: 0xf6f0dc, munduLong: true, kasavu: true, knot: true, moustache: true, bun: true, pendant: true, muscle: true, shoulderCloth: 0xf6f0dc, mark: 'chandanam' } },
   },
 };

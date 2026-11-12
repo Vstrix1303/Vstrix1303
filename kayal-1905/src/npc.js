@@ -1,7 +1,7 @@
 // Villagers, guards (stealth + melee AI), a duelling boss, and riders.
 import * as THREE from 'three';
 import { G } from './state.js';
-import { Human, CAST, makeStick, makeLantern, Quadruped } from './characters.js';
+import { Human, CAST, makeStick, makeLantern, makeCane, makeSlate, Quadruped } from './characters.js';
 import { getHeight } from './heightfield.js';
 import { groundAt, resolve, segmentBlocked } from './physics.js';
 import { clamp, damp, angleDamp, angleDiff, lerp } from './util.js';
@@ -45,6 +45,10 @@ export class NPC {
       scene.add(this.cone);
       this.viewDist = o.viewDist || 13;
     }
+    if (o.cane) this.h.hold(makeCane(o.cane === true ? 0.92 : o.cane));
+    if (o.slate) this.h.hold(makeSlate(), false);
+    if (o.headLoad) this.h.headLoad = true;
+    this.umbrellaOK = !!o.umbrella;
     this.root.traverse((ob) => ob.layers.set(1));
     scene.add(this.root);
     this.sync();
@@ -143,6 +147,10 @@ export class NPC {
     this.blockT -= dt;
     this.h.blocking = this.blockT > 0;
     if (this.lantern) this.lantern.visible = G.env.night > 0.25;
+    if (this.umbrellaOK) {
+      const want = G.env.rain > 0.3 && !this.hostile && !this.ko && !this.attached;
+      if (want !== !!this.h.umbrella) { this.h.setUmbrella(want); this.h.umb?.traverse((ob) => ob.layers.set(1)); }
+    }
 
     if (this.ko) { state = 'ko'; }
     else if (this.stun > 0) {

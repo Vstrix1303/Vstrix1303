@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GB, TRS, boxGeo, hipRoofGeo, gableRoofGeo, gableEndGeo } from './geo.js';
 import { TEX } from './textures.js';
 import { getHeight } from './heightfield.js';
-import { addBox, addPlatform, addCircle } from './physics.js';
+import { addBox, addPlatform, addCircle, addInterior } from './physics.js';
 
 export function makeMaterials() {
   const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0, vertexColors: true, ...o });
@@ -18,6 +18,9 @@ export function makeMaterials() {
     plank: std({ map: TEX.plank, roughness: 0.9 }),
     sack: std({ map: TEX.sack, roughness: 1 }),
     sign: std({ map: TEX.signs, roughness: 0.9 }),
+    gable: std({ map: TEX.gable, roughness: 0.8, side: THREE.DoubleSide }),
+    mural: std({ map: TEX.mural, roughness: 0.9 }),
+    jali: std({ map: TEX.jali, roughness: 0.75, side: THREE.DoubleSide }),
     tin: std({ map: TEX.tin, roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide }),
     paint: std({ roughness: 0.8 }),
     brass: std({ color: 0xffffff, roughness: 0.32, metalness: 0.55, emissive: 0x3a2606, emissiveIntensity: 0.6 }),
@@ -82,6 +85,33 @@ export class Builder {
       this.geo(endMat, e, TRS(x, y, z, 0, ry, 0).multiply(TRS(w / 2 - 0.25, 0, 0)));
       this.geo(endMat, e, TRS(x, y, z, 0, ry, 0).multiply(TRS(-w / 2 + 0.25, 0, 0, 0, Math.PI, 0)));
     }
+    return this;
+  }
+  // a turned object (pots, lamps, baskets): profile = [[radius, height], …]
+  lathe(mat, profile, x, y, z, o = {}) {
+    const geo = new THREE.LatheGeometry(profile.map(([r, h]) => new THREE.Vector2(r, h)), o.seg || 10);
+    const s = o.s || 1;
+    const m = this.m.clone().multiply(TRS(x, y, z, o.rx || 0, o.ry || 0, o.rz || 0, s));
+    this.gb(mat).add(geo, m, o.col, o.uv || [2, 1]);
+    geo.dispose();
+    return this;
+  }
+  // a painted triangular pediment facing local +Z (rotated by ry)
+  tri(mat, w, h, x, y, z, ry = 0, col) {
+    const g = new GB();
+    const a = g.vert(-w / 2, 0, 0, 0, 0, 1, 0, 0), c = g.vert(w / 2, 0, 0, 0, 0, 1, 1, 0), d = g.vert(0, h, 0, 0, 0, 1, 0.5, 1);
+    g.tri(a, c, d);
+    return this.geo(mat, g.build(false), TRS(x, y, z, 0, ry, 0), col);
+  }
+  // a flat painted panel facing local +Z
+  panel(mat, w, h, x, y, z, ry = 0, uv = [1, 1]) {
+    const geo = new THREE.PlaneGeometry(w, h);
+    const u = geo.attributes.uv; for (let k = 0; k < u.count; k++) u.setXY(k, u.getX(k) * uv[0], u.getY(k) * uv[1]);
+    return this.geo(mat, geo, TRS(x, y + h / 2, z, 0, ry, 0));
+  }
+  interior(x, z, hw, hd, ceil) {
+    const p = this.world(x, 0, z);
+    addInterior(p.x, p.z, hw, hd, this.ry, this.oy + ceil);
     return this;
   }
   // a thin square bar between two WORLD points (wires, rails, ropes)

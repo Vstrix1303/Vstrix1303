@@ -391,7 +391,7 @@ async function fireOnTheQuay(S, A, W, p, env, cp) {
     G.audio?.sfx('bell');
     G.audio?.setMood('chase');
     const hx = -416, hz = -356;
-    const spots = [[hx + 1, 4.4, hz - 2], [hx - 2, 4.9, hz + 2.5], [hx + 5.2, 1.6, hz + 1.5], [-406, 1.2, -349], [-388, 2.2, -350]];
+    const spots = [[hx + 1, 8.6, hz - 2], [hx - 2, 9.0, hz + 2.5], [hx + 6.6, 4.4, hz + 1.5], [-406, 1.2, -349], [-388, 2.2, -350]];
     const fires = spots.map(([x, y, z]) => {
       const pos = new THREE.Vector3(x, groundAt(x, z) + y, z);
       const em = fx.addEmitter({ pos, type: 'fire', rate: 30, scale: 1.4 });

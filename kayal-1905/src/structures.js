@@ -6,65 +6,11 @@ import { GB, TRS } from './geo.js';
 import { LOC, getHeight, canalZ, ROADS } from './heightfield.js';
 import { pointInBox } from './physics.js';
 import { makeRng, TAU } from './util.js';
+import { house, kettu, spiceHouse, nasraniHouse, wall, P, olakkuda, barrel, toolbox, castNet, poles, compound } from './houses.js';
 
 export const SPOTS = {};   // named world positions used by the story
 const BRASS = [0.95, 0.72, 0.28];
 const DOOR = [0.55, 0.42, 0.34];
-
-function house(b, x, z, ry, o = {}) {
-  const w = o.w || 8, d = o.d || 6, wallH = o.wallH || 2.7, ov = o.overhang ?? 1.4;
-  const wall = o.wall || 'wall', roof = o.roof || 'roof';
-  b.place(x, z, ry);
-  b.box('laterite', w + ov * 2 - 0.5, 2.0, d + ov * 2 - 0.5, 0, -1.5, 0);
-  const y0 = 0.5;
-  b.box(wall, w, wallH, d, 0, y0, 0, { col: o.col });
-  b.box(wall, w + 0.05, 0.55, d + 0.05, 0, y0, 0, { col: wall === 'wall' ? [0.6, 0.58, 0.5] : [0.62, 0.6, 0.58] });
-  b.box('wood', 1.34, 2.12, 0.1, o.doorX || 0, y0, d / 2 + 0.0, { col: [0.3, 0.24, 0.2] });
-  b.box('wood', 1.1, 2.0, 0.14, o.doorX || 0, y0, d / 2 + 0.02, { col: DOOR });
-  for (const sx of [-1, 1]) {
-    if (Math.abs(sx * w * 0.32 - (o.doorX || 0)) > 0.9) {
-      const wx = sx * w * 0.32;
-      b.box('wood', 1.08, 1.18, 0.07, wx, y0 + 0.91, d / 2 + 0.0, { col: [1.5, 1.35, 1.1] });
-      b.box('wood', 0.9, 1.0, 0.1, wx, y0 + 1.0, d / 2 + 0.02, { col: [0.35, 0.3, 0.28] });
-      for (let k = -1; k <= 1; k++) b.box('paint', 0.035, 1.0, 0.035, wx + k * 0.24, y0 + 1.0, d / 2 + 0.085, { col: [0.13, 0.12, 0.11] });
-      for (const ss of [-1, 1]) b.box('wood', 0.44, 1.0, 0.04, wx + ss * 0.68, y0 + 1.0, d / 2 + 0.06, { col: [0.55, 0.75, 0.62] });
-      b.box('wood', 1.2, 0.06, 0.16, wx, y0 + 0.93, d / 2 + 0.06, { col: [1.3, 1.2, 1.0] });
-    }
-    b.box('wood', 0.07, 1.18, 1.08, sx * (w / 2 + 0.0), y0 + 0.91, 0, { col: [1.5, 1.35, 1.1] });
-    b.box('wood', 0.1, 1.0, 0.9, sx * (w / 2 + 0.02), y0 + 1.0, 0, { col: [0.35, 0.3, 0.28] });
-  }
-  const hsh = Math.abs(Math.round(x * 3.1 + z * 7.7));
-  // woven palm-leaf fence along the front of the yard
-  if (o.fence ?? (hsh % 5 < 3)) {
-    const fz = d / 2 + ov + 3.0, fx = w / 2 + ov + 1.6;
-    for (const [a, c] of [[-fx, -1.4], [1.4, fx]]) {
-      b.box('thatch', c - a, 1.0, 0.05, (a + c) / 2, 0.08, fz, { tile: 1.2, col: [0.8, 0.74, 0.62] });
-      b.box('wood', c - a, 0.06, 0.07, (a + c) / 2, 1.0, fz);
-      for (let px = a; px <= c + 0.01; px += (c - a) / Math.max(1, Math.round((c - a) / 1.7))) b.cyl('wood', 0.045, 0.055, 1.3, px, 0, fz, { seg: 5 });
-      b.collider((a + c) / 2, fz, (c - a) / 2, 0.08, 0, 1.2);
-    }
-    b.box('thatch', 0.05, 1.0, fz + d / 2, -fx, 0.08, (fz - d / 2) / 2, { tile: 1.2, col: [0.8, 0.74, 0.62] });
-    b.collider(-fx, (fz - d / 2) / 2, 0.08, (fz + d / 2) / 2, 0, 1.2);
-  }
-  // washing on the line
-  if (o.washing ?? (hsh % 4 === 1)) {
-    const lx = w / 2 + ov + 1.2, lz = -d / 4;
-    for (const sz of [-1.7, 1.7]) b.cyl('wood', 0.04, 0.05, 1.9, lx, 0, lz + sz, { seg: 5 });
-    b.box('paint', 0.015, 0.015, 3.4, lx, 1.82, lz, { col: [0.2, 0.18, 0.15] });
-    const cc = [[0.92, 0.9, 0.82], [0.62, 0.16, 0.14], [0.2, 0.32, 0.5], [0.9, 0.86, 0.7]];
-    for (let k = 0; k < 4; k++) b.box('paint', 0.02, 0.62 + (k % 2) * 0.22, 0.6, lx, 1.82 - 0.63 - (k % 2) * 0.22, lz - 1.15 + k * 0.76, { col: cc[(hsh + k) % 4] });
-  }
-  const rh = (d / 2 + ov) * (o.pitch || 0.82);
-  b.roofHip(roof, w + ov * 2, d + ov * 2, rh, Math.max(w - d, w * 0.3), 0, y0 + wallH - 0.2, 0);
-  b.box(roof === 'roof' ? 'roof' : 'thatch', Math.max(w - d, w * 0.3) + 0.3, 0.14, 0.34, 0, y0 + wallH - 0.2 + rh - 0.05, 0, { col: [0.6, 0.55, 0.5], tile: 1 });
-  if (o.smoke ?? (Math.abs(Math.round(x * 7 + z * 13)) % 3 < 1)) b.smoke(w * 0.25, y0 + wallH + rh * 0.55, -d * 0.2);
-  const np = Math.max(2, Math.round(w / 2.6));
-  for (let i = 0; i <= np; i++) b.box('wood', 0.16, wallH - 0.25, 0.16, -w / 2 - ov + 0.5 + i * (w + ov * 2 - 1) / np, y0, d / 2 + ov - 0.45);
-  b.box('stone', 1.8, 0.28, 0.6, o.doorX || 0, 0, d / 2 + ov - 0.05);
-  b.collider(0, 0, (w + ov * 2 - 0.5) / 2, (d + ov * 2 - 0.5) / 2);
-  b.yard(Math.max(w, d) * 0.75 + 5, 0.7).clear(Math.max(w, d) * 0.62 + 2).mark(w + 2, d + 2);
-  if (o.lamp) b.lamp(o.doorX ? o.doorX + 1.2 : 1.4, y0 + 1.9, d / 2 + ov - 0.5, 1, 0);
-}
 
 function lampPost(b, x, z, light = 0) {
   b.place(x, z, 0);
@@ -205,15 +151,22 @@ export function buildStructures(scene) {
 
   // ================= village houses =================
   const H = [
-    [-152, 17, 0, { w: 7 }], [-116, 9, 0.05, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], [-84, 3, 0.1, { w: 9 }],
+    [-152, 17, 0, { w: 7 }], [-116, 9, 0.05, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], 
     [-12, -12, 0.2, { w: 8, lamp: 1 }], [34, -22, 0.1, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], [86, -36, 0.5, { w: 8 }],
     [-162, 52, Math.PI, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], [-128, 46, Math.PI, { w: 8 }], [-90, 40, Math.PI + 0.1, { w: 7, lamp: 1 }],
     [-64, 34, Math.PI + 0.1, { roof: 'thatch', wall: 'laterite', w: 5.5, d: 4.5 }], [-6, 24, Math.PI + 0.15, { w: 7 }],
-    [104, -6, Math.PI + 0.5, { w: 7 }], [140, -42, Math.PI + 0.6, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }],
+    [140, -42, Math.PI + 0.6, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }],
     [-76, -60, Math.PI / 2, { w: 7 }], [-36, -78, -Math.PI / 2, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }],
     [-56, 84, Math.PI / 2, { w: 7 }], [-10, 110, -Math.PI / 2, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], [-52, 132, Math.PI / 2, { w: 6, d: 5, roof: 'thatch', wall: 'laterite' }],
   ];
   for (const [x, z, ry, o] of H) house(b, x, z, ry, o);
+  // two nalukettu: the single-courtyard houses of the better-off families
+  for (const [x, z, ry] of [[-84, -5, 0.1], [104, -6, Math.PI + 0.58]]) {
+    kettu(b, x, z, ry, { W: 14, D: 12, courts: [{ cx: 0, cw: 4.6, cd: 4.2 }] });
+    b.yard(19, 0.7, 0, 2).clear(16, 0, 2);
+    P.urn(b, 8.2, 0.6, 6.6); P.pot(b, -8.0, 0.6, 6.8, 1.1);
+    compound(b, 12.5, 15.5, -9.5, rng);
+  }
 
   // tea shop at the junction
   {
@@ -223,74 +176,122 @@ export function buildStructures(scene) {
     b.box('plank', 2.2, 0.08, 0.45, 0, 0.45, 0, { tile: 1 }); b.box('wood', 0.1, 0.45, 0.4, -0.9, 0, 0); b.box('wood', 0.1, 0.45, 0.4, 0.9, 0, 0);
     b.box('plank', 2.2, 0.08, 0.45, 0, 0.45, -1.6, { tile: 1 }); b.box('wood', 0.1, 0.45, 0.4, -0.9, 0, -1.6); b.box('wood', 0.1, 0.45, 0.4, 0.9, 0, -1.6);
     SPOTS.teaShop = b.world(0, 0, 1.2);
+    barrel(b, 2.6, 0, -2.4); barrel(b, 3.3, 0, -1.9, 0.85); olakkuda(b, -2.2, 0, -3.0, 0.45); P.kindi(b, 0.4, 0.53, -1.6, 1.1);
   }
   well(b, -30, -8);
   cart(b, -60, 16, 0.4); cart(b, 62, -2, 1.9);
-  haystack(b, -140, 60, 1); haystack(b, 96, 6, 0.9); haystack(b, -100, 54, 0.8);
-  pots(b, -80, 12, 5, rng); pots(b, -4, -2, 4, rng);
+  haystack(b, -140, 60, 1); haystack(b, 93, 12, 0.9); haystack(b, -100, 54, 0.8);
+  pots(b, -72, 13, 5, rng); pots(b, -4, -2, 4, rng);
   lampPost(b, -42, 4, 1); lampPost(b, -120, 30, 0); lampPost(b, 30, 4, 0);
+  // street life: things set down by people who will be back for them
+  for (const [x, z, k] of [[-134, 26, 0], [-104, 16, 1], [-66, 9, 2], [-47, 18, 3], [-20, 12, 4], [8, -4, 0], [44, -12, 1], [78, -20, 2], [-37, 44, 3], [-33, 100, 4], [-146, 40, 2], [-58, 28, 1]]) {
+    b.place(x, z, rng() * TAU);
+    if (k === 0) { barrel(b, 0, 0, 0); barrel(b, 0.75, 0, 0.3, 0.9); P.rope(b, -0.7, 0, 0.5); }
+    else if (k === 1) { P.koodu(b, 0, 0, 0); P.basket(b, 0.9, 0, 0.2, 1.1, [0.85, 0.8, 0.55]); P.basket(b, 0.5, 0, -0.8, 0.9, [0.3, 0.42, 0.2]); b.circle(0, 0, 0.4); }
+    else if (k === 2) { P.urn(b, 0, 0, 0); P.pot(b, 0.8, 0, 0.3); P.pot(b, 0.3, 0, -0.75, 0.8, [0.75, 0.58, 0.22]); b.circle(0, 0, 0.45); }
+    else if (k === 3) { b.box('plank', 0.9, 0.7, 0.9, 0, 0, 0, { tile: 0.8 }); b.box('plank', 0.7, 0.55, 0.7, 0.1, 0.7, 0.05, { ry: 0.4, tile: 0.8 }); toolbox(b, 1.0, 0, 0.4, 0.5); olakkuda(b, -0.62, 0, 0, -0.42); b.collider(0, 0, 0.5, 0.5, 0, 1.4); }
+    else { for (let i = 0; i < 4; i++) b.sphere('sack', 0.42, (i % 2) * 0.9 - 0.4, 0.28 + (i > 2 ? 0.45 : 0), Math.floor(i / 2) * 0.7 - 0.3, { sx: 1.3, sy: 0.7, sz: 0.9 }); P.rope(b, 1.3, 0, 0.2); b.collider(0, 0, 0.8, 0.6, 0, 1.0); }
+  }
 
-  // ================= the tharavadu (ancestral home) =================
+  // ================= the tharavadu: an ettukettu, the two-courtyard manor =================
   {
     const hx = LOC.home.x, hz = LOC.home.z;
-    b.place(hx, hz, Math.PI);          // faces north (toward the village street)
-    const y0 = 0.7;
-    b.box('laterite', 19, 2.2, 12.5, 0, -1.5, 0);
-    b.box('wall', 14, 3.0, 7.5, 0, y0, 0);
-    // ground floor roof skirt
-    b.roofHip('roof', 19.6, 13, 2.5, 12, 0, y0 + 2.75, 0);
-    // upper storey
-    b.box('wall', 8.4, 2.5, 4.6, 0, y0 + 3.0, 0);
-    for (const sx of [-2.4, 0, 2.4]) b.box('wood', 1.0, 1.1, 0.1, sx, y0 + 3.9, 2.32);
-    b.roofHip('roof', 11.4, 7.6, 2.9, 5.2, 0, y0 + 5.35, 0);
-    b.cone('brass', 0.12, 0.6, -2.6, y0 + 8.2, 0, { col: BRASS }); b.cone('brass', 0.12, 0.6, 2.6, y0 + 8.2, 0, { col: BRASS });
-    // verandah pillars all round
-    for (let i = 0; i <= 8; i++) {
-      const px = -8.9 + i * 2.225;
-      b.cyl('wood', 0.13, 0.16, 2.2, px, y0, 5.7, { seg: 8 });
-      b.cyl('wood', 0.13, 0.16, 2.2, px, y0, -5.7, { seg: 8 });
+    const K = kettu(b, hx, hz, Math.PI, { W: 24, D: 15, courts: [{ cx: -5, cw: 4.5, cd: 5 }, { cx: 5, cw: 4.5, cd: 5 }], upper: true, upperW: 11 });
+    SPOTS.homeDoor = b.world(0, 0, 16.4);
+    SPOTS.ammavan = b.world(-1.4, 0, 15.4);
+    SPOTS.devaki = b.world(1.8, 0, 15.8);
+    SPOTS.homeHall = b.world(0, 0, 5.2);
+    // thatched kitchen wing (east) joined to the house by a covered walk
+    const kitchen = (x, z, w, d, door) => {
+      b.box('laterite', w + 1.6, 1.9, d + 1.6, x, -1.5, z);
+      b.platform(x, z, w / 2 + 0.8, d / 2 + 0.8, 0.4);
+      wall(b, 'wall', x - w / 2, z + d / 2, x + w / 2, z + d / 2, 0.4, 2.4, [{ at: w / 2, w: 0.9, kind: 'window' }], { col: [0.86, 0.66, 0.46], out: 1 });
+      wall(b, 'wall', x - w / 2, z - d / 2, x + w / 2, z - d / 2, 0.4, 2.4, [{ at: w / 2, w: 0.9, kind: 'window' }], { col: [0.86, 0.66, 0.46], out: -1 });
+      wall(b, 'wall', x - w / 2, z - d / 2, x - w / 2, z + d / 2, 0.4, 2.4, door < 0 ? [{ at: d / 2, w: 1.15, kind: 'door' }] : [], { col: [0.86, 0.66, 0.46], out: -1 });
+      wall(b, 'wall', x + w / 2, z - d / 2, x + w / 2, z + d / 2, 0.4, 2.4, door > 0 ? [{ at: d / 2, w: 1.15, kind: 'door' }] : [], { col: [0.86, 0.66, 0.46], out: 1 });
+      b.roofHip('thatch', w + 2.6, d + 2.6, 2.7, Math.max(1, d - w + 1), x, 2.6, z, Math.PI / 2);
+      b.interior(x, z, w / 2, d / 2, 3.4);
+    };
+    kitchen(-19, -3, 4.6, 7, 1);
+    P.hearth(b, -20.4, 0.43, -5.4); P.urn(b, -20.5, 0.43, -1.0); P.pot(b, -20.6, 0.43, 0.2, 1.1); P.pot(b, -19.6, 0.43, -0.2, 0.8, [0.75, 0.58, 0.22]);
+    P.basket(b, -17.6, 0.43, -5.6, 1.1, [0.85, 0.8, 0.55]); P.kindi(b, -18.2, 0.43, 0.0, 1.2);
+    b.smoke(-19, 5.4, -3);
+    // granary / cattle wing (west), open-fronted
+    b.box('laterite', 6.6, 1.9, 9, 19, -1.6, -5);
+    for (const sx of [-2.6, 2.6]) for (const sz of [-3.6, 0, 3.6]) b.cyl('wood', 0.1, 0.12, 2.3, 19 + sx, 0.3, -5 + sz, { seg: 6 });
+    b.roofHip('thatch', 8.4, 10.6, 2.4, 3.4, 19, 2.5, -5, Math.PI / 2);
+    b.box('wall', 0.24, 2.2, 8, 21.9, 0.3, -5, { col: [0.86, 0.66, 0.46] }); b.collider(21.9, -5, 0.14, 4);
+    b.box('wood', 0.1, 0.7, 6.4, 16.3, 0.3, -5); b.collider(16.3, -5, 0.1, 3.2, 0, 1.3);
+    SPOTS.cowShed = b.world(19, 0, -5);
+    haystack(b, hx - 19, hz - 8, 1.1);
+    b.place(hx, hz, Math.PI);
+    // compound wall, creepers along its top, thatched padippura (gate house)
+    const X = 24, Zf = 24, Zb = -17, PG = 2.08;
+    wallRun(b, 'laterite', -X, Zb, X, Zb, 1.5); wallRun(b, 'laterite', -X, Zb, -X, Zf, 1.5);
+    wallRun(b, 'laterite', X, Zb, X, PG - 1.5, 1.5); wallRun(b, 'laterite', X, PG + 1.5, X, Zf, 1.5);
+    wallRun(b, 'laterite', -X, Zf, -2.3, Zf, 1.5); wallRun(b, 'laterite', 2.3, Zf, X, Zf, 1.5);
+    for (let i = 0; i < 26; i++) {
+      const u = rng() * 2 - 1, side = i % 3;
+      const cx = side === 0 ? u * X : side === 1 ? -X : (Math.abs(u) < 0.14 ? 9 : u * X), cz = side === 0 ? Zb : side === 1 ? Zb + (u * 0.5 + 0.5) * (Zf - Zb) : Zf;
+      const gc = [0.11 + rng() * 0.06, 0.26 + rng() * 0.08, 0.09], along = side !== 1;
+      b.sphere('paint', 0.5 + rng() * 0.3, cx, 1.5, cz, { sx: along ? 1.5 : 0.8, sy: 0.6, sz: along ? 0.8 : 1.5, col: gc });
+      b.sphere('paint', 0.42, cx + (along ? 0.3 : -0.3), 1.0, cz + (side === 0 ? -0.3 : 0.3), { sx: along ? 1.1 : 0.35, sy: 1.1, sz: along ? 0.35 : 1.1, col: gc });
+      if (i % 4 === 0) b.sphere('paint', 0.16, cx + 0.3, 1.72, cz + 0.3, { col: [0.9, 0.35, 0.5] });
     }
-    for (let i = 1; i < 5; i++) { b.cyl('wood', 0.13, 0.16, 2.2, -8.9, y0, -5.7 + i * 2.28, { seg: 8 }); b.cyl('wood', 0.13, 0.16, 2.2, 8.9, y0, -5.7 + i * 2.28, { seg: 8 }); }
-    // poomukham (entrance portico) with gabled front
-    b.box('laterite', 5, 2.1, 4, 0, -1.5, 7.6);
-    b.roofGable('roof', 5.2, 5.6, 2.0, 0, y0 + 2.5, 7.8, Math.PI / 2, 'wood');
-    for (const sx of [-2.2, 2.2]) for (const sz of [6.2, 9.3]) b.cyl('wood', 0.15, 0.19, 2.5, sx, y0 - 0.1, sz, { seg: 8 });
-    for (const sx of [-2.2, 2.2]) b.box('wood', 0.12, 0.55, 3.0, sx, y0 + 0.3, 7.75);   // charupadi benches
-    b.box('wood', 1.3, 2.2, 0.16, 0, y0, 3.78, { col: DOOR });
-    for (const sx of [-4.4, 4.4]) b.box('wood', 1.1, 1.2, 0.1, sx, y0 + 1.0, 3.78);
-    for (let i = 0; i < 3; i++) b.box('stone', 2.6, 0.24, 0.5, 0, 0.46 - i * 0.23, 9.9 + i * 0.5);
-    b.lamp(1.2, y0 + 1.1, 8.6, 1.3, 1);
-    b.cyl('brass', 0.05, 0.16, 1.0, 1.2, y0, 8.6, { seg: 8, col: BRASS });     // nilavilakku
-    b.collider(0, 0, 9.5, 6.25); b.collider(0, 7.6, 2.5, 2.0);
-    SPOTS.homeDoor = b.world(0, 0, 12.5);
-    SPOTS.ammavan = b.world(-1.2, 0, 11.6);
-    SPOTS.devaki = b.world(1.6, 0, 11.9);
-    // tulsi thara
-    b.box('stone', 0.9, 1.0, 0.9, 5.2, 0, 13); b.box('stone', 1.1, 0.14, 1.1, 5.2, 1.0, 13);
-    b.sphere('paint', 0.42, 5.2, 1.5, 13, { col: [0.2, 0.42, 0.16] });
-    b.circle(5.2, 13, 0.6);
-    // kitchen wing and cow shed
-    b.box('laterite', 6.4, 2, 5.4, -13.5, -1.5, -2.5); b.box('laterite', 5, 2.4, 4, -13.5, 0.5, -2.5);
-    b.roofHip('thatch', 7.4, 6.4, 2.6, 1.6, -13.5, 2.7, -2.5);
-    b.collider(-13.5, -2.5, 3.2, 2.7);
-    for (const sx of [-2.2, 2.2]) for (const sz of [-1.6, 1.6]) b.box('wood', 0.14, 2.2, 0.14, 15 + sx, 0, -6 + sz);
-    b.roofHip('thatch', 6, 4.6, 1.5, 2, 15, 2.2, -6);
-    SPOTS.cowShed = b.world(15, 0, -6);
-    // compound wall with padippura (gate house)
-    const X = 21, Zf = 21, Zb = -13;
-    wallRun(b, 'laterite', -X, Zb, X, Zb); wallRun(b, 'laterite', -X, Zb, -X, Zf); wallRun(b, 'laterite', X, Zb, X, Zf);
-    wallRun(b, 'laterite', -X, Zf, -2.2, Zf); wallRun(b, 'laterite', 2.2, Zf, X, Zf);
-    b.box('laterite', 0.7, 2.6, 1.6, -2.3, -0.5, Zf); b.box('laterite', 0.7, 2.6, 1.6, 2.3, -0.5, Zf);
-    b.roofGable('roof', 6.4, 3.4, 1.3, 0, 2.05, Zf, 0, 'wood');
-    b.box('wood', 0.1, 1.9, 1.5, -1.9, 0, Zf + 0.9, { ry: 0.5, col: DOOR });
-    b.box('wood', 0.1, 1.9, 1.5, 1.9, 0, Zf + 0.9, { ry: -0.5, col: DOOR });
-    b.collider(-2.3, Zf, 0.4, 0.8); b.collider(2.3, Zf, 0.4, 0.8);
+    for (const sx of [-1, 1]) {
+      b.box('laterite', 1.5, 3.4, 3.0, sx * 3.05, -0.8, Zf); b.collider(sx * 3.05, Zf, 0.75, 1.5);
+      b.box('wood', 0.5, 0.45, 2.4, sx * 2.0, 0.35, Zf, { col: [0.5, 0.4, 0.32] });
+      for (const sz of [-1.6, 1.6]) b.cyl('wood', 0.11, 0.13, 2.7, sx * 2.1, 0, Zf + sz, { seg: 7 });
+      b.box('wood', 0.1, 2.0, 1.5, sx * 1.95, 0.05, Zf - 2.25, { ry: -sx * 0.25, col: DOOR });
+    }
+    b.box('stone', 4.2, 0.36, 3.2, 0, -0.02, Zf);
+    b.roofHip('thatch', 9.2, 6.2, 2.5, 3.6, 0, 2.55, Zf);
+    b.lamp(1.7, 2.1, Zf + 1.4, 1, 0);
     SPOTS.homeGate = b.world(0, 0, Zf + 3);
-    b.yard(26, 0.75, 0, 4).clear(24, 0, 4).mark(19, 12);
-    well(b, hx + 13, hz - 12);
-    haystack(b, hx - 15, hz + 8, 1.1);
-    pots(b, hx - 6, hz - 9, 6, rng);
-    bigTrees.push([hx + 15, hz - 2, 1], [hx - 16, hz - 10, 0], [hx - 4, hz + 9, 0]);
+    // the kulam: a stone-lined bathing tank with steps down to the water
+    {
+      const cx = 37.17, cz = PG, ix = 8.33, iz = 10.42, R = 4.3;
+      for (const s of [-1, 1]) {
+        b.box('laterite', R, 4.6, iz * 2 + R * 2, cx + s * (ix + R / 2), -4.5, cz, { tile: 3 });
+        b.box('laterite', ix * 2, 4.6, R, cx, -4.5, cz + s * (iz + R / 2), { tile: 3 });
+        b.box('stone', R + 0.1, 0.1, iz * 2 + R * 2 + 0.1, cx + s * (ix + R / 2), 0.02, cz, { tile: 2.5 });
+        b.box('stone', ix * 2, 0.1, R + 0.1, cx, 0.02, cz + s * (iz + R / 2), { tile: 2.5 });
+        b.platform(cx + s * (ix + R / 2), cz, R / 2, iz + R, 0.12);
+        b.platform(cx, cz + s * (iz + R / 2), ix, R / 2, 0.12);
+      }
+      for (let i = 0; i < 8; i++) {
+        const sx = cx - ix + 0.3 + i * 0.6, top = -0.2 - i * 0.31;
+        b.box('stone', 0.62, 2.6, 7, sx, top - 2.6, cz, { tile: 1.5 });
+        b.platform(sx, cz, 0.31, 3.5, top);
+      }
+      const ox = ix + R - 0.3, oz = iz + R - 0.3;
+      wallRun(b, 'laterite', cx - ox - 0.2, cz - oz, cx + ox, cz - oz, 1.0, 0.4); wallRun(b, 'laterite', cx - ox - 0.2, cz + oz, cx + ox, cz + oz, 1.0, 0.4);
+      wallRun(b, 'laterite', cx + ox, cz - oz, cx + ox, cz + oz, 1.0, 0.4);
+      P.lamp(b, cx - ix - 1.2, 0.12, cz + 4.4, 1.1, 0); P.kindi(b, cx - ix - 0.9, 0.12, cz - 4.2, 1.3); P.pot(b, cx - ix - 1.4, 0.12, cz - 4.9);
+      for (let i = 0; i < 9; i++) { const lx = cx + (rng() - 0.3) * ix * 1.5, lz = cz + (rng() - 0.5) * iz * 1.7; b.cyl('paint', 0.34, 0.34, 0.02, lx, -b.oy + 0.03 + i * 0.001, lz, { seg: 9, col: [0.2, 0.42, 0.2] }); if (i % 3 === 0) b.cone('paint', 0.12, 0.2, lx + 0.2, -b.oy + 0.04, lz, { seg: 6, col: [0.95, 0.6, 0.75] }); }
+      SPOTS.kulam = b.world(cx - ix - 2, 0, cz);
+      b.clear(17, cx, cz);
+    }
+    // sarpa kavu: the serpent grove left wild in the corner of the compound
+    {
+      const gx = -18.5, gz = 18.5;
+      b.box('stone', 3.6, 0.4, 2.6, gx, 0, gz);
+      for (let i = 0; i < 5; i++) {
+        const sx = gx - 1.3 + i * 0.65, hh = 0.55 + (i % 2) * 0.25 + (i === 2 ? 0.3 : 0);
+        b.box('stone', 0.34, hh, 0.14, sx, 0.4, gz - 0.3, { col: [0.5, 0.5, 0.48] });
+        b.sphere('stone', 0.2, sx, 0.4 + hh, gz - 0.3, { sx: 1, sy: 1.1, sz: 0.45, col: [0.5, 0.5, 0.48] });
+        b.box('paint', 0.2, 0.05, 0.02, sx, 0.4 + hh * 0.6, gz - 0.22, { col: [0.9, 0.75, 0.1] });
+      }
+      P.lamp(b, gx + 1.4, 0.4, gz + 0.6, 0.7, 0);
+      b.collider(gx, gz, 1.8, 1.3, 0, 1.2);
+      SPOTS.sarpaKavu = b.world(gx, 0, gz + 3);
+      bigTrees.push([hx - gx - 2.5, hz - gz - 2.5, 1], [hx - gx + 3, hz - gz - 3.5, 0], [hx - gx - 3.5, hz - gz + 3, 0]);
+    }
+    b.place(hx, hz, Math.PI);
+    b.yard(30, 0.75, 0, 4).clear(31, 0, 3);
+    well(b, hx + 15, hz - 16);
+    pots(b, hx - 8, hz - 17, 6, rng);
+    bigTrees.push([hx - 19, hz + 13, 0], [hx + 20, hz + 12, 0], [hx - 20, hz - 20, 1]);
   }
 
   // ================= temple =================
@@ -312,6 +313,8 @@ export function buildStructures(scene) {
     b.box('wall', 5.4, 2.8, 5.4, 0, 0.9, -5);
     for (const s of [-1, 1]) { b.box('wood', 5.5, 0.9, 0.08, 0, 1.6, -5 + s * 2.72); b.box('wood', 0.08, 0.9, 5.5, s * 2.72, 1.6, -5); }
     b.box('wood', 1.2, 2.1, 0.14, 0, 0.9, -2.26, { col: DOOR });
+    for (const s of [-1, 1]) { b.panel('mural', 1.5, 1.08, s * 1.7, 2.56, -2.2, 0); b.panel('mural', 1.7, 1.08, s * 2.78, 2.56, -5 + 1.3, s * Math.PI / 2); b.panel('mural', 1.7, 1.08, s * 2.78, 2.56, -5 - 1.3, s * Math.PI / 2); }
+    P.lamp(b, -1.5, 0.9, -1.7, 1.2, 0); P.lamp(b, 1.5, 0.9, -1.7, 1.2, 0);
     b.roofHip('roof', 9.6, 9.6, 2.9, 0.02, 0, 3.4, -5);
     b.box('wall', 3.6, 1.3, 3.6, 0, 5.0, -5);
     b.roofHip('roof', 6, 6, 3.0, 0.02, 0, 6.1, -5);
@@ -366,8 +369,10 @@ export function buildStructures(scene) {
     b.place(jx + 12, 46, 0); b.yard(12, 0.8).clear(10);
     crates(b, jx + 10, 46, 0.3, rng, 4, 'sack');
     lampPost(b, jx + 7, 37, 1);
+    b.place(jx + 9, 43, 0); castNet(b, 0, 0, 0); toolbox(b, 1.4, 0, -0.6, 0.4); P.rope(b, -1.2, 0, 0.6); P.rope(b, 2.2, 0, 1.2, 0.8); poles(b, -2.2, 0, -1.4, 0.3); P.koodu(b, 0.6, 0, 1.6); barrel(b, -2.6, 0, 1.0);
     // boatman's hut
-    house(b, jx + 20, 56, Math.PI, { w: 5, d: 4, roof: 'thatch', wall: 'laterite' });
+    house(b, jx + 20, 56, Math.PI, { w: 5, d: 4, roof: 'thatch', mud: true, fisher: true });
+    P.netFrame(b, 5.5, 2.5, 0.4); P.koodu(b, -3.6, 0, 3.4); P.rope(b, 3.2, 0, 3.6);
   }
 
   // ================= bridges =================
@@ -396,17 +401,18 @@ export function buildStructures(scene) {
     SPOTS.portLanding = new THREE.Vector3(-400, 0.85, pz + 12);
     // market row north of the road
     const shops = [[-352, -404, 0], [-366, -401, 0], [-380, -399, 0], [-416, -398, 0], [-430, -399, 0], [-444, -400, 0]];
-    shops.forEach(([x, z, ry], i) => house(b, x, z, ry, { w: 6 + (i % 2), d: 5, overhang: 1.5, wall: i % 3 === 1 ? 'laterite' : 'wall', lamp: i % 2, fence: false, washing: false }));
+    shops.forEach(([x, z, ry], i) => house(b, x, z, ry, { w: 6 + (i % 2), d: 5, overhang: 1.5, wall: i % 3 === 1 ? 'laterite' : 'wall', lamp: i % 2, fence: false, washing: false, porch: false, awning: 1 }));
     b.place(-430, -399, 0); b.sign(4, 2.6, 0.65, 0, 2.5, 3.5);
     b.place(-400, pz - 9, 0);
     for (const sx of [2.2, 5.0]) b.cyl('wood', 0.07, 0.09, 3.2, sx, 0, 0, { seg: 6 });
     b.sign(5, 3.0, 0.75, 3.6, 2.7, -0.06, Math.PI); b.circle(2.2, 0, 0.2); b.circle(5, 0, 0.2);
     spiceStall(b, -372, -389.5, 0, rng); spiceStall(b, -423, -389, 0, rng); spiceStall(b, -392, -372, Math.PI / 2, rng);
     // Moideen's spice house, on the quay
-    house(b, -416, -356, Math.PI / 2, { w: 9, d: 6.5, lamp: 1, overhang: 1.6, fence: false, washing: false });
-    b.sign(0, 3.6, 0.9, 0, 2.55, 4.4);
-    b.place(-416, -356, Math.PI / 2);
-    SPOTS.moideen = b.world(1.5, 0, 6.4);
+    spiceHouse(b, -416, -356, Math.PI / 2);
+    b.sign(0, 3.6, 0.9, 0, 3.3, 5.1);
+    SPOTS.moideen = b.world(2.6, 0, 8.4);
+    SPOTS.moideenStore = b.world(0, 0, 2);
+    barrel(b, -8.4, 0, 6.2); barrel(b, -8.6, 0, 7.1, 0.9); barrel(b, -7.7, 0, 6.9, 1.05); olakkuda(b, 8.0, 0, 5.6, -0.4); toolbox(b, 7.4, 0, 6.6, 0.7); P.rope(b, 8.4, 0, 7.2); P.urn(b, -7.6, 0.55, 3.2);
     crates(b, -406, -349, 0.2, rng, 5, 'sack'); crates(b, -406.5, -362.5, 1.2, rng, 4, 'mix');
     crates(b, -395, -334, 0.5, rng, 5, 'mix'); crates(b, -404.5, -326, 0.1, rng, 4, 'sack');
     spiceStall(b, -388, -350, -Math.PI / 2, rng);
@@ -434,6 +440,7 @@ export function buildStructures(scene) {
       b.box('wood', 1.6, 2.6, 0.14, 0, 0.5, 7.55, { col: DOOR });
       b.collider(0, 0, 4.5, 7.5); b.yard(12, 0.6).clear(10).mark(9, 15);
     }
+    nasraniHouse(b, -474, -424, 0.2);
     // Chinese fishing nets along the shore
     for (const x of [-372, -356, -340]) {
       let z = -350; while (getHeight(x, z) > -0.5 && z < -280) z += 0.5;
@@ -652,7 +659,7 @@ export function buildStructures(scene) {
   // ---- Azhikkal, a fishing hamlet on the sand-spit
   {
     const hx = LOC.hamlet.x, hz = LOC.hamlet.z;
-    for (const [dx, dz, ry] of [[-10, -14, 0.3], [8, -18, -0.2], [-14, 6, 1.5], [12, 16, -1.9], [-4, 24, 2.8], [16, -2, -1.4]]) house(b, hx + dx, hz + dz, ry, { w: 5, d: 4, roof: 'thatch', wall: 'laterite', overhang: 1.2 });
+    for (const [dx, dz, ry] of [[-10, -14, 0.3], [8, -18, -0.2], [-14, 6, 1.5], [12, 16, -1.9], [-4, 24, 2.8], [16, -2, -1.4]]) { house(b, hx + dx, hz + dz, ry, { w: 5, d: 4, roof: 'thatch', mud: true, fisher: true, overhang: 1.2, fence: false }); P.netFrame(b, 5.2, 1.5, 1.3); P.koodu(b, -3.4, 0, 3.2); P.basket(b, 3.2, 0, 3.4, 1.1, [0.7, 0.7, 0.66]); }
     b.place(hx, hz, 0); b.yard(18, 0.55).clear(12);
     // fish-drying racks and hung nets
     for (const [dx, dz, ry] of [[2, 4, 0.2], [-2, -4, 1.3], [24, 10, 0.1]]) {
@@ -670,6 +677,7 @@ export function buildStructures(scene) {
     SPOTS.hamletBoat = new THREE.Vector3(jx + 14, 0, 152.6);
     SPOTS.hamletJettyEnd = new THREE.Vector3(jx + 12, 0.75, 150);
     lampPost(b, jx - 6, 147.4, 1);
+    b.place(jx - 9, 153.5, 0.4); castNet(b, 0, 0, 0, 1.2); castNet(b, 1.8, 0, 0.7); P.rope(b, -1.3, 0, 0.3); poles(b, -2.4, 0, -0.8, 0.2, 4); P.koodu(b, 0.9, 0, -1.4); P.koodu(b, 1.7, 0, -1.6, 0.85); toolbox(b, 3.0, 0, -0.2, 1.0);
     SPOTS.hamlet = new THREE.Vector3(hx + 2, getHeight(hx + 2, hz + 10), hz + 10);
   }
 

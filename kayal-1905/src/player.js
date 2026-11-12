@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { G } from './state.js';
 import { Human, CAST, makeStick, makePaddle, makeBucket, makeRod } from './characters.js';
 import { getHeight, PLAY_LIMIT } from './heightfield.js';
-import { groundAt, resolve, pointInBox } from './physics.js';
+import { groundAt, resolve, pointInBox, interiorAt } from './physics.js';
 import { clamp, damp, angleDamp, lerp, smoothstep } from './util.js';
 
 export class Player {
@@ -16,7 +16,7 @@ export class Player {
     this.bucket = makeBucket(); this.bucket.visible = false;
     this.rod = makeRod(); this.rod.visible = false;
     this.bucketFull = false; this.blocking = false; this.blockStart = 0; this.poseOverride = null;
-    this.setOutfit('boatman');
+    this.setOutfit('everyday');
     this.pos = new THREE.Vector3(0, 3, 0);
     this.vel = new THREE.Vector3();
     this.vy = 0; this.yaw = 0; this.grounded = true;
@@ -36,7 +36,8 @@ export class Player {
   }
 
   setOutfit(key) {
-    const def = CAST.outfits[key] || CAST.outfits.boatman;
+    if (!CAST.outfits[key]) key = 'everyday';
+    const def = CAST.outfits[key];
     const old = this.h;
     this.h = new Human({ ...def.look, build: 1.06 });
     if (old) { this.root.remove(old.root); this.h.state = old.state; }
@@ -124,7 +125,23 @@ export class Player {
     return out.copy(this.pos);
   }
 
+  // the face follows what is happening: a fight, a wound, a storm
+  autoFace(dt) {
+    this.faceT = (this.faceT || 0) - dt;
+    const h = this.h;
+    if (this.faceT > 0 || h.exprT > 0 || h.talking || G.story?.busy) return;
+    this.faceT = 0.3;
+    let e = 'neutral';
+    if (this.health <= 0) e = 'grieving';
+    else if (h.strikeT >= 0) e = 'angry';
+    else if (this.blocking || this.nearestHostile(11)) e = 'determined';
+    else if (this.health < 38) e = 'worried';
+    else if (this.mode === 'boat' && G.env.rain > 0.6) e = 'determined';
+    h.setExpression(e);
+  }
+
   update(dt) {
+    this.autoFace(dt);
     const inp = G.input;
     const free = !this.locked && !this.photo && this.health > 0 && G.input.enabled;
     // --- camera angles
@@ -261,7 +278,8 @@ export class Player {
     const cp = Math.cos(this.camPitch), sp = Math.sin(this.camPitch);
     const dir = new THREE.Vector3(Math.sin(this.camYaw) * cp, sp, Math.cos(this.camYaw) * cp);
     // collision: shorten the boom when a wall or the ground is in the way
-    let dist = baseDist * (this.photo ? 1.5 : 1);
+    const room = mode === 'foot' ? interiorAt(focus.x, focus.z) : null;
+    let dist = room ? Math.min(baseDist, 2.5) : baseDist * (this.photo ? 1.5 : 1);
     const steps = 10;
     for (let i = 1; i <= steps; i++) {
       const d = dist * i / steps;
@@ -277,6 +295,7 @@ export class Player {
       this.camTarget.z + dir.z * this.camDistCur - Math.sin(this.camYaw) * side);
     const minY = Math.max(getHeight(desired.x, desired.z), 0) + 0.28;
     if (desired.y < minY) desired.y = minY;
+    if (room && desired.y > room.ceil - 0.2) desired.y = room.ceil - 0.2;
     const look = new THREE.Vector3(this.camTarget.x + Math.cos(this.camYaw) * side, this.camTarget.y, this.camTarget.z - Math.sin(this.camYaw) * side);
     this.snapCam = false;
 
