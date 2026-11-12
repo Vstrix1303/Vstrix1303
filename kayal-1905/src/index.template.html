@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>KAYAL — Travancore, 1905</title>
+<style>
+:root{--cream:#f4e6c0;--gold:#e9b949;--ink:#1a120a;--serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,'Noto Serif',serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--cream);font-family:var(--serif);-webkit-user-select:none;user-select:none;touch-action:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.layer{position:fixed;pointer-events:none}
+#fade{inset:0;background:#000;opacity:0;z-index:30}
+#letterTop,#letterBot{left:0;right:0;height:0;background:#000;transition:height .8s ease;z-index:12}
+#letterTop{top:0}#letterBot{bottom:0}
+body.cine #letterTop,body.cine #letterBot{height:11vh}
+/* HUD */
+#hud{inset:0;z-index:10;transition:opacity .5s}
+body.nohud #hud,body.mapopen #hud{opacity:0}
+#objective{position:absolute;top:22px;left:26px;max-width:min(430px,60vw);text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 14px rgba(0,0,0,.6)}
+#chapterTag{font-size:12px;letter-spacing:.28em;color:var(--gold);margin-bottom:6px;font-variant:small-caps}
+#objText{font-size:19px;line-height:1.3}
+#objText.pulse{animation:pulse 1.2s ease}
+@keyframes pulse{0%{color:#fff;transform:translateX(-8px);opacity:0}40%{color:#ffe9a8;opacity:1}100%{color:var(--cream);transform:none}}
+#mapWrap{position:absolute;left:22px;bottom:22px;width:200px}
+#minimap{width:200px;height:200px;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
+#clock{position:absolute;right:-4px;top:-4px;font-size:13px;letter-spacing:.08em;background:rgba(20,13,6,.72);padding:3px 8px;border:1px solid rgba(244,230,192,.35);border-radius:2px}
+#bars{position:absolute;left:236px;bottom:30px;width:150px}
+#area{bottom:26px}
+.bar{height:6px;background:rgba(15,10,5,.6);border:1px solid rgba(244,230,192,.4);margin-top:6px;border-radius:1px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#8a1f17,#c9463a);transition:width .15s}
+.bar.st i{background:linear-gradient(90deg,#8a7a3a,#e9d48a)}
+#prompt{position:absolute;left:50%;bottom:24vh;transform:translateX(-50%);font-size:18px;padding:8px 16px 8px 10px;background:rgba(15,10,5,.6);border:1px solid rgba(244,230,192,.3);border-radius:3px;opacity:0;transition:opacity .2s;white-space:nowrap}
+#prompt.on{opacity:1}
+#prompt b{display:inline-block;min-width:26px;text-align:center;margin-right:8px;padding:1px 6px;border:1px solid var(--cream);border-radius:3px;font-family:ui-monospace,Menlo,monospace;font-size:14px;background:rgba(244,230,192,.12)}
+#toast{position:absolute;left:50%;top:19vh;transform:translateX(-50%);max-width:min(680px,88vw);text-align:center;font-size:16px;line-height:1.45;padding:10px 18px;background:rgba(15,10,5,.62);border-top:1px solid rgba(233,185,73,.6);border-bottom:1px solid rgba(233,185,73,.6);opacity:0;transition:opacity .5s}
+#toast.on{opacity:1}
+#toast b{color:#ffe7a6;font-family:ui-monospace,Menlo,monospace;font-size:13px;border:1px solid rgba(244,230,192,.55);border-radius:3px;padding:0 5px;font-weight:600}
+#marker{position:absolute;left:0;top:0;display:none;will-change:transform}
+#marker i{position:absolute;left:-8px;top:-8px;width:16px;height:16px;background:var(--gold);transform:rotate(45deg);border:2px solid #3a2408;box-shadow:0 0 12px rgba(233,185,73,.8)}
+#marker.off i{background:#c9952e;opacity:.85}
+#markerDist{position:absolute;top:14px;left:-40px;width:80px;text-align:center;font-size:12px;letter-spacing:.06em;text-shadow:0 1px 3px #000}
+#detect{position:absolute;left:50%;top:9vh;transform:translateX(-50%);font-size:13px;letter-spacing:.35em;padding:4px 14px 4px 18px;opacity:0;transition:opacity .2s;color:#ffd27a;border:1px solid currentColor;background:rgba(15,10,5,.5)}
+#detect.on{opacity:calc(.35 + var(--a,1)*.65)}
+#detect.red{color:#ff5a48;opacity:1;animation:blink .5s infinite alternate}
+@keyframes blink{to{background:rgba(120,10,5,.6)}}
+#money{position:absolute;top:20px;right:26px;font-size:20px;letter-spacing:.06em;color:#f6e7b4;text-shadow:0 1px 3px #000,0 0 12px rgba(0,0,0,.7)}
+#moneyDelta{position:absolute;top:48px;right:26px;font-size:15px;color:#bfe39a;opacity:0;transition:opacity .4s;text-shadow:0 1px 3px #000}
+#moneyDelta.on{opacity:1}#moneyDelta.neg{color:#f0a48c}
+#timer{position:absolute;left:50%;top:4.2vh;transform:translateX(-50%);font-size:24px;letter-spacing:.12em;opacity:0;transition:opacity .3s;text-shadow:0 1px 4px #000,0 0 14px rgba(0,0,0,.8)}
+#timer.on{opacity:1}
+#meter{position:absolute;left:50%;top:13.2vh;transform:translateX(-50%);width:min(300px,60vw);opacity:0;transition:opacity .3s;text-align:center}
+#meter.on{opacity:1}
+#meterLabel{font-size:12px;letter-spacing:.24em;text-transform:uppercase;margin-bottom:5px;text-shadow:0 1px 3px #000}
+#meter .trk,#boss .trk{height:7px;background:rgba(15,10,5,.65);border:1px solid rgba(244,230,192,.45);overflow:hidden}
+#meterFill{height:100%;background:linear-gradient(90deg,#c9463a,#e9a23a);transition:width .12s}
+#meter.good #meterFill{background:linear-gradient(90deg,#8aa84a,#e9d48a)}
+#boss{position:absolute;left:50%;top:4.5vh;transform:translateX(-50%);width:min(460px,70vw);opacity:0;transition:opacity .4s;text-align:center}
+#boss.on{opacity:1}
+#bossName{font-size:13px;letter-spacing:.3em;text-transform:uppercase;margin-bottom:5px;color:#f0c8b8;text-shadow:0 1px 3px #000}
+#bossFill{height:100%;background:linear-gradient(90deg,#6a1410,#c9342a);transition:width .15s}
+#area{position:absolute;right:26px;bottom:26px;text-align:right;opacity:0;transition:opacity .8s;text-shadow:0 2px 6px #000,0 0 18px rgba(0,0,0,.8)}
+#area.on{opacity:1}
+#areaName{font-size:clamp(22px,2.6vw,34px);letter-spacing:.08em;font-style:italic}
+#areaSub{font-size:11px;letter-spacing:.4em;color:var(--gold);margin-top:2px;min-height:14px}
+#marker2{position:absolute;left:0;top:0;display:none;will-change:transform}
+#marker2 i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#58b7e8;border:2px solid #0c2a3a;box-shadow:0 0 10px rgba(88,183,232,.8)}
+#marker2Dist{position:absolute;top:12px;left:-40px;width:80px;text-align:center;font-size:12px;text-shadow:0 1px 3px #000}
+#banner{inset:0;z-index:22;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .7s;text-align:center;pointer-events:none;text-shadow:0 2px 16px rgba(0,0,0,.95)}
+#banner.on{opacity:1}
+#bannerTitle{font-size:clamp(30px,5vw,60px);letter-spacing:.3em;color:#f6d77a;padding-left:.3em}
+#bannerName{font-size:clamp(18px,2.2vw,28px);margin-top:10px;font-style:italic}
+#bannerSub{font-size:clamp(18px,2vw,24px);margin-top:10px;color:#bfe39a;letter-spacing:.08em}
+/* map */
+#mapScreen{position:fixed;inset:0;z-index:35;display:none;background:rgba(10,7,4,.82);padding:3.5vh 3vw;gap:2vw}
+#mapScreen.on{display:flex}
+#mapWrapBig{flex:1;min-width:0;position:relative;border:1px solid rgba(60,40,20,.9);box-shadow:0 10px 50px rgba(0,0,0,.7),inset 0 0 80px rgba(80,50,20,.35);background:#cdbb8f}
+#mapCanvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+#mapSide{width:min(300px,28vw);font-size:15px;line-height:1.5;color:#eadfbf;overflow:auto}
+#mapSide h3{font-weight:400;font-size:21px;letter-spacing:.05em;margin:0 0 10px;color:#f6e7b4}
+#mapSide p{margin:0 0 12px}
+#mapSide .dim{color:#b9ab86;font-size:13px}
+#mapSide .msep{height:1px;background:rgba(244,230,192,.25);margin:12px 0}
+#mapSide .mrow{display:flex;justify-content:space-between;padding:2px 0}
+#mapSide .mrow b{font-weight:400;color:#f6e7b4}
+#mapSide .leg{font-size:13px;line-height:2.1;margin-bottom:12px}
+#mapSide .k{display:inline-block;width:18px;height:18px;border-radius:50%;border:1.5px solid #1a120a;vertical-align:middle;text-align:center;font:bold 11px/16px Georgia;color:#1a120a;font-style:normal;background:#e6dcc0}
+#mapSide .k.m{background:#f2c14e}#mapSide .k.b{background:#6fc3d6;width:12px;height:12px}#mapSide .k.h{background:#c9a070;width:12px;height:12px}#mapSide .k.s{background:#9fc7c9}#mapSide .k.w{background:#58b7e8;width:13px;height:13px}
+#mapClose{position:absolute;right:10px;top:10px;min-width:0;padding:6px 14px;font-size:13px;z-index:2;background:rgba(40,26,12,.85)}
+@media (max-width:760px){#mapScreen{flex-direction:column}#mapSide{width:auto;max-height:26vh}}
+/* ---- HUD, third pass: status cluster top-right, square radar bottom-left, place-name bottom-right ---- */
+:root{--hud:'Rockwell','Roboto Slab','Clarendon','Bookman Old Style',Georgia,serif}
+.ol{-webkit-text-stroke:4px #0b0806;paint-order:stroke fill;text-shadow:none}
+#objective{top:20px;left:22px;max-width:min(440px,56vw);background:rgba(8,6,4,.5);padding:10px 16px 12px;border-radius:3px;text-shadow:0 1px 2px #000}
+#chapterTag{font-family:var(--hud);font-weight:700;font-size:11px;letter-spacing:.22em;margin-bottom:5px}
+#objText{font-size:17px;line-height:1.32}
+#stat{position:absolute;top:18px;right:22px;width:236px;display:grid;grid-template-columns:70px 1fr;column-gap:12px;row-gap:6px;align-items:center}
+#equip{width:70px;height:70px;border:2px solid rgba(244,230,192,.85);outline:2px solid #0b0806;border-radius:7px;background:rgba(10,8,5,.45);display:flex;align-items:center;justify-content:center}
+#equip svg{width:54px;height:54px}
+#statR{display:flex;flex-direction:column;gap:7px}
+#clock{position:static;background:none;border:0;padding:0;text-align:right;font-family:var(--hud);font-weight:700;font-size:17px;letter-spacing:.06em;color:#f4e6c0;-webkit-text-stroke:3.5px #0b0806;paint-order:stroke fill}
+#bars{position:static;width:auto}
+.bar{height:11px;margin:0;border:2.5px solid #0b0806;border-radius:0;background:rgba(10,8,5,.65)}
+.bar i{background:#b5261d;transition:width .12s}
+.bar.st i{background:#d9d3c2}
+.bar+.bar{margin-top:6px}
+#money{position:static;grid-column:1 / 3;text-align:right;font-family:var(--hud);font-weight:800;font-size:29px;letter-spacing:.03em;color:#e9c15a;-webkit-text-stroke:5px #0b0806;paint-order:stroke fill;text-shadow:none;line-height:1.1}
+#moneyDelta{position:static;grid-column:1 / 3;text-align:right;font-family:var(--hud);font-weight:700;font-size:17px;-webkit-text-stroke:3.5px #0b0806;paint-order:stroke fill;text-shadow:none;min-height:20px}
+#mapWrap{left:22px;bottom:22px;width:190px}
+#minimap{width:190px;height:190px;filter:none;border:4px solid #0b0806;outline:1px solid rgba(244,230,192,.55);outline-offset:-5px;box-shadow:0 3px 12px rgba(0,0,0,.5)}
+#area{right:24px;bottom:20px;text-shadow:none}
+#areaName{font-family:var(--hud);font-style:italic;font-weight:700;font-size:clamp(24px,2.9vw,38px);letter-spacing:.02em;color:#f4e6c0;-webkit-text-stroke:5px #0b0806;paint-order:stroke fill}
+#areaSub{font-family:var(--hud);font-weight:700;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill;font-size:12px;letter-spacing:.3em}
+#timer{font-family:var(--hud);font-weight:800;font-size:28px;-webkit-text-stroke:5px #0b0806;paint-order:stroke fill;text-shadow:none;color:#f4e6c0}
+#meter .trk,#boss .trk{height:11px;border:2.5px solid #0b0806;background:rgba(10,8,5,.65)}
+#meterLabel,#bossName{font-family:var(--hud);font-weight:700;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill;text-shadow:none;font-size:13px}
+#prompt{font-family:var(--hud);font-weight:700;background:rgba(8,6,4,.6);border:0;border-radius:3px}
+#prompt b{background:#f4e6c0;color:#0b0806;border:0;font-weight:800}
+#toast{background:rgba(8,6,4,.62);border:0;border-radius:3px;text-align:left;padding:11px 18px}
+#markerDist,#marker2Dist{font-family:var(--hud);font-weight:700;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill;text-shadow:none;font-size:13px}
+#bannerTitle{font-family:var(--hud);font-weight:800;-webkit-text-stroke:7px #0b0806;paint-order:stroke fill;text-shadow:none;color:#e9c15a;letter-spacing:.12em;padding-left:0}
+#bannerName,#bannerSub{font-family:var(--hud);font-weight:700;-webkit-text-stroke:4px #0b0806;paint-order:stroke fill;text-shadow:none}
+#barkText,#subText{font-weight:600;-webkit-text-stroke:3.5px #0b0806;paint-order:stroke fill;text-shadow:none;font-style:normal}
+#barkName,#subName{font-family:var(--hud);font-weight:700;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill;text-shadow:none}
+@media (max-width:760px){#stat{transform:scale(.72);transform-origin:right top}#mapWrap{transform:scale(.7);transform-origin:left bottom}}
+/* dialogue */
+#subs{position:fixed;left:50%;bottom:13vh;transform:translateX(-50%);width:min(820px,90vw);z-index:20;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;text-shadow:0 1px 4px #000,0 0 18px rgba(0,0,0,.8)}
+#subs.on{opacity:1;pointer-events:auto;cursor:pointer}
+#subName{font-size:14px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+#subText{font-size:clamp(17px,2.1vw,24px);line-height:1.42;min-height:2.8em}
+#subHint{font-size:12px;letter-spacing:.2em;opacity:0;margin-top:10px;color:#cdbf98;transition:opacity .3s}
+#bark{position:fixed;left:50%;bottom:15vh;transform:translateX(-50%);width:min(760px,88vw);z-index:19;text-align:center;opacity:0;transition:opacity .5s;text-shadow:0 1px 4px #000,0 0 16px rgba(0,0,0,.85)}
+#bark.on{opacity:1}
+#barkName{font-size:12px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;margin-bottom:5px}
+#barkText{font-size:clamp(16px,1.8vw,21px);line-height:1.4;font-style:italic}
+/* cards */
+#card{inset:0;z-index:31;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .9s;text-align:center;text-shadow:0 2px 20px rgba(0,0,0,.9)}
+#card.on{opacity:1}
+#cardSmall{font-size:14px;letter-spacing:.5em;color:var(--gold);margin-bottom:14px}
+#cardBig{font-size:clamp(40px,7vw,92px);letter-spacing:.16em;font-weight:400;line-height:1.05}
+#cardBig::after{content:'';display:block;width:120px;height:1px;background:var(--gold);margin:18px auto 0}
+#cardSub{font-size:22px;margin-top:14px;color:#e6d6ae;font-family:'Noto Serif Malayalam','Malayalam Sangam MN','Kartika','Nirmala UI',var(--serif)}
+#dead{inset:0;z-index:29;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(60,5,2,.35),rgba(20,0,0,.85));opacity:0;transition:opacity 1s;font-size:clamp(22px,3vw,36px);letter-spacing:.08em;text-align:center;padding:0 8vw}
+#dead.on{opacity:1}
+#photoTip{right:20px;bottom:13vh;z-index:21;font-size:13px;letter-spacing:.06em;line-height:1.7;text-align:right;opacity:0;transition:opacity .4s;text-shadow:0 1px 3px #000}
+#photoTip.on{opacity:.9}
+#photoTip b{font-family:ui-monospace,Menlo,monospace;border:1px solid rgba(244,230,192,.5);border-radius:3px;padding:0 5px;font-size:12px}
+/* menus */
+.screen{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 1s}
+.screen.gone{opacity:0;pointer-events:none}
+#menu{background:linear-gradient(180deg,rgba(10,6,3,.25) 0%,rgba(10,6,3,0) 30%,rgba(10,6,3,.2) 60%,rgba(10,6,3,.82) 100%);justify-content:flex-end;padding-bottom:7vh}
+#titleBlock{position:absolute;top:11vh;left:0;right:0;text-align:center;text-shadow:0 3px 30px rgba(0,0,0,.75)}
+#titleBlock .ml{font-size:clamp(20px,2.6vw,34px);color:#f0dca6;font-family:'Noto Serif Malayalam','Malayalam Sangam MN','Kartika','Nirmala UI',var(--serif);margin-bottom:6px}
+#titleBlock h1{margin:0;font-weight:400;font-size:clamp(64px,13vw,170px);letter-spacing:.2em;padding-left:.2em;line-height:1}
+#titleBlock .sub{text-shadow:0 1px 2px #000,0 0 12px rgba(0,0,0,.9);margin-top:12px;font-size:clamp(13px,1.5vw,18px);letter-spacing:.55em;color:var(--gold)}
+.btns{display:flex;flex-direction:column;gap:10px;align-items:center}
+button{font-family:var(--serif);font-size:19px;letter-spacing:.14em;color:var(--cream);background:rgba(20,13,6,.55);border:1px solid rgba(244,230,192,.35);padding:11px 34px;min-width:300px;cursor:pointer;transition:all .2s;border-radius:2px}
+button:hover,button:focus-visible{background:rgba(233,185,73,.18);border-color:var(--gold);color:#fff;outline:none}
+button.small{font-size:14px;padding:7px 20px;min-width:220px;opacity:.85}
+#menu .foot{margin-top:22px;font-size:12px;letter-spacing:.12em;color:#cdbf98;text-align:center;line-height:1.8;max-width:92vw;text-shadow:0 1px 3px #000}
+#pause{background:rgba(8,5,2,.72);backdrop-filter:blur(3px);display:none}
+#pause.on{display:flex}
+#pause h2{font-weight:400;font-size:44px;letter-spacing:.3em;margin:0 0 6px}
+#pauseChapter{color:var(--gold);letter-spacing:.25em;font-size:13px;margin-bottom:26px}
+#pause table{margin-top:26px;font-size:14px;border-collapse:collapse;color:#dccfa8}
+#pause td{padding:3px 14px}
+#pause td:first-child{text-align:right;color:#fff;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+#loading{background:#0b0704;z-index:50}
+#loading h1{font-weight:400;font-size:clamp(48px,9vw,110px);letter-spacing:.2em;padding-left:.2em;margin:0}
+#loading .ml{font-size:24px;color:#e6d6ae;margin-bottom:8px;font-family:'Noto Serif Malayalam','Malayalam Sangam MN','Kartika','Nirmala UI',var(--serif)}
+#loadWrap{width:min(360px,70vw);height:2px;background:rgba(244,230,192,.18);margin-top:34px}
+#loadBar{height:100%;width:0;background:var(--gold);transition:width .3s}
+#loadText{margin-top:14px;font-size:14px;letter-spacing:.14em;color:#cdbf98;font-style:italic;text-align:center;padding:0 20px}
+/* touch */
+#touch{position:fixed;inset:0;z-index:15;pointer-events:none;display:none}
+body.touch #touch{display:block}
+#stick{position:absolute;width:120px;height:120px;border-radius:50%;border:2px solid rgba(244,230,192,.4);background:rgba(20,13,6,.25);display:none}
+#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(244,230,192,.5)}
+.tb{position:absolute;width:62px;height:62px;border-radius:50%;border:2px solid rgba(244,230,192,.55);background:rgba(20,13,6,.45);color:var(--cream);font:600 15px var(--serif);display:flex;align-items:center;justify-content:center;pointer-events:auto}
+.tb.on{background:rgba(233,185,73,.5)}
+@media (max-width:760px){#objText{font-size:15px}#mapWrap{transform:scale(.7);transform-origin:left bottom}#bars{left:170px;bottom:22px;width:100px}button{min-width:240px;font-size:16px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" class="layer">
+  <div id="objective"><div id="chapterTag"></div><div id="objText"></div></div>
+  <div id="detect"></div>
+  <div id="toast"></div>
+  <div id="prompt"></div>
+  <div id="marker"><i></i><div id="markerDist"></div></div>
+  <div id="marker2"><i></i><div id="marker2Dist"></div></div>
+  <div id="stat"><div id="equip"></div><div id="statR"><div id="clock"></div><div id="bars"><div class="bar st"><i id="st"></i></div><div class="bar"><i id="hp"></i></div></div></div><div id="money">Rs 0</div><div id="moneyDelta"></div></div>
+  <div id="timer"></div>
+  <div id="meter"><div id="meterLabel"></div><div class="trk"><div id="meterFill"></div></div></div>
+  <div id="boss"><div id="bossName"></div><div class="trk"><div id="bossFill"></div></div></div>
+  <div id="area"><div id="areaName"></div><div id="areaSub"></div></div>
+  <div id="mapWrap"><canvas id="minimap" width="200" height="200"></canvas></div>
+</div>
+<div id="letterTop" class="layer"></div><div id="letterBot" class="layer"></div>
+<div id="bark"><div id="barkName"></div><div id="barkText"></div></div>
+<div id="subs"><div id="subName"></div><div id="subText"></div><div id="subHint">E / CLICK — CONTINUE</div></div>
+<div id="photoTip" class="layer">PHOTO MODE<br><b>Mouse</b> orbit &nbsp; <b>Wheel</b> zoom<br><b>[</b> <b>]</b> hour &nbsp; <b>R</b> rain<br><b>T</b> hide this &nbsp; <b>P</b> exit</div>
+<div id="hurt" class="layer"></div>
+<div id="dead" class="layer"><div id="deadText"></div></div>
+<div id="banner" class="layer"><div id="bannerTitle"></div><div id="bannerName"></div><div id="bannerSub"></div></div>
+<div id="fade" class="layer"></div>
+<div id="mapScreen"><div id="mapWrapBig"><canvas id="mapCanvas"></canvas><button id="mapClose">Close · M</button></div><div id="mapSide"></div></div>
+<div id="card" class="layer"><div id="cardSmall"></div><div id="cardBig"></div><div id="cardSub"></div></div>
+
+<div id="touch">
+  <div id="stick"><div id="knob"></div></div>
+  <div class="tb" data-key="KeyE" style="right:26px;bottom:150px">E</div>
+  <div class="tb" data-key="KeyF" style="right:100px;bottom:96px">⚔</div>
+  <div class="tb" data-key="Space" style="right:26px;bottom:70px">▲</div>
+  <div class="tb" data-key="Sprint" style="right:100px;bottom:176px">RUN</div>
+  <div class="tb" data-key="KeyC" style="right:174px;bottom:70px">▼</div>
+</div>
+
+<div id="menu" class="screen">
+  <div id="titleBlock">
+    <div class="ml">കായൽ</div>
+    <h1>KAYAL</h1>
+    <div class="sub">TRAVANCORE · 1905</div>
+  </div>
+  <div class="btns">
+    <button id="btnContinue" style="display:none">Continue</button>
+    <button id="btnNew">New Game</button>
+    <button id="btnQuality" class="small">Graphics</button>
+  </div>
+  <div class="foot">WASD move · Mouse look · Shift run / gallop · Space jump · C crouch · E interact · Left-click / F strike · Right-click / Q block · M map · X whistle for your horse · P photo mode · Esc pause<br>Headphones recommended. Best in a desktop browser.</div>
+</div>
+
+<div id="pause" class="screen">
+  <h2>PAUSED</h2>
+  <div id="pauseChapter"></div>
+  <div class="btns">
+    <button id="btnResume">Resume</button>
+    <button id="btnRestart" class="small">Restart mission</button>
+    <button id="btnMute" class="small">Sound: On</button>
+    <button id="btnTitle" class="small">Quit to title</button>
+  </div>
+  <table>
+    <tr><td>W A S D</td><td>Move / steer horse &amp; boat (camera-relative)</td></tr>
+    <tr><td>Mouse</td><td>Look · Wheel to zoom</td></tr>
+    <tr><td>Shift</td><td>Run · Gallop · Paddle hard</td></tr>
+    <tr><td>Space / C</td><td>Jump / Crouch (stealth)</td></tr>
+    <tr><td>E</td><td>Talk · Gather · Mount · Board · Dismount</td></tr>
+    <tr><td>LMB / F</td><td>Strike with your staff</td></tr>
+    <tr><td>RMB / Q</td><td>Block (time it to stagger)</td></tr>
+    <tr><td>M</td><td>Map — click to set a waypoint</td></tr>
+    <tr><td>X</td><td>Whistle for your horse</td></tr>
+    <tr><td>P / H</td><td>Photo mode / Hide HUD</td></tr>
+  </table>
+</div>
+
+<div id="loading" class="screen">
+  <div class="ml">കായൽ</div>
+  <h1>KAYAL</h1>
+  <div id="loadWrap"><div id="loadBar"></div></div>
+  <div id="loadText">Preparing…</div>
+</div>
+
+<script>/*__BUNDLE__*/</script>
+</body>
+</html>
