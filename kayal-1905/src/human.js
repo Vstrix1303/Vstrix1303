@@ -699,7 +699,7 @@ export class Human {
       const cp = addMesh(chest, G_CAPE, leafMat(), 0, -0.2, -0.005, 1, 0.98, 1); cp.rotation.x = 0.07;
       const hood = addMesh(hd, G_HOOD, leafMat(), 0, 0.085, -0.03, 1, 1, 1.12); hood.rotation.x = -0.32;
     }
-    if (o.basketHead) { addMesh(hd, G_BASKET, leafMat(), 0, 0.045, 0, 1); addMesh(hd, G_TORUS, AM(0x8a7a5a, 1), 0, 0.04, 0, 0.07, 0.07, 0.03).rotation.x = Math.PI / 2; }
+    if (o.basketHead) { addMesh(hd, G_BASKET, leafMat(), 0, 0.072, 0, 1); addMesh(hd, G_TORUS, AM(0x8a7a5a, 1), 0, 0.062, 0, 0.07, 0.07, 0.03).rotation.x = Math.PI / 2; }
     if (o.earrings) for (const s of [-1, 1]) addMesh(hd, G_SPH, AM(0xd9a93a, 0.35, { metalness: 0.5 }), s * 0.081, -0.085, 0.0, 0.009);
     if (o.necklace) { const n = addMesh(chest, G_TORUS, AM(0xd9a93a, 0.35, { metalness: 0.5 }), 0, 0.205, 0.022, 0.062, 0.062, 0.02); n.rotation.x = Math.PI / 2 - 0.5; }
 
