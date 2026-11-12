@@ -27,6 +27,40 @@ function speckle(ctx, w, h, rng, n, colors, minS, maxS, alpha = 0.25) {
   ctx.globalAlpha = 1;
 }
 
+// Weathering pass: film-grain, damp blotches, drip streaks and hairline cracks.
+function grit(c, rng, amt = 1, streaks = 0, cracks = 4) {
+  const g = c.getContext('2d'), w = c.width, h = c.height;
+  if (!grit.n) {
+    const nc = grit.n = document.createElement('canvas'); nc.width = nc.height = 512;
+    const ng = nc.getContext('2d'), im = ng.createImageData(512, 512), d = im.data;
+    for (let i = 0; i < d.length; i += 4) { const v = 96 + rng() * 64; d[i] = v; d[i + 1] = v; d[i + 2] = v * 0.96; d[i + 3] = 255; }
+    ng.putImageData(im, 0, 0);
+  }
+  g.globalAlpha = Math.min(1, 0.55 * amt); g.globalCompositeOperation = 'overlay';
+  for (let y = 0; y < h; y += 512) for (let x = 0; x < w; x += 512) g.drawImage(grit.n, x, y);
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 46; i++) {
+    const x = rng() * w, y = rng() * h, r = 8 + rng() * w * 0.2, dark = rng() < 0.65;
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, dark ? `rgba(30,22,12,${0.05 + rng() * 0.11 * amt})` : `rgba(255,245,225,${0.04 + rng() * 0.06})`); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  for (let i = 0; i < streaks; i++) {
+    const x = rng() * w, y = rng() * h * 0.5, len = h * (0.2 + rng() * 0.6), ww = 2 + rng() * 7;
+    const grd = g.createLinearGradient(0, y, 0, y + len);
+    grd.addColorStop(0, `rgba(35,30,18,${0.1 + rng() * 0.14})`); grd.addColorStop(1, 'rgba(35,30,18,0)');
+    g.fillStyle = grd; g.fillRect(x, y, ww, len);
+  }
+  g.lineWidth = 0.8;
+  for (let i = 0; i < cracks; i++) {
+    let x = rng() * w, y = rng() * h, a = rng() * 6.28;
+    g.strokeStyle = `rgba(25,18,10,${0.25 + rng() * 0.3})`;
+    g.beginPath(); g.moveTo(x, y);
+    for (let k = 0; k < 14; k++) { a += (rng() - 0.5) * 1.1; x += Math.cos(a) * (4 + rng() * 9); y += Math.sin(a) * (4 + rng() * 9); g.lineTo(x, y); }
+    g.stroke();
+  }
+}
+
 export const TEX = {};
 
 export function buildTextures() {
@@ -304,5 +338,54 @@ export function buildTextures() {
     }
     TEX.sack = tex(c);
   }
+  // ---- ground detail (linear, mid-grey mean): trodden earth and rough turf
+  {
+    const [c, g] = mk(512, 512);
+    g.fillStyle = 'rgb(128,125,119)'; g.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 2600; i++) {
+      const x = rng() * 512, y = rng() * 512, r = 0.8 + rng() * rng() * 6, v = 120 + rng() * 90;
+      g.fillStyle = 'rgba(40,34,26,0.5)'; g.beginPath(); g.ellipse(x + 0.8, y + 1.1, r, r * 0.8, rng() * 3, 0, 7); g.fill();
+      g.fillStyle = `rgb(${v},${v * 0.97},${v * 0.92})`; g.beginPath(); g.ellipse(x, y, r, r * 0.8, rng() * 3, 0, 7); g.fill();
+    }
+    grit(c, rng, 1.5, 0, 26);
+    for (let i = 0; i < 40; i++) { g.strokeStyle = 'rgba(60,50,40,0.16)'; g.lineWidth = 2 + rng() * 5; const y = rng() * 512; g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(170, y + (rng() - 0.5) * 40, 340, y + (rng() - 0.5) * 40, 512, y); g.stroke(); }
+    TEX.gDirt = tex(c, { srgb: false });
+  }
+  {
+    const [c, g] = mk(512, 512);
+    g.fillStyle = 'rgb(112,118,104)'; g.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 60; i++) { const x = rng() * 512, y = rng() * 512, r = 30 + rng() * 80; const grd = g.createRadialGradient(x, y, 0, x, y, r); grd.addColorStop(0, rng() < 0.5 ? 'rgba(70,84,60,0.35)' : 'rgba(170,160,110,0.25)'); grd.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2); }
+    g.lineCap = 'round';
+    for (let i = 0; i < 9000; i++) {
+      const x = rng() * 512, y = rng() * 512, l = 4 + rng() * 12, a = -1.57 + (rng() - 0.5) * 1.6, k = rng();
+      g.strokeStyle = k < 0.12 ? `rgba(${185 + rng() * 40},${170 + rng() * 30},${105 + rng() * 30},0.8)` : k < 0.5 ? `rgba(${62 + rng() * 30},${82 + rng() * 30},${52 + rng() * 20},0.85)` : `rgba(${130 + rng() * 50},${150 + rng() * 45},${95 + rng() * 35},0.8)`;
+      g.lineWidth = 0.8 + rng() * 1.4;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+    }
+    grit(c, rng, 0.8, 0, 0);
+    TEX.gGrass = tex(c, { srgb: false });
+  }
+  // ---- painted signboards (2 x 4 atlas)
+  {
+    const [c, g] = mk(1024, 512);
+    const SG = [
+      ['MOIDEEN & SONS', 'SPICES · PEPPER · GINGER', '#e8dcb8', '#3a1c10'], ['HARROW & FINCH', 'TRADING COMPANY · MADRAS', '#1e2c26', '#e6d9a8'],
+      ['ചായക്കട', 'TEA & TIFFIN', '#7a1f18', '#f2e6c0'], ['കള്ള് ഷാപ്പ്', 'TODDY', '#e8dcb8', '#1a1a1a'],
+      ['തയ്യൽക്കട', 'TAILOR & DRAPER', '#2a3c5a', '#f0e4c0'], ['PUTHENTHURA', 'JETTY  ·  FERRY', '#e8dcb8', '#1c2c4c'],
+      ['KANNIMALA', 'TEA ESTATE · H. & F. Co.', '#243a2a', '#e8dca8'], ['CUTCHERRY', 'HUZUR · TRAVANCORE', '#e8dcb8', '#3a1c10'],
+    ];
+    SG.forEach(([a, b, bg, fg], i) => {
+      const x = (i % 2) * 512, y = Math.floor(i / 2) * 128;
+      g.fillStyle = bg; g.fillRect(x, y, 512, 128);
+      g.strokeStyle = fg; g.lineWidth = 5; g.strokeRect(x + 9, y + 9, 494, 110); g.lineWidth = 1.5; g.strokeRect(x + 17, y + 17, 478, 94);
+      g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `bold ${/[A-Z]/.test(a) ? 52 : 56}px Georgia, 'Noto Serif Malayalam', 'Nirmala UI', serif`; g.fillText(a, x + 256, y + 52, 450);
+      g.font = 'bold 21px Georgia, serif'; g.fillText(b, x + 256, y + 96, 440);
+    });
+    grit(c, rng, 1.1, 30, 12);
+    TEX.signs = tex(c, { repeat: false });
+  }
+  // weather every built surface
+  for (const [k, a, st, cr] of [['wall', 1.2, 26, 10], ['laterite', 1.1, 10, 4], ['roof', 1.0, 12, 0], ['thatch', 0.8, 0, 0], ['wood', 0.9, 0, 5], ['plank', 1.0, 6, 6], ['stone', 1.0, 10, 8], ['bark', 0.8, 0, 0], ['palmBark', 0.8, 0, 0], ['tin', 1.0, 16, 0], ['sack', 0.8, 0, 0]]) grit(TEX[k].image, rng, a, st, cr);
   return TEX;
 }

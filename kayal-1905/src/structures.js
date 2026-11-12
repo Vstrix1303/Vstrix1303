@@ -3,7 +3,8 @@
 import * as THREE from 'three';
 import { Builder, makeMaterials } from './builder.js';
 import { GB, TRS } from './geo.js';
-import { LOC, getHeight, canalZ } from './heightfield.js';
+import { LOC, getHeight, canalZ, ROADS } from './heightfield.js';
+import { pointInBox } from './physics.js';
 import { makeRng, TAU } from './util.js';
 
 export const SPOTS = {};   // named world positions used by the story
@@ -21,8 +22,37 @@ function house(b, x, z, ry, o = {}) {
   b.box('wood', 1.34, 2.12, 0.1, o.doorX || 0, y0, d / 2 + 0.0, { col: [0.3, 0.24, 0.2] });
   b.box('wood', 1.1, 2.0, 0.14, o.doorX || 0, y0, d / 2 + 0.02, { col: DOOR });
   for (const sx of [-1, 1]) {
-    if (Math.abs(sx * w * 0.32 - (o.doorX || 0)) > 0.9) b.box('wood', 0.9, 1.0, 0.1, sx * w * 0.32, y0 + 1.0, d / 2 + 0.02);
-    b.box('wood', 0.1, 1.0, 0.9, sx * (w / 2 + 0.02), y0 + 1.0, 0);
+    if (Math.abs(sx * w * 0.32 - (o.doorX || 0)) > 0.9) {
+      const wx = sx * w * 0.32;
+      b.box('wood', 1.08, 1.18, 0.07, wx, y0 + 0.91, d / 2 + 0.0, { col: [1.5, 1.35, 1.1] });
+      b.box('wood', 0.9, 1.0, 0.1, wx, y0 + 1.0, d / 2 + 0.02, { col: [0.35, 0.3, 0.28] });
+      for (let k = -1; k <= 1; k++) b.box('paint', 0.035, 1.0, 0.035, wx + k * 0.24, y0 + 1.0, d / 2 + 0.085, { col: [0.13, 0.12, 0.11] });
+      for (const ss of [-1, 1]) b.box('wood', 0.44, 1.0, 0.04, wx + ss * 0.68, y0 + 1.0, d / 2 + 0.06, { col: [0.55, 0.75, 0.62] });
+      b.box('wood', 1.2, 0.06, 0.16, wx, y0 + 0.93, d / 2 + 0.06, { col: [1.3, 1.2, 1.0] });
+    }
+    b.box('wood', 0.07, 1.18, 1.08, sx * (w / 2 + 0.0), y0 + 0.91, 0, { col: [1.5, 1.35, 1.1] });
+    b.box('wood', 0.1, 1.0, 0.9, sx * (w / 2 + 0.02), y0 + 1.0, 0, { col: [0.35, 0.3, 0.28] });
+  }
+  const hsh = Math.abs(Math.round(x * 3.1 + z * 7.7));
+  // woven palm-leaf fence along the front of the yard
+  if (o.fence ?? (hsh % 5 < 3)) {
+    const fz = d / 2 + ov + 3.0, fx = w / 2 + ov + 1.6;
+    for (const [a, c] of [[-fx, -1.4], [1.4, fx]]) {
+      b.box('thatch', c - a, 1.0, 0.05, (a + c) / 2, 0.08, fz, { tile: 1.2, col: [0.8, 0.74, 0.62] });
+      b.box('wood', c - a, 0.06, 0.07, (a + c) / 2, 1.0, fz);
+      for (let px = a; px <= c + 0.01; px += (c - a) / Math.max(1, Math.round((c - a) / 1.7))) b.cyl('wood', 0.045, 0.055, 1.3, px, 0, fz, { seg: 5 });
+      b.collider((a + c) / 2, fz, (c - a) / 2, 0.08, 0, 1.2);
+    }
+    b.box('thatch', 0.05, 1.0, fz + d / 2, -fx, 0.08, (fz - d / 2) / 2, { tile: 1.2, col: [0.8, 0.74, 0.62] });
+    b.collider(-fx, (fz - d / 2) / 2, 0.08, (fz + d / 2) / 2, 0, 1.2);
+  }
+  // washing on the line
+  if (o.washing ?? (hsh % 4 === 1)) {
+    const lx = w / 2 + ov + 1.2, lz = -d / 4;
+    for (const sz of [-1.7, 1.7]) b.cyl('wood', 0.04, 0.05, 1.9, lx, 0, lz + sz, { seg: 5 });
+    b.box('paint', 0.015, 0.015, 3.4, lx, 1.82, lz, { col: [0.2, 0.18, 0.15] });
+    const cc = [[0.92, 0.9, 0.82], [0.62, 0.16, 0.14], [0.2, 0.32, 0.5], [0.9, 0.86, 0.7]];
+    for (let k = 0; k < 4; k++) b.box('paint', 0.02, 0.62 + (k % 2) * 0.22, 0.6, lx, 1.82 - 0.63 - (k % 2) * 0.22, lz - 1.15 + k * 0.76, { col: cc[(hsh + k) % 4] });
   }
   const rh = (d / 2 + ov) * (o.pitch || 0.82);
   b.roofHip(roof, w + ov * 2, d + ov * 2, rh, Math.max(w - d, w * 0.3), 0, y0 + wallH - 0.2, 0);
@@ -187,7 +217,8 @@ export function buildStructures(scene) {
 
   // tea shop at the junction
   {
-    house(b, -22, 30, Math.PI + 0.9, { w: 6, d: 4.5, roof: 'thatch', wall: 'laterite', lamp: 1 });
+    house(b, -22, 30, Math.PI + 0.9, { w: 6, d: 4.5, roof: 'thatch', wall: 'laterite', lamp: 1, fence: false, washing: false });
+    b.sign(2, 2.4, 0.6, 0, 2.5, 3.2);
     b.place(-26.5, 22, 0.9);
     b.box('plank', 2.2, 0.08, 0.45, 0, 0.45, 0, { tile: 1 }); b.box('wood', 0.1, 0.45, 0.4, -0.9, 0, 0); b.box('wood', 0.1, 0.45, 0.4, 0.9, 0, 0);
     b.box('plank', 2.2, 0.08, 0.45, 0, 0.45, -1.6, { tile: 1 }); b.box('wood', 0.1, 0.45, 0.4, -0.9, 0, -1.6); b.box('wood', 0.1, 0.45, 0.4, 0.9, 0, -1.6);
@@ -365,10 +396,15 @@ export function buildStructures(scene) {
     SPOTS.portLanding = new THREE.Vector3(-400, 0.85, pz + 12);
     // market row north of the road
     const shops = [[-352, -404, 0], [-366, -401, 0], [-380, -399, 0], [-416, -398, 0], [-430, -399, 0], [-444, -400, 0]];
-    shops.forEach(([x, z, ry], i) => house(b, x, z, ry, { w: 6 + (i % 2), d: 5, overhang: 1.5, wall: i % 3 === 1 ? 'laterite' : 'wall', lamp: i % 2 }));
+    shops.forEach(([x, z, ry], i) => house(b, x, z, ry, { w: 6 + (i % 2), d: 5, overhang: 1.5, wall: i % 3 === 1 ? 'laterite' : 'wall', lamp: i % 2, fence: false, washing: false }));
+    b.place(-430, -399, 0); b.sign(4, 2.6, 0.65, 0, 2.5, 3.5);
+    b.place(-400, pz - 9, 0);
+    for (const sx of [2.2, 5.0]) b.cyl('wood', 0.07, 0.09, 3.2, sx, 0, 0, { seg: 6 });
+    b.sign(5, 3.0, 0.75, 3.6, 2.7, -0.06, Math.PI); b.circle(2.2, 0, 0.2); b.circle(5, 0, 0.2);
     spiceStall(b, -372, -389.5, 0, rng); spiceStall(b, -423, -389, 0, rng); spiceStall(b, -392, -372, Math.PI / 2, rng);
     // Moideen's spice house, on the quay
-    house(b, -416, -356, Math.PI / 2, { w: 9, d: 6.5, lamp: 1, overhang: 1.6 });
+    house(b, -416, -356, Math.PI / 2, { w: 9, d: 6.5, lamp: 1, overhang: 1.6, fence: false, washing: false });
+    b.sign(0, 3.6, 0.9, 0, 2.55, 4.4);
     b.place(-416, -356, Math.PI / 2);
     SPOTS.moideen = b.world(1.5, 0, 6.4);
     crates(b, -406, -349, 0.2, rng, 5, 'sack'); crates(b, -406.5, -362.5, 1.2, rng, 4, 'mix');
@@ -417,6 +453,7 @@ export function buildStructures(scene) {
     wallRun(b, 'laterite', -28, -27, -28, 26, 2.3, 0.5); wallRun(b, 'laterite', -28, 26, 28, 26, 2.3, 0.5);
     for (const sx of [-3.6, 3.6]) { b.box('wall', 0.9, 3.2, 0.9, sx, -0.5, -27); b.sphere('wall', 0.36, sx, 2.9, -27); b.collider(sx, -27, 0.45, 0.45); }
     b.lamp(-3.6, 3.4, -27, 1.2, 1); b.lamp(3.6, 3.4, -27, 1.2, 0);
+    b.box('wood', 8.0, 0.18, 0.18, 0, 3.3, -27); b.sign(1, 4.4, 1.1, 0, 4.1, -27.12, Math.PI);
     // godown (warehouse) along the west wall
     b.box('laterite', 10.6, 2, 31, -20, -1.5, 0);
     b.box('laterite', 10, 4.2, 30, -20, 0.4, 0);
@@ -485,6 +522,7 @@ export function buildStructures(scene) {
     for (let i = 0; i < 6; i++) b.cyl('wall', 0.26, 0.3, 4.3, -5 + i * 2, 1.0, 8.6, { seg: 12 });
     b.box('wall', 11.4, 0.5, 4.6, 0, 5.3, 7);
     b.roofGable('roof', 4.8, 11.8, 2.2, 0, 5.8, 7, Math.PI / 2, 'wall');
+    b.sign(7, 3.4, 0.85, 0, 4.2, 5.14);
     b.box('wood', 1.8, 2.8, 0.16, 0, 1.0, 5.02, { col: [0.25, 0.3, 0.26] });
     for (const sx of [-8, -4.4, 4.4, 8]) b.box('wood', 1.2, 1.8, 0.1, sx, 2.0, 5.02, { col: [0.25, 0.3, 0.26] });
     for (let i = 0; i < 4; i++) b.box('stone', 7, 0.26, 0.55, 0, 0.74 - i * 0.25, 9.5 + i * 0.55);
@@ -511,7 +549,7 @@ export function buildStructures(scene) {
   const farms = [[-120, 200, 2.6], [150, 150, 0.4], [60, 215, 3.1], [-260, -440, 0.3], [-140, -300, 1.2], [20, -300, 3.2], [240, -280, 2.9], [-620, 100, 1.6], [-640, -120, 1.4], [-630, 300, 1.8], [100, 540, 0.2], [-100, 545, 0.1], [230, 40, 4.4], [-200, -200, 5]];
   for (const [x, z, ry] of farms) {
     if (getHeight(x, z) < 1.2) continue;
-    house(b, x, z, ry, rng() < 0.5 ? { w: 6, d: 5, roof: 'thatch', wall: 'laterite' } : { w: 7 });
+    house(b, x, z, ry, rng() < 0.5 ? { w: 6, d: 5, roof: 'thatch', wall: 'laterite', fence: false } : { w: 7, fence: false });
     if (rng() < 0.6) haystack(b, x + 9, z + 4, 0.9);
   }
   // shrine on the island
@@ -574,6 +612,7 @@ export function buildStructures(scene) {
     // gate
     for (const sx of [-2.6, 2.6]) { b.box('wall', 0.8, 2.8, 0.8, sx, -0.4, 34); b.sphere('wall', 0.3, sx, 2.65, 34); b.collider(sx, 34, 0.4, 0.4); }
     b.box('wood', 5.2, 0.5, 0.12, 0, 2.5, 34, { col: [0.2, 0.3, 0.22] });
+    b.sign(6, 3.6, 0.9, 0, 3.5, 34.1);
     b.lamp(-2.6, 3.1, 34, 1.2, 1);
     for (const [cx, cz] of [[4, 2], [-8, 12], [8, 18], [-10, -18], [6, -22], [-2, 24]]) { const w = b.world(cx, 0, cz); crates(b, w.x, w.z, cx, rng, 4, 'mix'); b.place(ex, ez, 0); }
     SPOTS.estateGate = b.world(0, 0, 40);
@@ -672,7 +711,8 @@ export function buildStructures(scene) {
 
   // ---- toddy shop on the canal towpath
   {
-    house(b, LOC.toddy.x, LOC.toddy.z - 4, 0, { w: 6, d: 4.5, roof: 'thatch', wall: 'laterite', lamp: 1, smoke: true });
+    house(b, LOC.toddy.x, LOC.toddy.z - 4, 0, { w: 6, d: 4.5, roof: 'thatch', wall: 'laterite', lamp: 1, smoke: true, fence: false, washing: false });
+    b.sign(3, 2.4, 0.6, 0, 2.5, 3.2);
     b.place(LOC.toddy.x, LOC.toddy.z + 2.6, 0);
     for (const sx of [-2.2, 2.2]) { b.box('plank', 1.8, 0.08, 0.45, sx, 0.45, 0, { tile: 1 }); b.box('wood', 0.1, 0.45, 0.4, sx - 0.7, 0, 0); b.box('wood', 0.1, 0.45, 0.4, sx + 0.7, 0, 0); }
     SPOTS.toddy = b.world(0, 0, 1.6);
@@ -700,6 +740,32 @@ export function buildStructures(scene) {
   for (const [x, z] of [[-70, 22], [8, 8], [-140, 28], [-396, -368], [-412, -386], [60, -6]]) {
     b.place(x, z, rng() * 3);
     for (let i = 0; i < 9; i++) b.sphere('paint', 0.15, (rng() - 0.5) * 1.3, 0.13 + (i > 5 ? 0.2 : 0), (rng() - 0.5) * 1.1, { seg: 6, rings: 5, col: rng() < 0.5 ? [0.45, 0.32, 0.18] : [0.35, 0.42, 0.18] });
+  }
+
+  // ---- the telegraph: Puthenthura to the hill Cutcherry
+  {
+    const line = [...ROADS.north.slice(Math.floor(ROADS.north.length * 0.42)).reverse(), ...ROADS.hill];
+    let acc = 30, prev = null;
+    for (let i = 1; i < line.length; i++) {
+      const a = line[i - 1], c = line[i], seg = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      acc += seg;
+      if (acc < 36) continue;
+      acc = 0;
+      const dx = (c[0] - a[0]) / seg, dz = (c[1] - a[1]) / seg;
+      const x = c[0] - dz * 5.2, z = c[1] + dx * 5.2, h = getHeight(x, z);
+      if (h < 0.8 || pointInBox(x, z, 1.5)) { prev = null; continue; }
+      const ry = Math.atan2(dx, dz);
+      b.place(x, z, ry, h);
+      b.cyl('wood', 0.08, 0.12, 7.6, 0, -0.4, 0, { seg: 6, col: [0.7, 0.62, 0.55] });
+      b.box('wood', 1.5, 0.09, 0.09, 0, 6.6, 0); b.box('wood', 1.1, 0.08, 0.08, 0, 6.1, 0);
+      const tops = [[-0.65, 6.78], [0.65, 6.78], [-0.45, 6.27], [0.45, 6.27]].map(([ox, oy]) => { b.cyl('paint', 0.035, 0.045, 0.14, ox, oy - 0.09, 0, { seg: 6, col: [0.9, 0.9, 0.86] }); return b.world(ox, oy + 0.05, 0); });
+      b.circle(0, 0, 0.16);
+      if (prev) for (let k = 0; k < 4; k++) {
+        const mid = prev[k].clone().add(tops[k]).multiplyScalar(0.5); mid.y -= 0.55;
+        b.beamW('paint', prev[k], mid, 0.022, [0.08, 0.08, 0.08]); b.beamW('paint', mid, tops[k], 0.022, [0.08, 0.08, 0.08]);
+      }
+      prev = tops;
+    }
   }
 
   const meshes = b.finish(scene, mats);

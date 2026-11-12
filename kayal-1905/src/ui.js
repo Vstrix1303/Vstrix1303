@@ -4,6 +4,15 @@ import { G } from './state.js';
 import { clamp } from './util.js';
 
 const $ = (id) => document.getElementById(id);
+// what Madhavan has in hand (drawn for this game)
+const svg = (inner) => `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const EQUIP = {
+  staff: svg('<path d="M12 54 L52 10" stroke="#0b0806" stroke-width="9"/><path d="M12 54 L52 10" stroke="#b98a52" stroke-width="5"/><path d="M46 17 L52 10 M12 54 L18 47" stroke="#e9c15a" stroke-width="5"/>'),
+  paddle: svg('<path d="M14 54 L40 22" stroke="#0b0806" stroke-width="8"/><path d="M14 54 L40 22" stroke="#b98a52" stroke-width="4"/><ellipse cx="46" cy="15" rx="7" ry="12" transform="rotate(38 46 15)" fill="#b98a52" stroke="#0b0806" stroke-width="3"/>'),
+  horse: svg('<path d="M18 52 V30 a14 14 0 0 1 28 0 V52" stroke="#0b0806" stroke-width="13"/><path d="M18 52 V30 a14 14 0 0 1 28 0 V52" stroke="#c9c2b0" stroke-width="7"/><g fill="#0b0806"><circle cx="18" cy="42" r="1.6"/><circle cx="46" cy="42" r="1.6"/><circle cx="21" cy="24" r="1.6"/><circle cx="43" cy="24" r="1.6"/><circle cx="32" cy="17" r="1.6"/></g>'),
+  bucket: svg('<path d="M16 26 L22 54 H42 L48 26 Z" fill="#9a7648" stroke="#0b0806" stroke-width="3.5"/><path d="M17 34 H47 M19 45 H45" stroke="#0b0806" stroke-width="2.5"/><path d="M16 26 Q32 4 48 26" stroke="#0b0806" stroke-width="3.5"/><ellipse cx="32" cy="26" rx="16" ry="4" fill="#6fa8b4" stroke="#0b0806" stroke-width="3"/>'),
+  rod: svg('<path d="M10 54 L52 10" stroke="#0b0806" stroke-width="6"/><path d="M10 54 L52 10" stroke="#c9a85a" stroke-width="2.6"/><path d="M52 10 Q58 30 46 44" stroke="#e8e0c8" stroke-width="1.6"/><path d="M46 44 q-4 6 2 8" stroke="#c9c2b0" stroke-width="2.4"/>'),
+};
 
 export class UI {
   constructor() {
@@ -73,7 +82,7 @@ export class UI {
   }
   area(name, sub = '') {
     this.el.areaName.textContent = name; this.el.areaSub.textContent = sub;
-    this.el.area.classList.add('on'); this.areaT = 4;
+    this.el.area.classList.add('on'); this.areaT = 4.5;
   }
   setWaypoint(pos) { this.waypoint = pos ? pos.clone() : null; }
 
@@ -129,7 +138,9 @@ export class UI {
     if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) this.el.toast.classList.remove('on'); }
     if (this.barkT > 0) { this.barkT -= dt; if (this.barkT <= 0) this.el.bark.classList.remove('on'); }
     this.hurtV = Math.max(0, this.hurtV - dt * 1.4);
-    if (this.areaT > 0) { this.areaT -= dt; if (this.areaT <= 0) this.el.area.classList.remove('on'); }
+    if (this.areaT > 0) { this.areaT -= dt; if (this.areaT <= 0) this.el.areaSub.textContent = ''; }
+    const eq = p.mode === 'horse' ? 'horse' : p.mode === 'boat' ? 'paddle' : p.rod.visible ? 'rod' : p.bucket.visible ? 'bucket' : 'staff';
+    if (eq !== this.equip) { this.equip = eq; document.getElementById('equip').innerHTML = EQUIP[eq]; }
     if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0) this.el.banner.classList.remove('on'); }
     if (this.moneyT > 0) { this.moneyT -= dt; if (this.moneyT <= 0) this.el.moneyDelta.className = ''; }
     this.el.hp.style.width = p.health + '%';
@@ -189,7 +200,7 @@ export class UI {
     const scale = p.mode === 'horse' ? 0.42 : 0.6;       // px per metre
     ctx.clearRect(0, 0, S, S);
     ctx.save();
-    ctx.beginPath(); ctx.arc(c, c, R, 0, 7); ctx.clip();
+    ctx.beginPath(); ctx.rect(0, 0, S, S); ctx.clip();
     ctx.fillStyle = '#5d8088'; ctx.fillRect(0, 0, S, S);
     ctx.translate(c, c); ctx.rotate(p.camYaw);
     const ipm = W.mapImage.width / 1600;
@@ -203,14 +214,10 @@ export class UI {
     const tm = (x, z, clampEdge) => {
       let dx = (x - pp.x) * scale, dz = (z - pp.z) * scale;
       let mx = dx * cs - dz * sn, mz = dx * sn + dz * cs;
-      const l = Math.hypot(mx, mz);
-      if (l > R - 6) { if (!clampEdge) return null; mx *= (R - 6) / l; mz *= (R - 6) / l; }
+      const l = Math.max(Math.abs(mx), Math.abs(mz));
+      if (l > R - 4) { if (!clampEdge) return null; mx *= (R - 4) / l; mz *= (R - 4) / l; }
       return [c + mx, c + mz];
     };
-    // vignette ring
-    const grd = ctx.createRadialGradient(c, c, R * 0.6, c, c, R);
-    grd.addColorStop(0, 'rgba(40,25,10,0)'); grd.addColorStop(1, 'rgba(40,25,10,0.45)');
-    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(c, c, R, 0, 7); ctx.fill();
     // actors
     for (const n of G.npcs) {
       if (!n.active || n.ko) continue;
@@ -237,12 +244,12 @@ export class UI {
     ctx.fillStyle = '#fff6e0'; ctx.strokeStyle = '#1a120a'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(5.5, 6); ctx.lineTo(0, 3); ctx.lineTo(-5.5, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
-    // north
-    const nx = c + (0 * cs - (-1) * sn) * (R - 9), nz = c + (0 * sn + (-1) * cs) * (R - 9);
-    ctx.fillStyle = '#f4e6c0'; ctx.font = 'bold 12px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('N', nx, nz);
-    // rim
-    ctx.strokeStyle = 'rgba(244,230,192,0.85)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(c, c, R, 0, 7); ctx.stroke();
+    // north tab rides the frame
+    let ndx = sn, ndz = -cs;
+    const nk = (R - 7) / Math.max(Math.abs(ndx), Math.abs(ndz));
+    const nx = c + ndx * nk, nz = c + ndz * nk;
+    ctx.fillStyle = '#0b0806'; ctx.beginPath(); ctx.arc(nx, nz, 9.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#f4e6c0'; ctx.font = 'bold 13px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('N', nx, nz + 0.5);
   }
 }

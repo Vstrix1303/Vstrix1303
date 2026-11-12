@@ -7,19 +7,20 @@ import { terrainU, heightTex, GLSL_HUV } from './terrain.js';
 
 // hour, zenith, horizon, light colour, light intensity, hemi sky, hemi intensity, fog colour, fog density
 const KEYS = [
-  [0.0, '#0a1228', '#1c2c4e', '#8fb0ee', 1.15, '#3d5488', 1.0, '#131d33', 0.0014],
-  [4.8, '#0b142c', '#1e2f52', '#8fb0ee', 1.15, '#3d5488', 1.0, '#141f36', 0.0016],
-  [5.6, '#1b2850', '#c8755a', '#ffb089', 0.35, '#56668f', 0.6, '#59506a', 0.0026],
-  [6.3, '#3d6ba8', '#ffb873', '#ffb070', 2.3, '#93a6c4', 0.8, '#d7aa8c', 0.0026],
-  [7.5, '#3276c6', '#bcd6ea', '#ffe6c4', 3.2, '#a9c2de', 1.0, '#bccfdc', 0.0016],
-  [10.0, '#2a6ec4', '#aed2f0', '#fff6e6', 3.7, '#b0c8e8', 1.1, '#afcbe2', 0.0010],
-  [13.0, '#2468c0', '#a8cfee', '#fffaf0', 3.8, '#b0c8e8', 1.15, '#a9c6dd', 0.0010],
-  [16.3, '#2f6db8', '#c7d6dc', '#ffe9c0', 3.4, '#aebfd6', 1.0, '#bccad0', 0.0011],
-  [17.6, '#3b5f9e', '#ffab5e', '#ff9f52', 2.7, '#9d93aa', 0.85, '#e2a574', 0.0015],
-  [18.4, '#2c376a', '#ec6a3e', '#ff7036', 1.3, '#7a6f96', 0.7, '#a5645a', 0.0018],
-  [19.1, '#141f44', '#4a3a5c', '#8fb0ee', 0.3, '#3f4f80', 0.8, '#222840', 0.0017],
-  [20.2, '#0a1228', '#1c2c4e', '#8fb0ee', 1.15, '#3d5488', 1.0, '#131d33', 0.0014],
-  [24.0, '#0a1228', '#1c2c4e', '#8fb0ee', 1.15, '#3d5488', 1.0, '#131d33', 0.0014],
+  [0.0, '#0b1226', '#1e2b48', '#93aee6', 1.0, '#44588a', 1.15, '#151d30', 0.0015],
+  [4.8, '#0c142a', '#22304e', '#93aee6', 1.0, '#44588a', 1.15, '#161f33', 0.0017],
+  [5.6, '#2a3052', '#d08a66', '#ffb894', 0.35, '#6a7090', 0.8, '#6e5f6c', 0.0028],
+  [6.3, '#8a9cb0', '#ffc488', '#ffb878', 2.0, '#b0a8a8', 1.2, '#e6bb96', 0.0022],
+  [7.5, '#86a8c8', '#f0dcb8', '#ffe2b8', 2.7, '#bcc4c8', 1.3, '#dcd2b8', 0.0015],
+  [10.0, '#6294c8', '#d8dcc8', '#fff0d6', 3.0, '#c2ccd2', 1.4, '#cdd3c2', 0.0012],
+  [13.0, '#5c90c6', '#d6dcca', '#fff4de', 3.1, '#c4ced4', 1.45, '#cbd2c2', 0.0012],
+  [15.6, '#86a2b8', '#ecd8a8', '#ffe2b0', 2.9, '#c8c2b0', 1.4, '#dccca4', 0.0013],
+  [17.0, '#d8cca0', '#f6bc78', '#ffc888', 2.8, '#d6c0a4', 1.55, '#ecc494', 0.0014],
+  [18.0, '#e6c48c', '#f39a54', '#ffa864', 2.3, '#ccaa94', 1.5, '#e8ac7c', 0.0016],
+  [18.6, '#a87a78', '#e86a40', '#ff7840', 1.2, '#94809a', 1.2, '#b0705e', 0.0017],
+  [19.2, '#1c2446', '#54405c', '#93aee6', 0.3, '#47557e', 0.95, '#28293c', 0.0018],
+  [20.2, '#0b1226', '#1e2b48', '#93aee6', 1.0, '#44588a', 1.15, '#151d30', 0.0015],
+  [24.0, '#0b1226', '#1e2b48', '#93aee6', 1.0, '#44588a', 1.15, '#151d30', 0.0015],
 ].map((k) => ({ t: k[0], zen: new THREE.Color(k[1]), hor: new THREE.Color(k[2]), sun: new THREE.Color(k[3]), sunI: k[4], hemi: new THREE.Color(k[5]), hemiI: k[6], fog: new THREE.Color(k[7]), fogD: k[8] }));
 
 const SKY_VERT = /* glsl */`
@@ -139,6 +140,7 @@ export class Env {
     sc.left = -62; sc.right = 62; sc.top = 62; sc.bottom = -62; sc.near = 1; sc.far = 420;
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.09;
+    this.sun.shadow.radius = 3.5;
     scene.add(this.sun); scene.add(this.sun.target);
 
     // shared uniforms for custom shaders (grass, water)
@@ -264,7 +266,7 @@ export class Env {
     this.sunI = sunI; this.hemiI = hemiI;
     this.sun.color.copy(c.sun); this.sun.intensity = sunI;
     this.hemi.color.copy(c.hemi); this.hemi.intensity = hemiI * (1 + fl * 5);
-    this.hemi.groundColor.copy(c.hemi).multiplyScalar(0.28).lerp(new THREE.Color(0.12, 0.09, 0.05), 0.4);
+    this.hemi.groundColor.copy(c.hemi).multiplyScalar(0.55).lerp(new THREE.Color(0.2, 0.15, 0.09), 0.35);
     this.scene.fog.color.copy(c.fog);
     this.scene.fog.density = fogD;
     this.sun.target.position.set(Math.round(focus.x / 2) * 2, focus.y, Math.round(focus.z / 2) * 2);

@@ -88,6 +88,41 @@ body.nohud #hud,body.mapopen #hud{opacity:0}
 #mapSide .k.m{background:#f2c14e}#mapSide .k.b{background:#6fc3d6;width:12px;height:12px}#mapSide .k.h{background:#c9a070;width:12px;height:12px}#mapSide .k.s{background:#9fc7c9}#mapSide .k.w{background:#58b7e8;width:13px;height:13px}
 #mapClose{position:absolute;right:10px;top:10px;min-width:0;padding:6px 14px;font-size:13px;z-index:2;background:rgba(40,26,12,.85)}
 @media (max-width:760px){#mapScreen{flex-direction:column}#mapSide{width:auto;max-height:26vh}}
+/* ---- HUD, third pass: status cluster top-right, square radar bottom-left, place-name bottom-right ---- */
+:root{--hud:'Rockwell','Roboto Slab','Clarendon','Bookman Old Style',Georgia,serif}
+.ol{-webkit-text-stroke:4px #0b0806;paint-order:stroke fill;text-shadow:none}
+#objective{top:20px;left:22px;max-width:min(440px,56vw);background:rgba(8,6,4,.5);padding:10px 16px 12px;border-radius:3px;text-shadow:0 1px 2px #000}
+#chapterTag{font-family:var(--hud);font-weight:700;font-size:11px;letter-spacing:.22em;margin-bottom:5px}
+#objText{font-size:17px;line-height:1.32}
+#stat{position:absolute;top:18px;right:22px;width:236px;display:grid;grid-template-columns:70px 1fr;column-gap:12px;row-gap:6px;align-items:center}
+#equip{width:70px;height:70px;border:2px solid rgba(244,230,192,.85);outline:2px solid #0b0806;border-radius:7px;background:rgba(10,8,5,.45);display:flex;align-items:center;justify-content:center}
+#equip svg{width:54px;height:54px}
+#statR{display:flex;flex-direction:column;gap:7px}
+#clock{position:static;background:none;border:0;padding:0;text-align:right;font-family:var(--hud);font-weight:700;font-size:17px;letter-spacing:.06em;color:#f4e6c0;-webkit-text-stroke:3.5px #0b0806;paint-order:stroke fill}
+#bars{position:static;width:auto}
+.bar{height:11px;margin:0;border:2.5px solid #0b0806;border-radius:0;background:rgba(10,8,5,.65)}
+.bar i{background:#b5261d;transition:width .12s}
+.bar.st i{background:#d9d3c2}
+.bar+.bar{margin-top:6px}
+#money{position:static;grid-column:1 / 3;text-align:right;font-family:var(--hud);font-weight:800;font-size:29px;letter-spacing:.03em;color:#e9c15a;-webkit-text-stroke:5px #0b0806;paint-order:stroke fill;text-shadow:none;line-height:1.1}
+#moneyDelta{position:static;grid-column:1 / 3;text-align:right;font-family:var(--hud);font-weight:700;font-size:17px;-webkit-text-stroke:3.5px #0b0806;paint-order:stroke fill;text-shadow:none;min-height:20px}
+#mapWrap{left:22px;bottom:22px;width:190px}
+#minimap{width:190px;height:190px;filter:none;border:4px solid #0b0806;outline:1px solid rgba(244,230,192,.55);outline-offset:-5px;box-shadow:0 3px 12px rgba(0,0,0,.5)}
+#area{right:24px;bottom:20px;text-shadow:none}
+#areaName{font-family:var(--hud);font-style:italic;font-weight:700;font-size:clamp(24px,2.9vw,38px);letter-spacing:.02em;color:#f4e6c0;-webkit-text-stroke:5px #0b0806;paint-order:stroke fill}
+#areaSub{font-family:var(--hud);font-weight:700;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill;font-size:12px;letter-spacing:.3em}
+#timer{font-family:var(--hud);font-weight:800;font-size:28px;-webkit-text-stroke:5px #0b0806;paint-order:stroke fill;text-shadow:none;color:#f4e6c0}
+#meter .trk,#boss .trk{height:11px;border:2.5px solid #0b0806;background:rgba(10,8,5,.65)}
+#meterLabel,#bossName{font-family:var(--hud);font-weight:700;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill;text-shadow:none;font-size:13px}
+#prompt{font-family:var(--hud);font-weight:700;background:rgba(8,6,4,.6);border:0;border-radius:3px}
+#prompt b{background:#f4e6c0;color:#0b0806;border:0;font-weight:800}
+#toast{background:rgba(8,6,4,.62);border:0;border-radius:3px;text-align:left;padding:11px 18px}
+#markerDist,#marker2Dist{font-family:var(--hud);font-weight:700;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill;text-shadow:none;font-size:13px}
+#bannerTitle{font-family:var(--hud);font-weight:800;-webkit-text-stroke:7px #0b0806;paint-order:stroke fill;text-shadow:none;color:#e9c15a;letter-spacing:.12em;padding-left:0}
+#bannerName,#bannerSub{font-family:var(--hud);font-weight:700;-webkit-text-stroke:4px #0b0806;paint-order:stroke fill;text-shadow:none}
+#barkText,#subText{font-weight:600;-webkit-text-stroke:3.5px #0b0806;paint-order:stroke fill;text-shadow:none;font-style:normal}
+#barkName,#subName{font-family:var(--hud);font-weight:700;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill;text-shadow:none}
+@media (max-width:760px){#stat{transform:scale(.72);transform-origin:right top}#mapWrap{transform:scale(.7);transform-origin:left bottom}}
 /* dialogue */
 #subs{position:fixed;left:50%;bottom:13vh;transform:translateX(-50%);width:min(820px,90vw);z-index:20;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;text-shadow:0 1px 4px #000,0 0 18px rgba(0,0,0,.8)}
 #subs.on{opacity:1;pointer-events:auto;cursor:pointer}
@@ -156,13 +191,12 @@ body.touch #touch{display:block}
   <div id="prompt"></div>
   <div id="marker"><i></i><div id="markerDist"></div></div>
   <div id="marker2"><i></i><div id="marker2Dist"></div></div>
-  <div id="money">Rs 0</div><div id="moneyDelta"></div>
+  <div id="stat"><div id="equip"></div><div id="statR"><div id="clock"></div><div id="bars"><div class="bar st"><i id="st"></i></div><div class="bar"><i id="hp"></i></div></div></div><div id="money">Rs 0</div><div id="moneyDelta"></div></div>
   <div id="timer"></div>
   <div id="meter"><div id="meterLabel"></div><div class="trk"><div id="meterFill"></div></div></div>
   <div id="boss"><div id="bossName"></div><div class="trk"><div id="bossFill"></div></div></div>
   <div id="area"><div id="areaName"></div><div id="areaSub"></div></div>
-  <div id="mapWrap"><canvas id="minimap" width="200" height="200"></canvas><div id="clock"></div></div>
-  <div id="bars"><div class="bar"><i id="hp"></i></div><div class="bar st"><i id="st"></i></div></div>
+  <div id="mapWrap"><canvas id="minimap" width="200" height="200"></canvas></div>
 </div>
 <div id="letterTop" class="layer"></div><div id="letterBot" class="layer"></div>
 <div id="bark"><div id="barkName"></div><div id="barkText"></div></div>

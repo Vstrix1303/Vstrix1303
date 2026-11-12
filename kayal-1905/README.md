@@ -89,6 +89,18 @@ chaya · visit the **tailor** in Puthenthura for new clothes. Money is kept in r
 - **Visuals**: particle effects (hearth smoke, fire, embers, dust, spray, waterfall mist), undergrowth
   and boulders, richer buildings, a turning lighthouse beam.
 
+## Version 3 — the visual pass
+
+- **Atmosphere**: hazy, warm, ambient-heavy lighting with soft shadows and a gentle colour filter — the
+  look of open-world games of the early 2000s — and long orange evenings.
+- **Surfaces**: every texture is weathered (grain, damp, drip-streaks, cracks); the ground has real
+  detail — trodden earth with pebbles and ruts, rough turf.
+- **Street furniture**: a telegraph line from the port to the hill court, hand-painted signboards in
+  English and Malayalam, palm-leaf fences, washing lines, barred and shuttered windows.
+- **Characters**: heavier-set proportions and baked shading.
+- **HUD**: status cluster top-right (what is in hand, stamina, health, purse), a square radar
+  bottom-left, the place-name bottom-right, outlined type throughout.
+
 ## A note on the setting
 
 Travancore in 1905 was a princely state under a British Resident; its district officers were the Dewan

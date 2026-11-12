@@ -192,7 +192,7 @@ function paintTorso(g, o, rng) {
   let grd = g.createLinearGradient(x0, 0, x1, 0);
   grd.addColorStop(0, 'rgba(0,0,0,0.14)'); grd.addColorStop(0.2, 'rgba(0,0,0,0.26)'); grd.addColorStop(0.38, 'rgba(0,0,0,0)'); grd.addColorStop(0.62, 'rgba(0,0,0,0)'); grd.addColorStop(0.8, 'rgba(0,0,0,0.26)'); grd.addColorStop(1, 'rgba(0,0,0,0.14)');
   g.fillStyle = grd; g.fillRect(x0, y0, 256, H);
-  folds(g, R_TORSO, rng, 26, 0.09, false); folds(g, R_TORSO, rng, 10, 0.07, true);
+  folds(g, R_TORSO, rng, 38, 0.13, false); folds(g, R_TORSO, rng, 14, 0.1, true);
   const line = 'rgba(0,0,0,0.38)';
   if (o.style === 'jacket' || o.style === 'frock') {
     const dark = o.style === 'frock';
@@ -249,6 +249,18 @@ function paintTorso(g, o, rng) {
   g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(x0, y1 - 5, 256, 5);
 }
 
+function bakeTorso(g) {
+  const [x0, y0, x1, y1] = R_TORSO, H = y1 - y0;
+  const Y = (h) => y0 + (1.49 - h) / (1.49 - 0.80) * H;
+  g.fillStyle = 'rgba(0,0,0,0.13)';
+  for (const x of [x0 + 64, x0 + 192]) { g.beginPath(); g.ellipse(x, Y(1.34), 11, 36, 0, 0, 7); g.fill(); }
+  let grd = g.createLinearGradient(0, Y(1.49), 0, Y(1.4));
+  grd.addColorStop(0, 'rgba(0,0,0,0.28)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grd; g.fillRect(x0, Y(1.49), 256, Y(1.4) - Y(1.49));
+  grd = g.createLinearGradient(0, Y(1.02), 0, Y(0.9));
+  grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.2)');
+  g.fillStyle = grd; g.fillRect(x0, Y(1.02), 256, Y(0.9) - Y(1.02));
+}
 function paintArm(g, o, rng) {
   const [x0, y0, x1, y1] = R_ARM, H = y1 - y0, Wd = x1 - x0;
   const Y = (h) => y0 + (1.475 - h) / (1.475 - 0.752) * H;
@@ -287,7 +299,7 @@ function paintLeg(g, o, rng) {
     g.fillStyle = grd; g.fillRect(x0, y0, Wd, H);
     g.fillStyle = 'rgba(0,0,0,0.16)'; g.beginPath(); g.ellipse(x0 + Wd / 2, Y(0.49), 16, 9, 0, 0, 7); g.fill();
     g.fillStyle = 'rgba(255,225,190,0.1)'; g.beginPath(); g.ellipse(x0 + Wd / 2, Y(0.35), 6, 34, 0, 0, 7); g.fill();
-    g.fillStyle = 'rgba(60,40,20,0.2)'; g.fillRect(x0, Y(0.16), Wd, y1 - Y(0.16));       // dusty ankles
+    g.fillStyle = 'rgba(60,40,20,0.1)'; g.fillRect(x0, Y(0.16), Wd, y1 - Y(0.16));       // dusty ankles
   }
   // foot swatch
   if (o.boots != null) { g.fillStyle = hex(o.boots); g.fillRect(64, 448, 64, 64); g.fillStyle = 'rgba(255,255,255,0.1)'; g.fillRect(64, 448, 64, 10); }
@@ -308,7 +320,7 @@ function paintSkirt(g, o, rng) {
   for (let i = 0; i < 30; i++) {
     const x = x0 + rng() * Wd, w = 3 + rng() * 9;
     const grd = g.createLinearGradient(x, 0, x + w, 0);
-    grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(0.5, `rgba(0,0,0,${0.08 + rng() * 0.12})`); grd.addColorStop(1, 'rgba(255,255,255,0.06)');
+    grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(0.5, `rgba(0,0,0,${0.12 + rng() * 0.16})`); grd.addColorStop(1, 'rgba(255,255,255,0.06)');
     g.fillStyle = grd; g.fillRect(x, y0, w, H);
   }
   let grd = g.createLinearGradient(x0, 0, x1, 0);
@@ -331,6 +343,15 @@ function paintSkirt(g, o, rng) {
   g.fillStyle = '#c9a13a'; g.fillRect(128, 448, 5, 64);
 }
 
+let _grain = null;
+function grainCanvas() {
+  if (_grain) return _grain;
+  const c = _grain = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d'), im = g.createImageData(512, 512), d = im.data;
+  for (let i = 0; i < d.length; i += 4) { const v = 100 + Math.random() * 56; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+  g.putImageData(im, 0, 0);
+  return c;
+}
 const texCache = new Map();
 function makeTexture(o) {
   const key = JSON.stringify(o);
@@ -340,10 +361,13 @@ function makeTexture(o) {
   let seed = 7; for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) | 0;
   const rng = makeRng(seed);
   g.fillStyle = hex(o.skin); g.fillRect(0, 0, 512, 512);
-  paintHead(g, o, rng); paintTorso(g, o, rng); paintArm(g, o, rng); paintLeg(g, o, rng); paintSkirt(g, o, rng);
+  paintHead(g, o, rng); paintTorso(g, o, rng); bakeTorso(g); paintArm(g, o, rng); paintLeg(g, o, rng); paintSkirt(g, o, rng);
+  // cloth-and-skin grain
+  g.globalAlpha = 0.5; g.globalCompositeOperation = 'overlay'; g.drawImage(grainCanvas(), 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.82, metalness: 0, side: THREE.DoubleSide });
+  // a little self-illumination keeps faces readable in shade, as hand-lit game characters were
+  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.16 });
   texCache.set(key, m);
   return m;
 }
@@ -356,7 +380,7 @@ const geoCache = new Map();
 function bodyGeometry(o) {
   const fem = !!o.female, belly = !!o.belly, skirt = o.trousers == null, long = !!o.munduLong;
   const shirtOver = o.shirt != null && o.style !== 'blouse';
-  const bk = (o.build ?? 1) * (fem ? 1 : 1.07);
+  const bk = (o.build ?? 1) * (fem ? 1.05 : 1.17);
   const key = [fem, belly, skirt, long, shirtOver, o.boots != null, !!o.shoulderCloth, o.style === 'frock', bk].join('|');
   if (geoCache.has(key)) return geoCache.get(key);
   const g = new SGB(512);
@@ -373,7 +397,7 @@ function bodyGeometry(o) {
     [1.13, fem ? 0.130 : 0.150, 0.100, 0.094, [[B.spine, 0.8], [B.chest, 0.2]]],
     [1.23, 0.170 * sw, fem ? 0.122 : 0.112, 0.100, [[B.spine, 0.4], [B.chest, 0.6]]],
     [1.32, 0.190 * sw, fem ? 0.134 : 0.122, 0.106, [[B.chest, 1]]],
-    [1.40, 0.192 * sw, 0.108, 0.106, [[B.chest, 1]]],
+    [1.40, 0.198 * sw, 0.110, 0.108, [[B.chest, 1]]],
     [1.455, 0.148 * sw, 0.084, 0.090, [[B.chest, 1]]],
     [1.49, 0.058, 0.054, 0.056, [[B.chest, 0.55], [B.head, 0.45]]],
   ];
@@ -398,7 +422,7 @@ function bodyGeometry(o) {
     const a = wrap(th), s = Math.abs(a) - Math.PI / 2;
     return 1 + nose * Math.exp(-(a * a) / 0.045) + ear * Math.exp(-(s * s) / 0.03) + chin * Math.exp(-(a * a) / 0.2);
   };
-  const hs = fem ? 0.99 : 1.06, yTop = 1.776, yBot = 1.49;
+  const hs = fem ? 1.07 : 1.14, yTop = 1.776, yBot = 1.49;
   const Hd = [
     [1.49, 0.050, 0.052, 0.052, [[B.chest, 0.4], [B.head, 0.6]], null],
     [1.535, 0.050, 0.056, 0.053, [[B.head, 1]], null],
@@ -416,10 +440,12 @@ function bodyGeometry(o) {
   // ---------------- arms
   for (const s of [-1, 1]) {
     const up = s < 0 ? B.armL : B.armR, fo = s < 0 ? B.foreL : B.foreR, ha = s < 0 ? B.handL : B.handR;
-    const k = (fem ? 0.92 : 1.2) * (o.build ?? 1), sx = 0.2 * (fem ? 0.875 : 1) * (fem ? 1 : 1.04);
+    const k = (fem ? 1.0 : 1.2) * (o.build ?? 1), sx = 0.2 * (fem ? 0.9 : 1.1);
     const A = [
-      [1.458, 0.040, 0.042, [[B.chest, 0.5], [up, 0.5]]],
-      [1.40, 0.052, 0.055, [[B.chest, 0.2], [up, 0.8]]],
+      [1.47, 0.02, 0.024, [[B.chest, 0.5], [up, 0.5]]],
+      [1.458, 0.038, 0.042, [[B.chest, 0.5], [up, 0.5]]],
+      [1.43, 0.049, 0.053, [[B.chest, 0.3], [up, 0.7]]],
+      [1.39, 0.052, 0.055, [[B.chest, 0.15], [up, 0.85]]],
       [1.32, 0.049, 0.052, [[up, 1]]],
       [1.23, 0.043, 0.046, [[up, 1]]],
       [1.165, 0.038, 0.040, [[up, 0.5], [fo, 0.5]]],
@@ -432,14 +458,14 @@ function bodyGeometry(o) {
       [0.757, 0.010, 0.022, [[ha, 1]]],
     ];
     const rs = A.map(([y, rx, rz, w]) => ({ c: [s * (sx + 0.032 * (1.435 - y) / 0.55), y, 0.002], ax: [rx * k, 0, 0], az: [0, 0, rz * k], w, v: (1.475 - y) / (1.475 - 0.752) }));
-    g.loft(rs, 10, R_ARM, { capStart: 0.016, capEnd: 0.006, mirrorU: s > 0 });
+    g.loft(rs, 10, R_ARM, { capStart: 0.004, capEnd: 0.006, mirrorU: s > 0 });
   }
 
   // ---------------- legs & feet
   const legFrom = skirt ? (long ? 0.19 : 0.61) : 1;
   for (const s of [-1, 1]) {
     const th = s < 0 ? B.thighL : B.thighR, sh = s < 0 ? B.shinL : B.shinR, ft = s < 0 ? B.footL : B.footR;
-    const tk = (o.trousers != null ? 1.12 : (fem ? 0.94 : 1.1)) * (o.build ?? 1), bt = o.boots != null ? 1.14 : 1;
+    const tk = (o.trousers != null ? 1.26 : (fem ? 1.02 : 1.24)) * (o.build ?? 1), bt = o.boots != null ? 1.26 : 1.14;
     const L = [
       [0.96, 0.080, 0.090, 0.090, [[B.hips, 0.6], [th, 0.4]]],
       [0.88, 0.084, 0.092, 0.094, [[B.hips, 0.2], [th, 0.8]]],
@@ -470,7 +496,7 @@ function bodyGeometry(o) {
     if (long) S.push([0.42, 0.190, 0.138, 0.5, 0.5], [0.28, 0.186, 0.135, 0, 1], [0.115, 0.192, 0.14, 0, 1]);
     const yb = S[S.length - 1][0];
     g.loft(S.map(([y, rx, rz, wt, ws]) => ({
-      c: [0, y, 0.004], ax: [rx * (fem ? 1.03 : 1.07), 0, 0], az: [0, 0, rz * (fem ? 1 : 1.07)], v: (1.02 - y) / (1.02 - yb),
+      c: [0, y, 0.004], ax: [rx * (fem ? 1.07 : 1.15), 0, 0], az: [0, 0, rz * (fem ? 1.05 : 1.15)], v: (1.02 - y) / (1.02 - yb),
       w: (th, p) => {
         const l = 0.5 - 0.5 * clamp(p[0] / (0.34 * rx), -1, 1);       // 1 = left (-x)
         const out = [], hip = 1 - wt - ws;
@@ -521,7 +547,7 @@ export class Human {
     this.root.scale.setScalar(scale ?? 1);
     this.body = new THREE.Group(); this.root.add(this.body);
     const bone = (parent, x, y, z) => { const b = new THREE.Bone(); b.position.set(x, y, z); parent.add(b); return b; };
-    const fem = !!o.female, sx = 0.2 * (fem ? 0.875 : 1.04);
+    const fem = !!o.female, sx = 0.2 * (fem ? 0.9 : 1.1);
     const hips = this.hips = bone(this.body, 0, 0.94, 0);
     const spine = this.spine = bone(hips, 0, 0.09, 0);
     const chest = this.chest = bone(spine, 0, 0.21, 0);

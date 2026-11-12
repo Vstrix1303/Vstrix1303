@@ -248,7 +248,7 @@ export class Player {
     const focus = this.worldPos(new THREE.Vector3());
     const mode = this.mode;
     const headY = mode === 'horse' ? 2.35 : mode === 'boat' ? 1.25 : this.crouch ? 1.15 : 1.55;
-    const baseDist = (mode === 'horse' ? 6.4 : mode === 'boat' ? (this.mount.chundan ? 13.5 : 7.6) : 4.1) * this.zoom;
+    const baseDist = (mode === 'horse' ? 6.2 : mode === 'boat' ? (this.mount.chundan ? 13.5 : 7.6) : 3.7) * this.zoom;
     if (this.photo) {
       this.photoAng += dt * 0.12;
       this.camYaw += dt * 0.12;
@@ -282,7 +282,7 @@ export class Player {
 
     this.shake = Math.max(0, this.shake - dt * 1.6);
     const sprintFov = mode === 'horse' ? smoothstep(6, 12, this.speedNow) * 9 : smoothstep(4.5, 7, this.speedNow) * 5;
-    let fov = 55 + sprintFov;
+    let fov = 60 + sprintFov;
 
     if (this.cine) {
       this.cineBlend = Math.min(1, this.cineBlend + dt / (this.cine.blend ?? 1.2));

@@ -51,7 +51,7 @@ async function boot() {
   renderer.setPixelRatio(basePR());
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.NoToneMapping;
 
   const scene = G.scene = new THREE.Scene();
@@ -254,9 +254,9 @@ async function boot() {
     u.uSun.value.copy(sunUV);
     u.uGodCol.value.copy(env.sun.color);
     u.uNight.value = env.night;
-    u.uWarm.value = smoothstep(0.4, 0.06, env.sunDir.y) * env.dayLight * (1 - env.rain);
-    u.uExposure.value = 1.0 + env.night * 0.55 + env.rain * 0.12 * env.dayLight;
-    u.uSat.value = 0.96 - env.rain * 0.14;
+    u.uWarm.value = smoothstep(0.62, 0.1, env.sunDir.y) * env.dayLight * (1 - env.rain);
+    u.uExposure.value = 1.04 + env.night * 0.5 + env.rain * 0.12 * env.dayLight;
+    u.uSat.value = 0.9 - env.rain * 0.12;
     u.uHurt.value = Math.max(ui.hurtV, G.started ? smoothstep(45, 5, player.health) * 0.6 : 0);
 
     camera.updateMatrixWorld();

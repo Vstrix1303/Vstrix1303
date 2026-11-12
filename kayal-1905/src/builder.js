@@ -17,6 +17,7 @@ export function makeMaterials() {
     stone: std({ map: TEX.stone, roughness: 0.9 }),
     plank: std({ map: TEX.plank, roughness: 0.9 }),
     sack: std({ map: TEX.sack, roughness: 1 }),
+    sign: std({ map: TEX.signs, roughness: 0.9 }),
     tin: std({ map: TEX.tin, roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide }),
     paint: std({ roughness: 0.8 }),
     brass: std({ color: 0xffffff, roughness: 0.32, metalness: 0.55, emissive: 0x3a2606, emissiveIntensity: 0.6 }),
@@ -81,6 +82,27 @@ export class Builder {
       this.geo(endMat, e, TRS(x, y, z, 0, ry, 0).multiply(TRS(w / 2 - 0.25, 0, 0)));
       this.geo(endMat, e, TRS(x, y, z, 0, ry, 0).multiply(TRS(-w / 2 + 0.25, 0, 0, 0, Math.PI, 0)));
     }
+    return this;
+  }
+  // a thin square bar between two WORLD points (wires, rails, ropes)
+  beamW(mat, a, c, t, col) {
+    const len = a.distanceTo(c);
+    if (len < 0.01) return this;
+    const geo = boxGeo(t, t, len, 2);
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), c.clone().sub(a).normalize());
+    const m = new THREE.Matrix4().compose(a.clone().add(c).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1));
+    this.gb(mat).add(geo, m, col);
+    geo.dispose();
+    return this;
+  }
+  // hand-painted signboard i from the atlas, facing local +Z
+  sign(i, w, h, x, y, z, ry = 0) {
+    const geo = new THREE.PlaneGeometry(w, h);
+    const uv = geo.attributes.uv, u0 = (i % 2) * 0.5, v1 = 1 - Math.floor(i / 2) * 0.25;
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) * 0.5, v1 - 0.25 + uv.getY(k) * 0.25);
+    const m = TRS(x, y, z, 0, ry, 0);
+    this.geo('sign', geo, m);
+    this.geo('wood', boxGeo(w + 0.14, h + 0.14, 0.05, 2), m.clone().multiply(TRS(0, 0, -0.035)), [0.5, 0.42, 0.36]);
     return this;
   }
   collider(x, z, hw, hd, ry = 0, top = 50) {

@@ -53,17 +53,19 @@ const GradeShader = {
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       c = mix(vec3(l), c, uSat);
       // split-tone: cool shadows, warm highlights
-      vec3 shadowTint = mix(vec3(0.95, 1.0, 1.07), vec3(0.86, 0.96, 1.16), uNight);
-      vec3 hiTint = mix(vec3(1.05, 1.0, 0.93), vec3(1.12, 1.0, 0.84), uWarm);
+      vec3 shadowTint = mix(vec3(1.0, 0.98, 1.02), vec3(0.86, 0.96, 1.16), uNight);
+      vec3 hiTint = mix(vec3(1.04, 1.0, 0.94), vec3(1.08, 1.0, 0.88), uWarm);
       c *= mix(shadowTint, hiTint, smoothstep(0.05, 0.65, l));
       c = pow(c, vec3(1.0 / 2.2));
-      // gentle S-curve
-      c = mix(c, c * c * (3.0 - 2.0 * c), 0.28);
+      // the era's look: a warm colour filter over everything, blacks lifted into haze
+      vec3 filt = mix(vec3(1.0, 0.97, 0.9), vec3(1.0, 0.92, 0.78), uWarm);
+      c = mix(c, c * filt + vec3(0.046, 0.038, 0.026), 0.75 * (1.0 - uNight * 0.75));
+      c = mix(c, c * c * (3.0 - 2.0 * c), 0.10);
       vec2 q = vUv - 0.5;
       float vig = smoothstep(0.85, 0.2, length(q * vec2(1.0, 0.85)) );
-      c *= mix(1.0, vig, uVig * 0.55);
+      c *= mix(1.0, vig, uVig * 0.35);
       c = mix(c, vec3(0.5, 0.03, 0.02), uHurt * smoothstep(0.25, 0.75, length(q)) * 0.75);
-      c += (hash(vUv * vec2(1920.0, 1080.0) + fract(uTime) * 100.0) - 0.5) * 0.028;
+      c += (hash(vUv * vec2(1920.0, 1080.0) + fract(uTime) * 100.0) - 0.5) * 0.034;
       gl_FragColor = vec4(c, 1.0);
     }`,
 };
@@ -76,7 +78,7 @@ export class Post {
     this.composer = new EffectComposer(renderer, rt);
     this.composer.addPass(new RenderPass(scene, camera));
     if (q.bloom) {
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.32, 0.7, 1.05);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.36, 0.95, 0.9);
       this.composer.addPass(this.bloom);
     }
     this.grade = new ShaderPass(GradeShader);
