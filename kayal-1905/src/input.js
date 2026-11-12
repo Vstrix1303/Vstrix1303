@@ -22,8 +22,9 @@ export class Input {
       if (!this.enabled) return;
       if (!this.locked) { this.dragging = true; this.requestLock(); }
       else if (e.button === 0) this.hits.add('Attack');
+      else if (e.button === 2) this.keys.add('Block');
     });
-    addEventListener('mouseup', () => { this.dragging = false; });
+    addEventListener('mouseup', (e) => { this.dragging = false; if (e.button === 2) this.keys.delete('Block'); });
     addEventListener('mousemove', (e) => {
       if (!this.enabled) return;
       if (this.locked || this.dragging) { this.dx += e.movementX || 0; this.dy += e.movementY || 0; }

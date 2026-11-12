@@ -2,10 +2,11 @@
 
 *കായൽ (kayal): the backwaters of Kerala.*
 
-A single-player, story-driven open-world adventure set on the Malabar coast in the monsoon of 1905.
+A single-player, story-driven **open-world** adventure set on the Malabar coast in the monsoon of 1905.
 You are **Madhavan**, a boatman's son home after six years on the Bombay docks, to find the family
 pepper garden about to be seized by a trading company's forged debt ledger. Walk, ride and paddle
-across a hand-built slice of old Travancore to set it right.
+across a hand-built slice of old Travancore to set it right — and then face the Company's senior
+partner when he comes from Madras to undo it.
 
 It is a browser game: **one self-contained file, no installs, no downloads, no image or audio assets** —
 every texture, model, animation, sound effect and note of music is generated procedurally at load time.
@@ -20,10 +21,13 @@ every texture, model, animation, sound effect and note of music is generated pro
 | --- | --- |
 | `W A S D` | Move · steer the horse / boat (camera-relative) |
 | Mouse / wheel | Look / zoom |
-| `Shift` | Run · gallop · paddle hard |
+| `Shift` | Run · gallop · racing stroke (uses stamina) |
 | `Space` / `C` | Jump / crouch (stealth) |
-| `E` | Talk · gather · mount · board · dismount |
+| `E` | Talk · begin a mission · gather · mount · board · dismount |
 | Left click / `F` | Strike with your staff |
+| Right click / `Q` | Block — block just as a blow lands to stagger the attacker |
+| `M` | **The map**: drag to pan, wheel to zoom, click to set a waypoint |
+| `X` | Whistle for your horse (once Sultan is yours) |
 | `P` | Photo mode (orbit camera, HUD off; `[` `]` change the hour, `R` toggles rain) |
 | `H` / `Esc` | Hide HUD / pause |
 
@@ -31,33 +35,59 @@ Touch devices get an on-screen stick and buttons, though a keyboard and mouse is
 The **Graphics** button on the title screen switches Low / Medium / High; the game also lowers its
 resolution automatically if the frame rate drops.
 
-## The game
+## The story — nine missions in two acts
 
-Five chapters (about 20–30 minutes), then free roam:
+Between missions the world is yours. Each mission begins at a ring of light beside the person who
+needs you (a lettered marker on the map).
 
-| | Chapter | What you do |
-| --- | --- | --- |
-| I | **Homecoming** | Arrive by boat at dawn and walk home through the village |
-| II | **Black Gold** | Bring in the pepper harvest — and defend it |
-| III | **The Backwater Run** | Paddle a loaded *vallam* across the lake as the monsoon breaks |
-| IV | **The Red Ledger** | Slip into the Company compound before dawn (stealth) |
-| V | **Ride for the Cutcherry** | A horseback chase into the hills as the sun comes up |
+**Act I — The Red Ledger**
 
-The world (about 1.6 km × 1.6 km, with terrain to the horizon):
+| Mission | What you do |
+| --- | --- |
+| **Homecoming** | Arrive by boat at dawn and walk home through the village |
+| **Black Gold** | Bring in the pepper harvest — and defend it |
+| **The Backwater Run** | Paddle a loaded *vallam* across the lake as the monsoon breaks |
+| **The Red Ledger** | Slip into the Company compound before dawn, then ride for the hill court with riders on your tail |
 
-- **Thekkumkara** — a backwater village: laterite and lime-washed houses under terracotta and thatch,
-  the family *tharavadu* with its gate-house, a temple with lamp tower, flag mast and stepped tank.
-- **The kayal** — a great lake with an island shrine, drifting *kettuvallam* rice boats, a canal and lotus ponds.
-- **Puthenthura** — a spice port: market stalls, a Kerala-style mosque, a Syrian Christian church,
-  Chinese fishing nets, and the walled compound of Harrow & Finch.
-- **The foothills of the Western Ghats** — pepper gardens, rainforest, tea terraces, wild elephants,
-  and the hill-top Cutcherry (district court).
+**Act II — The House of Harrow**
 
-Systems: full day/night cycle with sun, moon and stars · monsoon weather with rain, lightning, thunder
-and wet ground · planar water reflections · dynamic shadows · wind-blown palms and grass · fireflies ·
-oil lamps at night · third-person movement, swimming, riding and boating · staff combat · guard vision
-cones and stealth · a dialogue and quest system with checkpoints · minimap · a generative score built on
-Carnatic raga scales over a tanpura-style drone.
+| Mission | What you do |
+| --- | --- |
+| **The Senior Partner** | Carry Devaki up to the Cutcherry on horseback; gather sworn receipts from three farmsteads |
+| **Fire on the Quay** | Fight a warehouse fire with a bucket chain, then ride down the man who lit it |
+| **Vallamkali** | Steer the village snake-boat in the regatta against the Company's hired crew |
+| **The Elephant Road** | Free a witness from the tea estate at night — and walk your horse past a wild herd |
+| **Storm over the Kayal** | A boat chase through a monsoon storm and a duel under the lighthouse |
+
+## The open world
+
+About 1.6 km × 1.6 km, with terrain to the horizon:
+
+- **Thekkumkara** — the home village, the family *tharavadu*, a temple with lamp tower and stepped tank, a toddy shop on the canal towpath.
+- **The kayal** — a great lake with an island shrine, drifting *kettuvallam* rice boats, lotus ponds, and **Lotus Falls** at the foot of the hills.
+- **Puthenthura** — a spice port: market, Kerala-style mosque, Syrian Christian church, Chinese fishing nets, the walled Company compound.
+- **The bar** — a sand-spit between lake and sea, cut by a tidal channel: the **Azhimukham lighthouse** and the fishing hamlet of **Azhikkal**.
+- **The Western Ghats** — pepper gardens, rainforest, a serpent grove, wild elephants, **Kannimala tea estate** with its factory, and the hill-top Cutcherry.
+- **Kottappuram** — a ruined Dutch fort on the south shore.
+
+Things to do between missions: discover the named places · find the **12 lost ledger pages** ·
+fish from the jetties · take **ferries** between jetties · run cargo for the quay clerk · buy a glass of
+chaya · visit the **tailor** in Puthenthura for new clothes. Money is kept in rupees and annas.
+
+## What changed in version 2
+
+- **Characters rebuilt from scratch.** Every person is now a single skinned mesh lofted from anatomical
+  cross-sections, wrapped in a painted texture (faces, hair, bare skin, shirts, jackets, uniforms,
+  *mundu* with *kasavu* border). Clothing is part of the body surface and the *mundu* is weighted to both
+  legs, so cloth no longer clips through limbs. Horses and cattle use the same construction.
+- **Open-world structure** with mission markers, money, a save that remembers everything, a full-screen
+  **map** and waypoints, and side activities.
+- **Act II**: five new missions, new cast (Sir Edmund Harrow, Captain Dacre, Velu, the Assistant Resident),
+  new mechanics (blocking and parrying, a boss duel, pillion riding, fire-fighting, a regatta, elephants).
+- **New places**: lighthouse, fishing hamlet, sea channel, tea estate and factory, waterfall, fort ruin,
+  serpent grove, toddy shop.
+- **Visuals**: particle effects (hearth smoke, fire, embers, dust, spray, waterfall mist), undergrowth
+  and boulders, richer buildings, a turning lighthouse beam.
 
 ## A note on the setting
 
@@ -66,12 +96,11 @@ Travancore in 1905 was a princely state under a British Resident; its district o
 coast were traded through European agency houses. The village, the port, the company and every
 character in this story are fictional.
 
-## A note on "AAA"
+## A note on scope
 
-This was built in a single pass as a browser game. It aims for the *feel* of a cinematic open-world
-western — golden-hour lighting, weather, a horse, a story — with stylised procedural art. It is not, and
-could not be, the product of a few hundred artists and several years; think of it as a playable
-vertical slice.
+This is a browser game built by one author in two passes. It aims for the *feel* of a cinematic
+open-world game with stylised procedural art — roughly early-2000s character fidelity under modern
+lighting. It is not the product of a few hundred artists and several years.
 
 ## Build from source
 
@@ -84,10 +113,12 @@ npm run build      # bundles everything into index.html
 
 | File | Purpose |
 | --- | --- |
-| `heightfield.js`, `terrain.js` | The land: analytic height function, splat mask, terrain shader, survey map |
-| `env.js`, `water.js`, `post.js` | Sky, time of day, weather, reflective water, post-processing |
+| `heightfield.js`, `terrain.js`, `places.js` | The land: height function, splat mask, terrain shader, survey map, place names |
+| `env.js`, `water.js`, `post.js`, `fx.js` | Sky, time of day, weather, reflective water, post-processing, particles |
 | `flora.js`, `structures.js`, `builder.js`, `textures.js` | Vegetation, architecture, procedural textures |
-| `characters.js`, `npc.js`, `entities.js`, `player.js` | People, animals, AI, horse and boat, the player controller |
-| `story.js`, `ui.js`, `audio.js`, `world.js`, `main.js` | Quest scripts, HUD, synthesised audio, world assembly, main loop |
+| `human.js`, `characters.js`, `geo.js` | Skinned people and their painted textures; animals and boats; the loft builder |
+| `npc.js`, `entities.js`, `player.js` | AI, horse and boats, the player controller |
+| `story.js`, `missions.js`, `activities.js` | Mission framework, the nine mission scripts, side activities |
+| `ui.js`, `mapui.js`, `audio.js`, `world.js`, `main.js` | HUD, the map, synthesised audio, world assembly, main loop |
 
 Add `?q=low`, `?q=medium` or `?q=high` to the URL to force a graphics preset.

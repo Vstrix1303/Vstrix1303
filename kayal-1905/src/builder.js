@@ -17,6 +17,7 @@ export function makeMaterials() {
     stone: std({ map: TEX.stone, roughness: 0.9 }),
     plank: std({ map: TEX.plank, roughness: 0.9 }),
     sack: std({ map: TEX.sack, roughness: 1 }),
+    tin: std({ map: TEX.tin, roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide }),
     paint: std({ roughness: 0.8 }),
     brass: std({ color: 0xffffff, roughness: 0.32, metalness: 0.55, emissive: 0x3a2606, emissiveIntensity: 0.6 }),
     net: std({ map: TEX.net, transparent: true, alphaTest: 0.2, side: THREE.DoubleSide, depthWrite: false }),
@@ -28,7 +29,7 @@ export class Builder {
     this.g = {};
     this.m = new THREE.Matrix4();
     this.ox = 0; this.oy = 0; this.oz = 0; this.ry = 0;
-    this.yards = []; this.keepClear = []; this.marks = []; this.lamps = [];
+    this.yards = []; this.keepClear = []; this.marks = []; this.lamps = []; this.smokes = [];
   }
   gb(mat) { return this.g[mat] || (this.g[mat] = new GB()); }
   place(x, z, ry = 0, y = null) {
@@ -96,6 +97,7 @@ export class Builder {
   yard(r, s = 0.8, x = 0, z = 0) { const p = this.world(x, 0, z); this.yards.push({ x: p.x, z: p.z, r, s }); return this; }
   clear(r, x = 0, z = 0) { const p = this.world(x, 0, z); this.keepClear.push({ x: p.x, z: p.z, r }); return this; }
   mark(w, d, x = 0, z = 0) { const p = this.world(x, 0, z); this.marks.push({ x: p.x, z: p.z, w, d, rot: this.ry }); return this; }
+  smoke(x, y, z) { const p = this.world(x, y, z); this.smokes.push(p); return this; }
   lamp(x, y, z, size = 1, light = 0) {
     const p = this.world(x, y, z);
     this.lamps.push({ x: p.x, y: p.y, z: p.z, size, light });

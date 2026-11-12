@@ -1,7 +1,7 @@
 // Procedural people, horses, cattle, elephants, birds and boats — built
 // from primitives and animated with hand-written joint curves.
 import * as THREE from 'three';
-import { GB } from './geo.js';
+import { GB, SGB } from './geo.js';
 import { TEX } from './textures.js';
 import { damp, clamp, lerp } from './util.js';
 
@@ -63,273 +63,133 @@ export function mergeStatic(root) {
   }
 }
 
-export const SKIN = [0x8d5b3c, 0x7a4b30, 0x9b6a48, 0x6e432b, 0x84553a];
-
-// =========================================================== HUMAN
-export class Human {
-  constructor(o = {}) {
-    const skin = M(o.skin ?? SKIN[0], 0.7);
-    const cloth = M(o.mundu ?? 0xe9e2cf, 0.95);
-    const shirtM = o.shirt != null ? M(o.shirt, 0.9) : skin;
-    const hairM = M(o.hair ?? 0x14100d, 0.6);
-    const sc = o.scale ?? 1;
-    this.root = new THREE.Group();
-    this.root.scale.setScalar(sc);
-    this.body = group(this.root);
-    const hips = this.hips = group(this.body, 0, 0.93, 0);
-    const spine = this.spine = group(hips);
-    // torso
-    const torso = mesh(capsule(0.15, 0.3, 10), shirtM, spine, 0, 0.3, 0);
-    torso.scale.set(1.18, 1, 0.74);
-    const shd = mesh(capsule(0.052, 0.3, 8), shirtM, spine, 0, 0.5, 0); shd.rotation.z = Math.PI / 2;
-    if (o.belly) { const b = mesh(sphere(0.15), shirtM, spine, 0, 0.2, 0.035); b.scale.set(1.18, 1.05, 0.95); }
-    mesh(cyl(0.05, 0.06, 0.1, 8), skin, spine, 0, 0.6, 0);
-    // head
-    const head = this.head = group(spine, 0, 0.73, 0);
-    const skull = mesh(sphere(0.105, 12, 10), skin, head);
-    skull.scale.set(0.94, 1.1, 1);
-    const hair = mesh(new THREE.SphereGeometry(0.113, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.56), hairM, head, 0, 0.012, -0.012);
-    hair.rotation.x = -0.32;
-    mesh(box(0.028, 0.04, 0.03), skin, head, 0, -0.012, 0.1);
-    const eyeM = M(0x120c08, 0.3);
-    mesh(sphere(0.012, 6, 4), eyeM, head, -0.036, 0.018, 0.094);
-    mesh(sphere(0.012, 6, 4), eyeM, head, 0.036, 0.018, 0.094);
-    if (o.moustache) mesh(box(0.075, 0.016, 0.02), M(o.grey ? 0xb9b4a8 : 0x14100d, 0.6), head, 0, -0.04, 0.098);
-    if (o.beard) { const bd = mesh(sphere(0.07, 8, 6), M(o.grey ? 0xc9c4b8 : 0x14100d, 0.7), head, 0, -0.085, 0.055); bd.scale.set(1.1, 0.9, 0.7); }
-    if (o.grey) hair.material = M(0xb9b4a8, 0.7);
-    if (o.headgear === 'turban') { const t = mesh(sphere(0.12, 10, 6), M(o.gearColor ?? 0xb02a22, 0.95), head, 0, 0.07, -0.005); t.scale.set(1.12, 0.62, 1.12); }
-    if (o.headgear === 'thorthu') { const t = mesh(sphere(0.115, 10, 6), M(o.gearColor ?? 0xe7dfc8, 0.95), head, 0, 0.065, -0.01); t.scale.set(1.08, 0.5, 1.1); }
-    if (o.headgear === 'cap') mesh(cyl(0.098, 0.103, 0.075, 12), M(o.gearColor ?? 0xf0ece0, 0.9), head, 0, 0.1, -0.005);
-    if (o.headgear === 'topi') {
-      mesh(new THREE.SphereGeometry(0.128, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), M(0xd8cfb4, 0.9), head, 0, 0.045, 0);
-      const brim = mesh(cyl(0.185, 0.19, 0.014, 14), M(0xd8cfb4, 0.9), head, 0, 0.05, 0.01); brim.rotation.x = 0.08;
-    }
-    if (o.bun) { mesh(sphere(0.06, 8, 6), hairM, head, 0, -0.01, -0.115); const hb = mesh(sphere(0.113, 10, 8), hairM, head, 0, 0.005, -0.02); hb.scale.set(1, 1.02, 0.95); }
-    // arms
-    const sleeve = o.sleeves ? shirtM : skin;
-    const mkArm = (s) => {
-      const sh = group(spine, s * 0.215, 0.5, 0);
-      mesh(capsule(0.044, 0.22), sleeve, sh, 0, -0.14, 0);
-      const el = group(sh, 0, -0.29, 0);
-      mesh(capsule(0.037, 0.2), o.longSleeves ? shirtM : skin, el, 0, -0.125, 0);
-      const hand = group(el, 0, -0.27, 0);
-      mesh(sphere(0.043, 8, 6), skin, hand);
-      return { sh, el, hand };
-    };
-    this.armL = mkArm(-1); this.armR = mkArm(1);
-    // legs
-    const legM = o.trousers != null ? M(o.trousers, 0.9) : skin;
-    const mkLeg = (s) => {
-      const hp = group(hips, s * 0.088, 0, 0);
-      mesh(capsule(0.072, 0.3), legM, hp, 0, -0.21, 0);
-      const kn = group(hp, 0, -0.44, 0);
-      mesh(capsule(0.056, 0.3), legM, kn, 0, -0.2, 0);
-      const ft = mesh(box(0.085, 0.055, 0.21), o.boots != null ? M(o.boots, 0.6) : skin, kn, 0, -0.455, 0.05);
-      return { hp, kn, ft };
-    };
-    this.legL = mkLeg(-1); this.legR = mkLeg(1);
-    // lower garment
-    if (o.trousers == null) {
-      const len = o.munduLong ? 0.78 : 0.5;
-      const sk = this.skirt = mesh(new THREE.CylinderGeometry(0.175, o.munduLong ? 0.25 : 0.225, len, 14, 1, true), cloth, hips, 0, 0.09 - len / 2, 0);
-      sk.material = M(o.mundu ?? 0xe9e2cf, 0.95, { side: THREE.DoubleSide });
-      if (o.kasavu) mesh(new THREE.CylinderGeometry(0.251, 0.253, 0.035, 14, 1, true), M(0xc9a13a, 0.5, { side: THREE.DoubleSide }), hips, 0, 0.09 - len + 0.02, 0);
-      mesh(cyl(0.18, 0.18, 0.06, 14), cloth, hips, 0, 0.08, 0);
-    } else {
-      const p = mesh(capsule(0.15, 0.06, 10), legM, hips, 0, 0.0, 0); p.scale.set(1.1, 1, 0.75);
-    }
-    if (o.sash != null) {
-      const s = mesh(box(0.09, 0.5, 0.2), M(o.sash, 0.95), spine, -0.13, 0.36, 0.0);
-      s.rotation.z = -0.12;
-    }
-    if (o.shoulderCloth != null) { const s = mesh(box(0.1, 0.028, 0.3), M(o.shoulderCloth, 0.95), spine, 0.15, 0.575, 0.0); s.rotation.z = -0.22; }
-    mergeStatic(this.root);
-    this.state = 'idle';
-    this.phase = Math.random() * 6;
-    this.t = Math.random() * 10;
-    this.speed = 0;
-    this.strikeT = -1;
-    this.j = { legL: 0, legR: 0, kneeL: 0, kneeR: 0, armL: 0, armR: 0, elL: 0, elR: 0, spine: 0, hipY: 0.93, armLz: 0, armRz: 0, legLz: 0, legRz: 0, bodyX: 0, bodyY: 0, twist: 0, head: 0 };
-  }
-
-  hold(obj, right = true) { (right ? this.armR : this.armL).hand.add(obj); return obj; }
-
-  update(dt) {
-    this.t += dt;
-    const s = this.state, t = this.t, sp = this.speed;
-    const g = { legL: 0, legR: 0, kneeL: 0.03, kneeR: 0.03, armL: 0, armR: 0, elL: -0.12, elR: -0.12, spine: 0, hipY: 0.93, armLz: -0.07, armRz: 0.07, legLz: 0, legRz: 0, bodyX: 0, bodyY: 0, twist: 0, head: 0 };
-    let k = 12;
-    if (s === 'idle' || s === 'talk') {
-      g.spine = Math.sin(t * 1.3) * 0.015;
-      g.armL = Math.sin(t * 0.9) * 0.03; g.armR = -g.armL;
-      if (s === 'talk') { g.armR = -0.55 + Math.sin(t * 3.1) * 0.22; g.elR = -1.0 + Math.sin(t * 2.3) * 0.25; g.head = Math.sin(t * 1.7) * 0.06; }
-    } else if (s === 'move' || s === 'crouch') {
-      const crouch = s === 'crouch';
-      this.phase += dt * (4.0 + sp * 0.86);
-      const p = this.phase, amp = clamp(0.3 + sp * 0.115, 0, 1.08) * (sp > 0.05 ? 1 : 0);
-      g.legL = -Math.sin(p) * amp; g.legR = Math.sin(p) * amp;
-      g.kneeL = Math.max(0, Math.cos(p)) * amp * 1.35 + 0.05; g.kneeR = Math.max(0, -Math.cos(p)) * amp * 1.35 + 0.05;
-      g.armL = Math.sin(p) * amp * 0.8; g.armR = -Math.sin(p) * amp * 0.8;
-      g.elL = g.elR = -(0.2 + amp * 0.75);
-      g.spine = 0.03 + sp * 0.028;
-      g.hipY = 0.93 - amp * 0.03 + Math.abs(Math.sin(p)) * 0.035 * amp;
-      g.twist = Math.sin(p) * 0.1 * amp;
-      if (crouch) {
-        g.hipY -= 0.26; g.spine += 0.5; g.legL -= 0.75; g.legR -= 0.75; g.kneeL += 1.25; g.kneeR += 1.25;
-        g.elL = g.elR = -0.9; g.head = -0.4;
-      }
-      k = 16;
-    } else if (s === 'sit' || s === 'ride') {
-      g.legL = g.legR = -1.25; g.kneeL = g.kneeR = 1.25; g.legLz = -0.42; g.legRz = 0.42;
-      g.armL = g.armR = -0.75; g.elL = g.elR = -0.55; g.armLz = -0.12; g.armRz = 0.12;
-      g.spine = 0.08 + sp * 0.014 + Math.sin(this.phase * 2) * 0.03 * Math.min(1, sp * 0.2);
-      g.hipY = 0.93;
-      this.phase += dt * (3 + sp * 0.9);
-    } else if (s === 'paddle' || s === 'boat') {
-      g.legL = g.legR = -1.45; g.kneeL = g.kneeR = 1.5; g.hipY = 0.5;
-      const pd = s === 'paddle' ? 1 : 0;
-      this.phase += dt * 4.2 * pd;
-      const p = this.phase;
-      g.spine = 0.18 + Math.sin(p) * 0.16 * pd;
-      g.armR = -0.95 + Math.sin(p) * 0.55 * pd; g.armL = -1.25 + Math.sin(p) * 0.4 * pd;
-      g.elR = -0.5 - Math.cos(p) * 0.3 * pd; g.elL = -0.7; g.armLz = 0.35; g.armRz = 0.1;
-      g.twist = Math.sin(p) * 0.2 * pd;
-    } else if (s === 'swim') {
-      this.phase += dt * 5;
-      const p = this.phase;
-      g.bodyX = 1.1; g.bodyY = -0.3;
-      g.armL = -2.4 + Math.sin(p) * 1.2; g.armR = -2.4 - Math.sin(p) * 1.2;
-      g.legL = Math.sin(p * 1.5) * 0.35; g.legR = -Math.sin(p * 1.5) * 0.35; g.head = -0.7;
-    } else if (s === 'ko') {
-      g.bodyX = -1.5; g.bodyY = 0.16; g.armLz = -1.1; g.armRz = 1.2; g.legLz = -0.2; g.legRz = 0.25; g.hipY = 0.93;
-      k = 7;
-    } else if (s === 'work') {
-      // stooping, hands busy (harvesting / planting)
-      g.spine = 0.85 + Math.sin(t * 2.2) * 0.08; g.armL = -0.9 + Math.sin(t * 4.4) * 0.3; g.armR = -0.9 - Math.sin(t * 4.4) * 0.3;
-      g.elL = g.elR = -0.4; g.kneeL = g.kneeR = 0.25; g.legL = g.legR = -0.12; g.head = -0.3;
-    }
-    if (this.strikeT >= 0) {
-      this.strikeT += dt;
-      const u = this.strikeT / 0.42;
-      if (u >= 1) this.strikeT = -1;
-      else {
-        const sw = u < 0.35 ? lerp(-0.6, -2.9, u / 0.35) : lerp(-2.9, -0.2, (u - 0.35) / 0.65);
-        g.armR = sw; g.elR = -0.35; g.armRz = 0.25;
-        g.spine += u < 0.35 ? -0.1 : 0.28; g.twist = u < 0.35 ? -0.35 : 0.4;
-        k = 30;
-      }
-    }
-    const j = this.j;
-    for (const key in g) j[key] = damp(j[key], g[key], k, dt);
-    this.legL.hp.rotation.set(j.legL, 0, j.legLz); this.legR.hp.rotation.set(j.legR, 0, j.legRz);
-    this.legL.kn.rotation.x = j.kneeL; this.legR.kn.rotation.x = j.kneeR;
-    this.armL.sh.rotation.set(j.armL, 0, j.armLz); this.armR.sh.rotation.set(j.armR, 0, j.armRz);
-    this.armL.el.rotation.x = j.elL; this.armR.el.rotation.x = j.elR;
-    this.spine.rotation.set(j.spine, j.twist, 0);
-    this.hips.position.y = j.hipY;
-    this.hips.rotation.y = -j.twist * 0.5;
-    this.head.rotation.x = j.head;
-    this.body.rotation.x = j.bodyX; this.body.position.y = j.bodyY + (j.bodyX < -0.5 ? 0 : 0);
-    if (this.skirt) this.skirt.rotation.x = clamp((j.legL + j.legR) * 0.42, -0.3, 0.3);
-  }
-}
-
-// Cast presets
-export const CAST = {
-  madhavan: { skin: SKIN[0], mundu: 0xe4dcc6, shirt: null, moustache: true, headgear: 'thorthu', gearColor: 0xb8402c },
-  ammavan: { skin: SKIN[1], mundu: 0xefe9d8, munduLong: true, kasavu: true, grey: true, moustache: true, belly: true, shoulderCloth: 0xefe9d8, scale: 0.98 },
-  devaki: { skin: SKIN[2], mundu: 0xf0ead8, munduLong: true, kasavu: true, shirt: 0x8a2f3a, sleeves: true, bun: true, sash: 0xf0ead8, scale: 0.93 },
-  ouseph: { skin: SKIN[3], mundu: 0x4a6a8a, shirt: null, beard: true, grey: true, headgear: 'thorthu', gearColor: 0xd8d0b8 },
-  moideen: { skin: SKIN[4], mundu: 0xe8e2d2, munduLong: true, shirt: 0xeae6da, sleeves: true, longSleeves: true, beard: true, headgear: 'cap', belly: true },
-  finch: { skin: 0xd9a98c, trousers: 0xcbbf9f, shirt: 0xd5cab0, sleeves: true, longSleeves: true, moustache: true, hair: 0x8a6a3a, headgear: 'topi', boots: 0x3a2416, scale: 1.04 },
-  peishkar: { skin: SKIN[2], trousers: 0xe8e4d8, shirt: 0x24303e, sleeves: true, longSleeves: true, moustache: true, headgear: 'turban', gearColor: 0xe9d9a8, boots: 0x20140c },
-  guard: { skin: SKIN[1], mundu: 0x8a7d5a, shirt: 0x8a7d5a, sleeves: true, moustache: true, headgear: 'turban', gearColor: 0x9c2a20 },
-  villagerM: [
-    { skin: SKIN[0], mundu: 0xe6dfcb, moustache: true }, { skin: SKIN[3], mundu: 0xd9d2bd, headgear: 'thorthu' },
-    { skin: SKIN[1], mundu: 0x6a4a3a, moustache: true, shoulderCloth: 0xe6dfcb }, { skin: SKIN[4], mundu: 0xe8e2d2, shirt: 0xe6e0d0, sleeves: true, headgear: 'cap' },
-    { skin: SKIN[2], mundu: 0x35506a, grey: true, beard: true },
-  ],
-  villagerF: [
-    { skin: SKIN[2], mundu: 0xefe9d8, munduLong: true, kasavu: true, shirt: 0x2f5a4a, sleeves: true, bun: true, sash: 0xefe9d8, scale: 0.92 },
-    { skin: SKIN[0], mundu: 0xe9e1cc, munduLong: true, shirt: 0x7a3a5a, sleeves: true, bun: true, sash: 0xe9e1cc, scale: 0.9 },
-    { skin: SKIN[4], mundu: 0xe5ddc8, munduLong: true, shirt: 0xb0862a, sleeves: true, bun: true, scale: 0.92 },
-  ],
-};
+export { Human, CAST, SKIN } from './human.js';
 
 export function makeStick(len = 1.5, color = 0x6a4a2a) {
   const m = new THREE.Mesh(cyl(0.018, 0.022, len, 6), M(color, 0.7));
   m.rotation.x = Math.PI / 2;
-  m.position.set(0, -0.02, len * 0.32);
+  m.position.set(0, -0.075, len * 0.32);
   m.castShadow = true;
   return m;
 }
 export function makeLantern() {
   const g = new THREE.Group();
+  g.position.y = -0.06;
   mesh(cyl(0.05, 0.06, 0.13, 6), new THREE.MeshStandardMaterial({ color: 0xffc070, emissive: 0xffa040, emissiveIntensity: 3, roughness: 0.4 }), g, 0, -0.14, 0);
   mesh(cyl(0.005, 0.005, 0.1, 4), M(0x222222), g, 0, -0.04, 0);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: new THREE.Color(2.2, 1.4, 0.5), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-  sp.scale.setScalar(1.3); sp.position.y = -0.14;
+  sp.scale.setScalar(0.75); sp.position.y = -0.14;
   g.add(sp);
   return g;
 }
 
 // =========================================================== QUADRUPEDS
 const QUAD = {
-  horse: { body: [0.3, 0.95], bodyY: 1.2, bodySX: 0.88, legU: 0.5, legL: 0.5, legR: 0.062, legX: 0.16, legZ: [0.43, -0.45], neck: [0.14, 0.21, 0.74, 0.82], head: [0.105, 0.34], col: 0x5a3320, dark: 0x1c120c },
-  cow: { body: [0.36, 0.8], bodyY: 1.0, bodySX: 0.95, legU: 0.36, legL: 0.36, legR: 0.07, legX: 0.19, legZ: [0.36, -0.4], neck: [0.16, 0.22, 0.42, 1.2], head: [0.12, 0.28], col: 0xd8d0c0, dark: 0x4a4038 },
+  horse: { bodyY: 1.2, neck: [0, 0, 0.72, 0.82], neckAt: [0.2, 0.6], headRot: 1.0, legU: 0.5, legL: 0.5, legR: 0.062, legX: 0.17, legZ: [0.44, -0.46], hipY: -0.2, tailAt: [0.17, -0.72], top: 0.33, col: 0x5a3320, dark: 0x1c120c },
+  cow: { bodyY: 1.0, neck: [0, 0, 0.4, 1.2], neckAt: [0.12, 0.56], headRot: 0.6, legU: 0.36, legL: 0.36, legR: 0.07, legX: 0.2, legZ: [0.38, -0.42], hipY: -0.22, tailAt: [0.2, -0.64], top: 0.36, col: 0xd8d0c0, dark: 0x4a4038 },
 };
+const coatCache = new Map();
+function coatMaterial(col, dark) {
+  const k = col + '|' + dark;
+  if (coatCache.has(k)) return coatCache.get(k);
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'), hx = (v) => '#' + v.toString(16).padStart(6, '0');
+  g.fillStyle = hx(col); g.fillRect(0, 0, 256, 256);
+  // body: darker along the spine, paler under the belly, a soft dapple
+  let grd = g.createLinearGradient(0, 0, 256, 0);
+  grd.addColorStop(0, 'rgba(255,240,220,0.16)'); grd.addColorStop(0.3, 'rgba(0,0,0,0.05)'); grd.addColorStop(0.5, 'rgba(0,0,0,0.26)'); grd.addColorStop(0.7, 'rgba(0,0,0,0.05)'); grd.addColorStop(1, 'rgba(255,240,220,0.16)');
+  g.fillStyle = grd; g.fillRect(0, 0, 256, 128);
+  for (let i = 0; i < 160; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(255,235,210,0.05)' : 'rgba(0,0,0,0.06)'; g.beginPath(); g.arc(Math.random() * 256, Math.random() * 256, 3 + Math.random() * 10, 0, 7); g.fill(); }
+  // legs: shade toward the dark points
+  grd = g.createLinearGradient(0, 128, 0, 256);
+  grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, hx(dark));
+  g.fillStyle = grd; g.fillRect(128, 128, 64, 128);
+  g.fillStyle = hx(dark); g.fillRect(192, 128, 64, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.72 });
+  coatCache.set(k, m);
+  return m;
+}
 export class Quadruped {
   constructor(type = 'horse', o = {}) {
-    const d = QUAD[type];
-    const col = M(o.color ?? d.col, 0.8), dark = M(o.dark ?? d.dark, 0.8);
+    const d = QUAD[type], horse = type === 'horse';
+    const colHex = o.color ?? d.col, darkHex = o.dark ?? d.dark;
+    const mat = coatMaterial(colHex, darkHex), dark = M(darkHex, 0.8);
     this.type = type;
     this.root = new THREE.Group();
     const body = this.body = group(this.root, 0, d.bodyY, 0);
-    const barrel = mesh(capsule(d.body[0], d.body[1], 12), col, body);
-    barrel.rotation.x = Math.PI / 2; barrel.scale.set(d.bodySX, 1, 1);
-    mesh(sphere(d.body[0] * 1.02, 10, 8), col, body, 0, 0.03, d.body[1] * 0.42).scale.set(d.bodySX, 1.05, 0.9);
-    mesh(sphere(d.body[0] * 1.05, 10, 8), col, body, 0, 0.04, -d.body[1] * 0.45).scale.set(d.bodySX * 1.02, 1.05, 0.95);
-    if (type === 'cow' && o.hump) mesh(sphere(0.17, 8, 6), col, body, 0, 0.36, 0.3);
-    // neck & head
-    const neck = this.neck = group(body, 0, d.body[0] * 0.55, d.body[1] * 0.5 + 0.06);
+    const add = (parent, sgb, m = mat) => { const ms = new THREE.Mesh(sgb.build(false), m); ms.castShadow = true; parent.add(ms); return ms; };
+    const RB = [0, 0, 256, 128], RN = [0, 128, 128, 256], RL = [128, 128, 192, 256], RH = [192, 128, 256, 256];
+    // ---- barrel: croup, flank, girth, chest
+    const Bd = horse
+      ? [[-0.74, 0.06, 0.13, 0.17], [-0.6, 0.06, 0.26, 0.29], [-0.3, 0.01, 0.3, 0.31], [0.08, -0.02, 0.31, 0.325], [0.4, 0.0, 0.29, 0.335], [0.62, 0.05, 0.22, 0.3], [0.76, 0.08, 0.12, 0.18]]
+      : [[-0.66, 0.04, 0.14, 0.2], [-0.52, 0.04, 0.3, 0.32], [-0.2, -0.03, 0.36, 0.38], [0.12, -0.04, 0.36, 0.38], [0.4, 0.0, 0.31, 0.36], [0.56, 0.04, 0.22, 0.3], [0.66, 0.06, 0.12, 0.2]];
+    let g = new SGB(256);
+    g.loft(Bd.map(([z, cy, rx, ry], i) => ({ c: [0, cy, z], ax: [rx, 0, 0], az: [0, ry, 0], v: i / (Bd.length - 1) })), 14, RB, { capStart: 0.06, capEnd: 0.06 });
+    if (!horse && o.hump) g.loft([[0.26, 0.17], [0.38, 0.15], [0.47, 0.07]].map(([y, r], i) => ({ c: [0, y, 0.3], ax: [r, 0, 0], az: [0, 0, r * 1.25], v: i / 2 })), 10, RB, { capEnd: 0.03 });
+    if (!horse) g.loft([[-0.2, 0.05], [-0.36, 0.09], [-0.44, 0.03]].map(([y, r], i) => ({ c: [0, y, 0.5], ax: [r * 0.5, 0, 0], az: [0, 0, r * 1.6], v: i / 2 })), 8, RB, { capEnd: 0.02 });   // dewlap
+    add(body, g);
+    // ---- neck & head
+    const neck = this.neck = group(body, 0, d.neckAt[0], d.neckAt[1]);
     neck.rotation.x = d.neck[3];
-    mesh(cyl(d.neck[0], d.neck[1], d.neck[2], 10), col, neck, 0, d.neck[2] / 2 - 0.05, 0).scale.set(0.8, 1, 1.15);
-    const head = this.head = group(neck, 0, d.neck[2] - 0.06, 0);
-    head.rotation.x = type === 'horse' ? 1.0 : 0.6;
-    const hm = mesh(capsule(d.head[0], d.head[1], 8), col, head, 0, d.head[1] * 0.55, 0.01);
-    hm.scale.set(0.82, 1, 1);
-    mesh(sphere(d.head[0] * 0.78, 8, 6), type === 'horse' ? dark : col, head, 0, d.head[1] + d.head[0] * 0.75, 0.01);
+    const Nk = horse ? [[-0.14, 0.15, 0.22], [0.2, 0.115, 0.17], [0.5, 0.09, 0.125], [0.72, 0.08, 0.105]] : [[-0.12, 0.17, 0.23], [0.15, 0.14, 0.19], [0.4, 0.12, 0.15]];
+    g = new SGB(256);
+    g.loft(Nk.map(([y, rx, rz], i) => ({ c: [0, y, 0], ax: [rx, 0, 0], az: [0, 0, rz], v: i / (Nk.length - 1) * 0.5 })), 10, RN, {});
+    add(neck, g);
+    const head = this.head = group(neck, 0, d.neck[2] - 0.04, 0);
+    head.rotation.x = d.headRot;
+    const Hd = horse ? [[-0.07, 0.07, 0.085], [0.05, 0.097, 0.118], [0.2, 0.076, 0.096], [0.36, 0.058, 0.07], [0.45, 0.056, 0.062]] : [[-0.06, 0.09, 0.1], [0.06, 0.122, 0.132], [0.2, 0.1, 0.106], [0.31, 0.088, 0.086]];
+    g = new SGB(256);
+    g.loft(Hd.map(([y, rx, rz], i) => ({ c: [0, y, 0.01], ax: [rx, 0, 0], az: [0, 0, rz], v: 0.5 + i / (Hd.length - 1) * 0.5 })), 10, RN, { capStart: 0.03, capEnd: 0.025 });
+    add(head, g);
+    const hl = Hd[Hd.length - 1][0];
+    mesh(sphere(0.012, 6, 4), M(0x0a0806, 0.2), head, -0.085, 0.07, -0.02); mesh(sphere(0.012, 6, 4), M(0x0a0806, 0.2), head, 0.085, 0.07, -0.02);
+    mesh(sphere(0.012, 5, 4), M(0x0a0806, 0.4), head, -0.03, hl, 0.02); mesh(sphere(0.012, 5, 4), M(0x0a0806, 0.4), head, 0.03, hl, 0.02);
     for (const s of [-1, 1]) {
-      const ear = mesh(new THREE.ConeGeometry(0.035, 0.12, 5), col, head, s * 0.06, 0.02, -0.07);
+      const ear = mesh(new THREE.ConeGeometry(0.035, 0.13, 5), dark, head, s * 0.06, -0.02, -0.09);
       ear.rotation.x = -0.9; ear.rotation.z = s * -0.3;
-      if (type === 'cow') { const horn = mesh(new THREE.ConeGeometry(0.025, 0.22, 5), M(0x3a3028, 0.5), head, s * 0.09, 0.0, -0.1); horn.rotation.x = -1.3; horn.rotation.z = s * -0.7; }
+      if (!horse) { const horn = mesh(new THREE.ConeGeometry(0.026, 0.24, 5), M(0x3a3028, 0.5), head, s * 0.1, -0.02, -0.1); horn.rotation.x = -1.3; horn.rotation.z = s * -0.7; }
     }
-    if (type === 'horse') {
-      mesh(box(0.045, d.neck[2] + 0.1, 0.1), dark, neck, 0, d.neck[2] / 2, -0.17);
-      mesh(box(0.05, 0.12, 0.1), dark, head, 0, 0.02, -0.08);
+    if (horse) {
+      // mane & forelock
+      g = new SGB(256);
+      g.loft(Nk.map(([y, rx, rz], i) => ({ c: [0, y + 0.03, -rz - 0.025], ax: [0.022, 0, 0], az: [0, 0, 0.075], v: i / 3 })), 6, RH, { capStart: 0.01, capEnd: 0.01 });
+      add(neck, g);
+      mesh(box(0.05, 0.13, 0.08), dark, head, 0, 0.0, -0.1);
     }
-    // tail
-    const tail = this.tail = group(body, 0, d.body[0] * 0.55, -d.body[1] * 0.5 - d.body[0] * 0.75);
+    // ---- tail
+    const tail = this.tail = group(body, 0, d.tailAt[0], d.tailAt[1]);
     tail.rotation.x = 0.35;
-    mesh(cyl(0.05, 0.02, type === 'horse' ? 0.8 : 0.7, 6), dark, tail, 0, -0.38, 0);
-    // legs
+    g = new SGB(256);
+    const Tl = horse ? [[0, 0.04], [-0.2, 0.07], [-0.52, 0.078], [-0.8, 0.03]] : [[0, 0.026], [-0.45, 0.02], [-0.56, 0.05], [-0.68, 0.02]];
+    g.loft(Tl.map(([y, r], i) => ({ c: [0, y, 0], ax: [r, 0, 0], az: [0, 0, r], v: i / 3 })), 6, RH, { capStart: 0.01, capEnd: 0.03 });
+    add(tail, g);
+    // ---- legs
     this.legs = [];
     for (const z of d.legZ) for (const s of [-1, 1]) {
-      const hp = group(body, s * d.legX, -d.body[0] * 0.55, z);
-      mesh(capsule(d.legR * 1.25, d.legU - 0.1, 8), col, hp, 0, -d.legU / 2, 0);
+      const hind = z < 0, r = d.legR;
+      const hp = group(body, s * d.legX, d.hipY, z);
+      g = new SGB(256);
+      g.loft([[0.1, 1.5, hind ? 2.3 : 1.8], [-d.legU * 0.45, 1.25, hind ? 1.7 : 1.4], [-d.legU, 0.82, 0.9]].map(([y, a, b], i) => ({ c: [0, y, 0], ax: [r * a, 0, 0], az: [0, 0, r * b], v: i / 2 * 0.5 })), 8, RL, { capStart: 0.02 });
+      add(hp, g);
       const kn = group(hp, 0, -d.legU, 0);
-      mesh(capsule(d.legR * 0.78, d.legL - 0.1, 6), type === 'horse' ? dark : col, kn, 0, -d.legL / 2, 0);
-      mesh(cyl(d.legR, d.legR * 1.1, 0.08, 8), M(0x15100c, 0.5), kn, 0, -d.legL - 0.02, 0);
+      g = new SGB(256);
+      g.loft([[0.03, 0.86], [-d.legL * 0.45, 0.6], [-d.legL * 0.84, 0.6], [-d.legL * 0.95, 0.8]].map(([y, a], i) => ({ c: [0, y, 0], ax: [r * a, 0, 0], az: [0, 0, r * a * 1.1], v: 0.5 + i / 3 * 0.5 })), 8, RL, {});
+      add(kn, g);
+      mesh(cyl(r * 0.95, r * 1.12, 0.09, 8), M(0x15100c, 0.5), kn, 0, -d.legL - 0.015, 0.005);
       this.legs.push({ hp, kn, front: z > 0, side: s });
     }
     if (o.saddle) {
-      mesh(box(0.62, 0.035, 0.8), M(0x7a1f1c, 0.95), body, 0, d.body[0] + 0.0, -0.02).scale.set(d.bodySX, 1, 1);
-      const sd = mesh(sphere(0.2, 10, 6), M(0x4a2a16, 0.6), body, 0, d.body[0] + 0.03, -0.02); sd.scale.set(1.15, 0.38, 1.5);
-      mesh(box(0.02, 0.4, 0.03), M(0x2a1a10, 0.6), body, -0.28, d.body[0] - 0.25, 0.02);
-      mesh(box(0.02, 0.4, 0.03), M(0x2a1a10, 0.6), body, 0.28, d.body[0] - 0.25, 0.02);
+      const top = d.top;
+      mesh(box(0.66, 0.035, 0.84), M(0x7a1f1c, 0.95), body, 0, top - 0.035, -0.02);
+      const sd = mesh(sphere(0.2, 10, 6), M(0x4a2a16, 0.6), body, 0, top + 0.005, -0.02); sd.scale.set(1.15, 0.38, 1.5);
+      mesh(sphere(0.07, 8, 6), M(0x4a2a16, 0.6), body, 0, top + 0.06, 0.26);
+      for (const sx of [-1, 1]) { mesh(box(0.02, 0.44, 0.03), M(0x2a1a10, 0.6), body, sx * 0.3, top - 0.28, 0.02); mesh(box(0.03, 0.04, 0.12), M(0x8a8a8a, 0.4), body, sx * 0.31, top - 0.5, 0.04); }
+      // bridle
+      mesh(box(0.2, 0.02, 0.24), M(0x2a1a10, 0.6), head, 0, 0.08, 0.01); mesh(box(0.17, 0.02, 0.19), M(0x2a1a10, 0.6), head, 0, 0.3, 0.01);
     }
     mergeStatic(this.root);
-    this.seatY = d.bodyY + d.body[0] - 0.8;   // rider root offset (hips sit at 0.93)
+    this.seatY = d.bodyY + d.top - 0.8;
     this.baseY = d.bodyY;
     this.phase = Math.random() * 6; this.t = Math.random() * 10; this.speed = 0;
     this.graze = !!o.graze;
@@ -491,6 +351,7 @@ export function makePaddle() {
   const shaft = mesh(cyl(0.018, 0.018, 1.5, 6), M(0x7a5a38, 0.7), g, 0, -0.45, 0);
   const blade = mesh(box(0.16, 0.42, 0.02), M(0x6a4a2c, 0.7), g, 0, -1.3, 0);
   g.rotation.x = 0.5;
+  g.position.y = -0.06;
   return g;
 }
 
@@ -509,4 +370,50 @@ export function makeKettuvallam() {
   for (const z of [-4.5, -0.5, 3.5]) for (const x of [-1.6, 1.6]) mesh(cyl(0.05, 0.05, 1.0, 5), M(0x5a4634), root, x, 0.95, z);
   const pole = mesh(cyl(0.03, 0.03, 5, 5), M(0x8a7a50), root, 0.6, 1.8, 6.0); pole.rotation.x = 0.5;
   return root;
+}
+
+// The chundan vallam: a long racing snake-boat with a high, raked stern.
+export function makeChundan(o = {}) {
+  const root = new THREE.Group();
+  const trim = o.trim ?? 0xb8402c;
+  const hullM = new THREE.MeshStandardMaterial({ map: TEX.wood, color: 0x4a4038, roughness: 0.5, side: THREE.DoubleSide });
+  const L = 15.5, B = 0.74, D = 0.52;
+  const hull = new THREE.Mesh(hullGeo(L, B, D, 0.35), hullM);
+  hull.castShadow = true; hull.position.y = -0.22;
+  root.add(hull);
+  const fl = mesh(box(B * 1.2, 0.03, L * 0.84), M(0x3a2c20, 0.9), root, 0, -0.08, 0); fl.castShadow = false;
+  for (let i = 0; i < 9; i++) mesh(box(B * 1.7, 0.035, 0.18), M(0x6a5540, 0.8), root, 0, 0.2, -5.6 + i * 1.5);
+  // the amaram: the stern sweeping up like a cobra's hood
+  const g = new GB();
+  g.tube((t) => [0, 0.2 + Math.pow(t, 1.7) * 3.3, -L / 2 + 0.9 - t * 2.3], (t) => 0.24 * (1 - t * 0.7), 8, 6, 2, [1, 1, 1], 1, true);
+  const st = new THREE.Mesh(g.build(false), hullM); st.castShadow = true; root.add(st);
+  const gold = new THREE.MeshStandardMaterial({ color: 0xd9a93a, roughness: 0.35, metalness: 0.5, emissive: 0x4a3008, emissiveIntensity: 0.5 });
+  for (let i = 0; i < 4; i++) { const t = 0.3 + i * 0.2; mesh(sphere(0.07, 8, 6), gold, root, 0, 0.2 + Math.pow(t, 1.7) * 3.3 + 0.1, -L / 2 + 0.9 - t * 2.3 + 0.2); }
+  // trim stripe & pennant in the village colours
+  const tm = M(trim, 0.7);
+  for (const sx of [-1, 1]) { const s = mesh(box(0.03, 0.09, L * 0.8), tm, root, sx * (B + 0.005), 0.3, 0); s.castShadow = false; }
+  mesh(cyl(0.02, 0.02, 2.2, 5), M(0x8a7a50), root, 0, 4.4, -L / 2 - 1.3);
+  const fg = mesh(box(0.02, 0.5, 0.9), new THREE.MeshStandardMaterial({ color: trim, roughness: 0.8, side: THREE.DoubleSide }), root, 0, 5.2, -L / 2 - 1.78);
+  fg.userData.flag = true;
+  return { root, cargo: new THREE.Group(), L, flag: fg };
+}
+
+export function makeBucket() {
+  const g = new THREE.Group();
+  const w = new THREE.MeshStandardMaterial({ map: TEX.plank, roughness: 0.8, side: THREE.DoubleSide });
+  mesh(new THREE.CylinderGeometry(0.17, 0.13, 0.26, 10, 1, true), w, g, 0, -0.3, 0);
+  mesh(new THREE.CircleGeometry(0.13, 10), w, g, 0, -0.43, 0).rotation.x = -Math.PI / 2;
+  const h = mesh(new THREE.TorusGeometry(0.16, 0.012, 4, 10, Math.PI), M(0x3a3a3a, 0.5), g, 0, -0.17, 0);
+  const water = mesh(new THREE.CircleGeometry(0.155, 10), new THREE.MeshStandardMaterial({ color: 0x4a6a70, roughness: 0.15 }), g, 0, -0.2, 0);
+  water.rotation.x = -Math.PI / 2; water.visible = false;
+  g.userData.water = water;
+  g.position.y = -0.06;
+  return g;
+}
+export function makeRod() {
+  const g = new THREE.Group();
+  const r = mesh(cyl(0.008, 0.016, 2.6, 5), M(0x8a7a40, 0.7), g, 0, 0, 1.2);
+  r.rotation.x = Math.PI / 2 - 0.5;
+  g.position.y = -0.06;
+  return g;
 }

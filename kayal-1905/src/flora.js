@@ -234,7 +234,7 @@ void main(){
   float n3 = texture2D(uNoise, w * 0.11).a;
   vec3 base = mix(SRGB(0.20, 0.31, 0.13), SRGB(0.34, 0.42, 0.19), smoothstep(0.3, 0.7, pn));
   vec3 tip = base * 1.22 + SRGB(0.30, 0.32, 0.10) * 0.18;
-  base = mix(base, SRGB(0.27, 0.40, 0.13), paddy); tip = mix(tip, SRGB(0.50, 0.62, 0.22), paddy);
+  base = mix(base, SRGB(0.22, 0.34, 0.12), paddy); tip = mix(tip, SRGB(0.40, 0.52, 0.20), paddy);
   float dry = smoothstep(0.55, 0.8, texture2D(uNoise, w * 0.031).r);
   tip = mix(tip, SRGB(0.56, 0.52, 0.30), dry * 0.45 * (1.0 - paddy));
   vCol = mix(base * 0.8, tip, lp.y * lp.y) * (0.78 + 0.44 * n3) * (uAmb * 1.05 + uSunCol * (0.18 + 0.8 * max(uSunDir.y, 0.0))) * (1.0 - 0.25 * uWet);
@@ -450,6 +450,53 @@ export function buildFlora(scene, env, keepClear, bigTrees = []) {
     for (let x = -220; x < 160; x += 4) if (rng() < 0.5) pond(x, canalZ(x) + (rng() - 0.5) * 9, 2.5, 5);
     addInstanced(scene, pad, padMat, pads, { cast: false });
     addInstanced(scene, fl, flMat, flowers, { cast: false });
+  }
+
+  // --- undergrowth: shrubs, ferns and crotons
+  {
+    const g = new GB();
+    for (let i = 0; i < 4; i++) {
+      const a = i / 4 * Math.PI + rng() * 0.3, cx = Math.cos(a), sz = Math.sin(a), w = 0.75 + rng() * 0.25, h = 0.95 + rng() * 0.3, lean = (rng() - 0.5) * 0.3;
+      const q = [[-1, 0, 0, 0], [1, 0, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].map(([u, v, tu, tv]) => g.vert(cx * u * w + lean * v, v * h - 0.08, sz * u * w, cx * u * 0.3, 0.9, sz * u * 0.3, tu, tv, 0.8 + v * 0.3, 0.8 + v * 0.3, 0.8 + v * 0.3));
+      g.quad(q[0], q[1], q[2], q[3]);
+    }
+    const sg = g.build(), list = [];
+    const n = Math.round(5200 * q.treeScale);
+    for (let i = 0; i < n; i++) {
+      const x = (rng() * 2 - 1) * 770, z = (rng() * 2 - 1) * 770, h = getHeight(x, z);
+      if (h < 0.8) continue;
+      const hill = smoothstep(7, 26, h), nz = fbm(x * 0.02, z * 0.02, 2, 91);
+      if (rng() > hill * 0.75 + (1 - hill) * 0.22 * smoothstep(0.45, 0.6, nz)) continue;
+      if (maskAt(x, z, 0) > 0.2 || maskAt(x, z, 1) > 0.2 || maskAt(x, z, 2) > 0.4 || pointInBox(x, z, 1)) continue;
+      const k = rng(), b = 0.75 + rng() * 0.4;
+      const tint = k < 0.12 ? [1.25 * b, 0.75 * b, 0.55 * b] : k < 0.25 ? [1.15 * b, 1.15 * b, 0.6 * b] : [0.85 * b, b, 0.8 * b];
+      list.push({ x, y: h, z, ry: rng() * TAU, s: 0.7 + rng() * 1.0, tint });
+    }
+    addInstanced(scene, sg, leafMat, list, { cast: false, receive: true });
+  }
+  // --- boulders on the slopes and shores
+  {
+    const rg = new THREE.IcosahedronGeometry(1, 1);
+    const rp = rg.attributes.position;
+    for (let i = 0; i < rp.count; i++) {
+      const vx = rp.getX(i), vy = rp.getY(i), vz = rp.getZ(i);
+      const k = 0.78 + 0.44 * fbm(vx * 1.7 + 3, vy * 1.7 + vz * 1.3, 2, 13);
+      rp.setXYZ(i, vx * k * 1.15, vy * k * 0.72, vz * k);
+    }
+    rg.computeVertexNormals();
+    const rm = new THREE.MeshStandardMaterial({ map: TEX.stone, roughness: 0.96 });
+    const list = [];
+    for (let i = 0; i < 2600; i++) {
+      const x = (rng() * 2 - 1) * 770, z = (rng() * 2 - 1) * 770, h = getHeight(x, z);
+      if (h < -0.4) continue;
+      const sl = getSlope(x, z);
+      const pr = h > 10 ? 0.1 + sl * 0.7 : (h < 1.3 ? 0.1 : 0.012);
+      if (rng() > pr || maskAt(x, z, 0) > 0.2 || maskAt(x, z, 1) > 0.2 || pointInBox(x, z, 1.5)) continue;
+      const s = 0.35 + rng() * rng() * 1.9, b = 0.75 + rng() * 0.3;
+      list.push({ x, y: h - s * 0.2, z, ry: rng() * TAU, rx: (rng() - 0.5) * 0.5, s, tint: [b * 1.5, b * 1.5, b * 1.45] });
+      if (s > 0.9) addCircle(x, z, s * 0.75);
+    }
+    addInstanced(scene, rg, rm, list, { cast: true, receive: true });
   }
 
   buildGrass(scene, env);

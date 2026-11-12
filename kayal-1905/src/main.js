@@ -7,10 +7,12 @@ import { AudioSys } from './audio.js';
 import { Player } from './player.js';
 import { buildWorld } from './world.js';
 import { Post } from './post.js';
-import { Story, loadSave, CHAPTER_NAMES } from './story.js';
+import { Story, loadSave, MISSIONS } from './story.js';
+import { MapUI } from './mapui.js';
 import { getHeight, LOC } from './heightfield.js';
 import { SPOTS } from './structures.js';
 import { clamp, smoothstep, nextFrame } from './util.js';
+import { buildTextures } from './textures.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -60,6 +62,7 @@ async function boot() {
   const ui = G.ui = new UI();
   const input = G.input = new Input(canvas);
   const audio = G.audio = new AudioSys();
+  buildTextures();
   const player = G.player = new Player(scene, camera);
 
   await nextFrame();
@@ -67,6 +70,8 @@ async function boot() {
   ui.attach(scene);
   const post = new Post(renderer, scene, camera);
   const story = G.story = new Story();
+  story.attach(scene);
+  const mapUI = G.mapUI = new MapUI();
   const env = G.env, water = G.water;
 
   const resize = () => {
@@ -97,7 +102,7 @@ async function boot() {
 
   const save = loadSave();
   const btnC = $('btnContinue');
-  if (save && save.chapter > 0) { btnC.style.display = ''; btnC.textContent = `Continue — ${save.chapter < 5 ? 'Chapter ' + ['I', 'II', 'III', 'IV', 'V'][save.chapter] + ': ' : ''}${CHAPTER_NAMES[save.chapter]}`; }
+  if (save && save.done > 0) { btnC.style.display = ''; btnC.textContent = `Continue — ${save.done < MISSIONS.length ? 'next: ' + MISSIONS[save.done].name : 'free roam'}`; }
   const qb = $('btnQuality');
   const qLabel = () => (qb.textContent = `Graphics: ${G.quality[0].toUpperCase() + G.quality.slice(1)}`);
   qLabel();
@@ -119,10 +124,10 @@ async function boot() {
     input.requestLock();
     env.frozen = false;
     player.setCine(null);
-    story.run(ch, false);
+    if (ch === 'new') story.newGame(); else if (ch === 'continue') story.continueGame(save); else { story.state.done = ch; if (ch < MISSIONS.length) story.startMission(ch); else story.enterFree({ fresh: true }); }
   };
-  $('btnNew').onclick = () => start(0);
-  btnC.onclick = () => start(save.chapter);
+  $('btnNew').onclick = () => start('new');
+  btnC.onclick = () => start('continue');
 
   const setPaused = (v) => {
     if (!G.started || G.paused === v) return;
@@ -133,22 +138,30 @@ async function boot() {
     else { input.requestLock(); audio.resume(); }
   };
   $('btnResume').onclick = () => setPaused(false);
-  $('btnRestart').onclick = () => { setPaused(false); ui.fade(1, 0.6).then(() => story.run(story.chapter, false)); };
+  $('btnRestart').onclick = () => { setPaused(false); ui.fade(1, 0.6).then(() => (story.mode === 'mission' ? story.startMission(story.mi, story.cp) : story.enterFree({ fresh: true }))); };
   $('btnMute').onclick = () => { audio.enabled = !audio.enabled; if (audio.master) audio.master.gain.value = audio.enabled ? 0.8 : 0; $('btnMute').textContent = audio.enabled ? 'Sound: On' : 'Sound: Off'; };
   $('btnTitle').onclick = () => location.reload();
   document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === canvas;
-    if (!locked && wasLocked && G.started && !G.paused) setPaused(true);
+    if (!locked && wasLocked && G.started && !G.paused && !G.mapOpen) setPaused(true);
     wasLocked = locked;
   });
-  addEventListener('keydown', (e) => { if (e.code === 'Escape' && G.started && !wasLocked) setPaused(!G.paused); });
+  addEventListener('keydown', (e) => {
+    if (e.code === 'Escape' && G.mapOpen) { mapUI.close(); return; }
+    if (e.code === 'KeyM' && G.started && !G.paused && !e.repeat) {
+      if (G.mapOpen) mapUI.close(); else if (!story.busy && !ui.subResolve && !story.failing) mapUI.open();
+      return;
+    }
+    if (e.code === 'Escape' && G.started && !wasLocked) setPaused(!G.paused);
+  });
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.started) setPaused(true); });
 
   // ---------------- debug / automation hooks ----------------
   window.KAYAL = {
     G, THREE,
     tp: (x, z) => player.teleport(x, z, player.yaw),
-    chapter: (n) => story.run(n, false),
+    chapter: (n) => { story.state.done = n; if (n < MISSIONS.length) story.startMission(n); else story.enterFree({ fresh: true }); },
+    free: (n) => { story.state.done = n; story.enterFree({ fresh: true }); },
     time: (h) => env.setTime(h),
     rain: (v) => env.setRain(v, true),
     spots: SPOTS,
@@ -157,7 +170,7 @@ async function boot() {
   ui.hideLoading();
   G.paused = false;
   if (params.has('auto')) {
-    await start(parseInt(params.get('ch') || '0', 10));
+    await start(params.has('ch') ? parseInt(params.get('ch'), 10) : 'new');
   }
 
   // ---------------- main loop ----------------
@@ -168,12 +181,13 @@ async function boot() {
   function interactions(dt) {
     let label = null, act = null;
     const pp = player.worldPos(tmp);
-    if (G.started && !player.locked && !story.busy && !player.photo && player.health > 0) {
+    if (G.activity && G.activity.label) { label = G.activity.label; act = G.activity.action; }
+    else if (G.started && !player.locked && !story.busy && !player.photo && player.health > 0) {
       if (player.mode === 'foot') {
         let bd = 1e9;
         for (const it of G.interactables) {
           const d = Math.hypot(it.pos.x - pp.x, it.pos.z - pp.z);
-          if (d < it.r && d < bd && (!it.cond || it.cond())) { bd = d; label = it.label; act = it.action; }
+          if (d < it.r && (d < bd || it.prio) && (!it.cond || it.cond())) { bd = it.prio ? -1 : d; label = it.label; act = it.action; }
         }
       } else if (player.mode === 'horse') {
         if (player.mount.speed < 4 && !story.noDismount) { label = 'Dismount'; act = () => player.dismount(); }
@@ -194,7 +208,8 @@ async function boot() {
     const dt = Math.min(rawDt, 0.05);
     G.dt = dt;
 
-    if (!G.paused) {
+    if (G.mapOpen) mapUI.draw();
+    if (!G.paused && !G.mapOpen) {
       const reps = G.debug.speed || 1;
       for (let rep = 0; rep < reps; rep++) {
         G.time += dt;
@@ -215,6 +230,7 @@ async function boot() {
             if (input.consume('KeyR')) env.setRain(env.rainTarget > 0.5 ? 0 : 1);
             if (input.consume('KeyT')) $('photoTip').classList.toggle('on');
           } else if (input.consume('KeyH')) ui.setHud(ui.hudHidden);
+          if (input.consume('KeyX') && !player.locked && !story.busy) G.act.whistle();
         }
         player.update(dt);
         for (let i = 0; i < G.npcs.length; i++) G.npcs[i].update(dt);

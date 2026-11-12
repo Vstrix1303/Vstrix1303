@@ -18,7 +18,7 @@
 
 <h3 align="left">🎮 KAYAL — Travancore, 1905</h3>
 
-A single-player open-world adventure set in the backwaters of Kerala in the monsoon of 1905 — walk, ride and paddle through a procedurally built slice of old Travancore. One self-contained HTML file, no assets, no installs.
+A single-player open-world adventure set in the backwaters of Kerala in the monsoon of 1905 — nine story missions in two acts, a map to explore, horses, boats, a regatta and a lighthouse duel, in a procedurally built slice of old Travancore. One self-contained HTML file, no assets, no installs.
 
 **[Open the game folder](kayal-1905/)** · download `kayal-1905/index.html` and open it in a desktop browser to play.
 

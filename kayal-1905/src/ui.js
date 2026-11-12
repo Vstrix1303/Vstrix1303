@@ -9,10 +9,12 @@ export class UI {
   constructor() {
     this.el = {};
     for (const id of ['hud', 'chapterTag', 'objText', 'minimap', 'clock', 'hp', 'st', 'prompt', 'toast', 'marker', 'markerDist', 'subs', 'subName', 'subText', 'subHint',
-      'bark', 'barkName', 'barkText', 'card', 'cardSmall', 'cardBig', 'cardSub', 'fade', 'hurt', 'menu', 'pause', 'loading', 'loadBar', 'loadText', 'letterTop', 'letterBot', 'detect', 'photoTip', 'dead', 'deadText']) this.el[id] = $(id);
+      'bark', 'barkName', 'barkText', 'card', 'cardSmall', 'cardBig', 'cardSub', 'fade', 'hurt', 'menu', 'pause', 'loading', 'loadBar', 'loadText', 'letterTop', 'letterBot', 'detect', 'photoTip', 'dead', 'deadText',
+      'money', 'moneyDelta', 'timer', 'meter', 'meterLabel', 'meterFill', 'boss', 'bossName', 'bossFill', 'banner', 'bannerTitle', 'bannerName', 'bannerSub', 'area', 'areaName', 'areaSub', 'marker2', 'marker2Dist']) this.el[id] = $(id);
     this.mctx = this.el.minimap.getContext('2d');
     this.markerPos = null; this.markerLabel = '';
-    this.toastT = 0; this.barkT = 0; this.hurtV = 0;
+    this.toastT = 0; this.barkT = 0; this.hurtV = 0; this.areaT = 0; this.bannerT = 0; this.moneyT = 0;
+    this.waypoint = null;
     this.subResolve = null; this.typing = null;
     this.hudHidden = false;
     this.beacon = new THREE.Mesh(
@@ -51,6 +53,29 @@ export class UI {
     this.el.bark.classList.add('on'); this.barkT = dur;
   }
   hurt() { this.hurtV = 1; }
+  setMoney(text, delta) {
+    this.el.money.textContent = text;
+    if (delta) { this.el.moneyDelta.textContent = (delta > 0 ? '+ ' : '− ') + (Math.abs(delta) >= 16 ? 'Rs ' + Math.floor(Math.abs(delta) / 16) + (Math.abs(delta) % 16 ? ' · ' + (Math.abs(delta) % 16) + ' as' : '') : Math.abs(delta) + ' as'); this.el.moneyDelta.className = delta > 0 ? 'on' : 'on neg'; this.moneyT = 3; }
+  }
+  setTimer(text) { this.el.timer.textContent = text || ''; this.el.timer.classList.toggle('on', !!text); }
+  setMeter(label, frac, good) {
+    if (label == null) { this.el.meter.classList.remove('on'); return; }
+    this.el.meter.classList.add('on'); this.el.meter.classList.toggle('good', !!good);
+    this.el.meterLabel.textContent = label; this.el.meterFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
+  }
+  setBoss(name, frac) {
+    if (name == null) { this.el.boss.classList.remove('on'); return; }
+    this.el.boss.classList.add('on'); this.el.bossName.textContent = name; this.el.bossFill.style.width = Math.max(0, frac) * 100 + '%';
+  }
+  banner(title, name, sub = '') {
+    this.el.bannerTitle.textContent = title; this.el.bannerName.textContent = name; this.el.bannerSub.textContent = sub;
+    this.el.banner.classList.add('on'); this.bannerT = 5;
+  }
+  area(name, sub = '') {
+    this.el.areaName.textContent = name; this.el.areaSub.textContent = sub;
+    this.el.area.classList.add('on'); this.areaT = 4;
+  }
+  setWaypoint(pos) { this.waypoint = pos ? pos.clone() : null; }
 
   // blocking dialogue line; resolves when the player advances
   say(name, text) {
@@ -104,6 +129,9 @@ export class UI {
     if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) this.el.toast.classList.remove('on'); }
     if (this.barkT > 0) { this.barkT -= dt; if (this.barkT <= 0) this.el.bark.classList.remove('on'); }
     this.hurtV = Math.max(0, this.hurtV - dt * 1.4);
+    if (this.areaT > 0) { this.areaT -= dt; if (this.areaT <= 0) this.el.area.classList.remove('on'); }
+    if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0) this.el.banner.classList.remove('on'); }
+    if (this.moneyT > 0) { this.moneyT -= dt; if (this.moneyT <= 0) this.el.moneyDelta.className = ''; }
     this.el.hp.style.width = p.health + '%';
     this.el.st.style.width = p.stamina + '%';
     const h = G.env.hour, hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
@@ -134,6 +162,23 @@ export class UI {
       this.el.markerDist.textContent = dist > 6 ? `${Math.round(dist)} m` : '';
       this.beacon.material.opacity = clamp((dist - 8) / 40, 0, 1) * 0.22;
     } else mk.style.display = 'none';
+    const m2 = this.el.marker2;
+    if (this.waypoint && !this.hudHidden) {
+      const pp = p.worldPos();
+      const dist = Math.hypot(pp.x - this.waypoint.x, pp.z - this.waypoint.z);
+      if (dist < 8) { this.waypoint = null; }
+      else {
+        const v = this._v.copy(this.waypoint); v.y += 2.2; v.project(cam);
+        let x = v.x, y = v.y; const behind = v.z > 1;
+        if (behind) { x = -x; y = -y; }
+        const off = behind || Math.abs(x) > 0.92 || Math.abs(y) > 0.86;
+        if (off) { const m = Math.max(Math.abs(x) / 0.92, Math.abs(y) / 0.86, 1e-3); x /= m; y /= m; if (behind && Math.abs(y) < 0.8) y = -0.8; }
+        m2.style.display = 'block';
+        m2.style.transform = `translate(${(x * 0.5 + 0.5) * innerWidth}px, ${(-y * 0.5 + 0.5) * innerHeight}px)`;
+        this.el.marker2Dist.textContent = `${Math.round(dist)} m`;
+      }
+    }
+    if (!this.waypoint || this.hudHidden) m2.style.display = 'none';
     this.drawMap();
   }
 
@@ -147,9 +192,10 @@ export class UI {
     ctx.beginPath(); ctx.arc(c, c, R, 0, 7); ctx.clip();
     ctx.fillStyle = '#5d8088'; ctx.fillRect(0, 0, S, S);
     ctx.translate(c, c); ctx.rotate(p.camYaw);
-    const k = scale / 0.32;
+    const ipm = W.mapImage.width / 1600;
+    const k = scale / ipm;
     ctx.scale(k, k);
-    ctx.translate(-(pp.x + 800) * 0.32, -(pp.z + 800) * 0.32);
+    ctx.translate(-(pp.x + 800) * ipm, -(pp.z + 800) * ipm);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(W.mapImage, 0, 0);
     ctx.restore();
@@ -175,12 +221,15 @@ export class UI {
     }
     for (const r of W.riders) { if (!r.active) continue; const m = tm(r.pos.x, r.pos.z, true); ctx.fillStyle = '#d8261c'; ctx.beginPath(); ctx.arc(m[0], m[1], 3.6, 0, 7); ctx.fill(); }
     const icon = (pos, col, ok) => { if (!ok) return; const m = tm(pos.x, pos.z, false); if (!m) return; ctx.fillStyle = col; ctx.strokeStyle = '#1a120a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.rect(m[0] - 3, m[1] - 3, 6, 6); ctx.fill(); ctx.stroke(); };
-    icon(W.boat.pos, '#6fc3d6', W.boat.usable && p.mode !== 'boat');
+    for (const b of W.vallams) icon(b.pos, '#6fc3d6', W.boatsUnlocked && p.mount !== b);
+    if (this.waypoint) { const m = tm(this.waypoint.x, this.waypoint.z, true); ctx.fillStyle = '#58b7e8'; ctx.strokeStyle = '#0c2a3a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(m[0], m[1], 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
     icon(W.horse.pos, '#c9a070', W.horse.usable && p.mode !== 'horse');
     if (this.markerPos) {
       const m = tm(this.markerPos.x, this.markerPos.z, true);
       ctx.fillStyle = '#f2c14e'; ctx.strokeStyle = '#3a2408'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(m[0], m[1] - 6); ctx.lineTo(m[0] + 5, m[1]); ctx.lineTo(m[0], m[1] + 6); ctx.lineTo(m[0] - 5, m[1]); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const nx = G.story && G.story.next;
+      if (nx) { ctx.beginPath(); ctx.arc(m[0], m[1], 8, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#2a1a06'; ctx.font = 'bold 11px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(nx.def.letter, m[0], m[1] + 0.5); }
+      else { ctx.beginPath(); ctx.moveTo(m[0], m[1] - 6); ctx.lineTo(m[0] + 5, m[1]); ctx.lineTo(m[0], m[1] + 6); ctx.lineTo(m[0] - 5, m[1]); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     }
     // player arrow
     const a = Math.atan2(Math.sin(p.yaw) * cs - Math.cos(p.yaw) * sn, -(Math.sin(p.yaw) * sn + Math.cos(p.yaw) * cs));

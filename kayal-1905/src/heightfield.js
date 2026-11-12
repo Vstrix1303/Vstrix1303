@@ -22,6 +22,14 @@ export const LOC = {
   cutcherry: { x: 500, z: -334 },
   island: { x: -350, z: -60 },
   lotus: { x: 176, z: 190 },
+  estate: { x: 372, z: -128 },
+  lighthouse: { x: -668, z: -14 },
+  hamlet: { x: -654, z: 152 },
+  fort: { x: -352, z: 434 },
+  falls: { x: 204, z: 190 },
+  toddy: { x: 62, z: 172 },
+  kavu: { x: 268, z: 36 },
+  hamletJetty: { x: -590, z: 150 },   // refined at init
   villageJetty: { x: -200, z: 40 },   // refined at init
   portJetty: { x: -400, z: -310 },    // refined at init
 };
@@ -46,6 +54,7 @@ function hills(x, z) {
 }
 
 const cutH = hills(LOC.cutcherry.x, LOC.cutcherry.z);
+const estH = hills(LOC.estate.x, LOC.estate.z);
 
 export function heightFn(x, z) {
   let h = hills(x, z);
@@ -59,6 +68,12 @@ export function heightFn(x, z) {
   // cutcherry plateau
   d = Math.hypot(x - LOC.cutcherry.x, z - LOC.cutcherry.z);
   if (d < 85) h = lerp(h, cutH, smoothstep(85, 44, d));
+  // tea-estate terrace
+  d = Math.hypot(x - LOC.estate.x, z - LOC.estate.z);
+  if (d < 74) h = lerp(h, estH, smoothstep(74, 40, d));
+  // rock shelf above the lotus pond (the falls)
+  d = Math.hypot(x - 206, z - 190);
+  if (d < 28) h += 9 * smoothstep(28, 9, d);
   // paddy fields
   if (z > 215 && z < 520 && x > -200 && x < 210) {
     const px = smoothstep(-190, -172, x) * smoothstep(200, 182, x);
@@ -85,6 +100,11 @@ export function heightFn(x, z) {
   // island
   d = Math.hypot(x - LOC.island.x, z - LOC.island.z);
   if (d < 46) h += 9 * smoothstep(46, 8, d);
+  // the bar: a tidal channel cutting the sand-spit between kayal and sea
+  if (x < -560) {
+    const dz = Math.abs(z - 40);
+    if (dz < 26) h = lerp(h, -3.2, smoothstep(25, 10, dz) * smoothstep(-560, -588, x));
+  }
   // the sea
   if (x < -640) {
     const sea = smoothstep(-690, -780, x + (fbm(z * 0.006, 0.5, 2, 30) - 0.5) * 40);
@@ -110,6 +130,9 @@ export function initHeights() {
   let z = -360;
   while (getHeight(-400, z) > -0.9 && z < -250) z += 0.5;
   LOC.portJetty.z = z - 9;
+  x = -650;
+  while (getHeight(x, 150) > -0.9 && x < -540) x += 0.5;
+  LOC.hamletJetty.x = x - 9;
 }
 
 // Exact height of the rendered triangle mesh at (x,z)
@@ -143,6 +166,11 @@ export function initRoads() {
     south: [[-40, 10], [-34, 80], [-30, 150], [-30, 190], [-30, 232], [-32, 330], [-30, 480]],
     quay: [[-400, -382], [-400, pz - 6]],
     temple: [[-58, -92], [-96, -92]],
+    bar: [[-530, -372], [-585, -340], [-640, -250], [-662, -120], [-668, -34]],
+    coast: [[-30, 480], [-150, 502], [-300, 474], [-420, 454], [-540, 412], [-622, 300], [-650, 176]],
+    estate: [[320, -335], [345, -270], [362, -205], [370, -160]],
+    towpath: [[-30, 160], [30, 168], [62, 180], [120, 176], [170, 168]],
+    hamlet: [[-650, 176], [-640, 152], [LOC.hamletJetty.x - 4, 150]],
   };
   for (const k in raw) ROADS[k] = smoothPath(raw[k], 5);
 }

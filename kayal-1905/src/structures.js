@@ -17,6 +17,8 @@ function house(b, x, z, ry, o = {}) {
   b.box('laterite', w + ov * 2 - 0.5, 2.0, d + ov * 2 - 0.5, 0, -1.5, 0);
   const y0 = 0.5;
   b.box(wall, w, wallH, d, 0, y0, 0, { col: o.col });
+  b.box(wall, w + 0.05, 0.55, d + 0.05, 0, y0, 0, { col: wall === 'wall' ? [0.6, 0.58, 0.5] : [0.62, 0.6, 0.58] });
+  b.box('wood', 1.34, 2.12, 0.1, o.doorX || 0, y0, d / 2 + 0.0, { col: [0.3, 0.24, 0.2] });
   b.box('wood', 1.1, 2.0, 0.14, o.doorX || 0, y0, d / 2 + 0.02, { col: DOOR });
   for (const sx of [-1, 1]) {
     if (Math.abs(sx * w * 0.32 - (o.doorX || 0)) > 0.9) b.box('wood', 0.9, 1.0, 0.1, sx * w * 0.32, y0 + 1.0, d / 2 + 0.02);
@@ -24,6 +26,8 @@ function house(b, x, z, ry, o = {}) {
   }
   const rh = (d / 2 + ov) * (o.pitch || 0.82);
   b.roofHip(roof, w + ov * 2, d + ov * 2, rh, Math.max(w - d, w * 0.3), 0, y0 + wallH - 0.2, 0);
+  b.box(roof === 'roof' ? 'roof' : 'thatch', Math.max(w - d, w * 0.3) + 0.3, 0.14, 0.34, 0, y0 + wallH - 0.2 + rh - 0.05, 0, { col: [0.6, 0.55, 0.5], tile: 1 });
+  if (o.smoke ?? (Math.abs(Math.round(x * 7 + z * 13)) % 3 < 1)) b.smoke(w * 0.25, y0 + wallH + rh * 0.55, -d * 0.2);
   const np = Math.max(2, Math.round(w / 2.6));
   for (let i = 0; i <= np; i++) b.box('wood', 0.16, wallH - 0.25, 0.16, -w / 2 - ov + 0.5 + i * (w + ov * 2 - 1) / np, y0, d / 2 + ov - 0.45);
   b.box('stone', 1.8, 0.28, 0.6, o.doorX || 0, 0, d / 2 + ov - 0.05);
@@ -521,6 +525,183 @@ export function buildStructures(scene) {
     SPOTS.island = b.world(0, 0, 3);
   }
 
+
+  // =====================================================================
+  //  ACT II locations
+  // =====================================================================
+  const rock = (x, y, z, sc, sy = 0.7) => b.sphere('stone', sc, x, y, z, { seg: 6, rings: 5, sx: 1 + rng() * 0.5, sy: sy + rng() * 0.3, sz: 1 + rng() * 0.4, col: [0.95 + rng() * 0.25, 0.95 + rng() * 0.25, 0.92 + rng() * 0.25] });
+
+  // ---- Kannimala tea estate (Harrow's)
+  {
+    const ex = LOC.estate.x, ez = LOC.estate.z;
+    b.place(ex, ez, 0);
+    const y0 = 0.6;
+    // manager's bungalow
+    b.box('laterite', 17, 2.2, 12, -20, -1.5, -6);
+    b.box('wall', 13, 3.3, 8, -20, y0, -6);
+    b.roofHip('roof', 18, 13, 3.1, 7, -20, y0 + 3.1, -6);
+    for (let i = 0; i <= 6; i++) b.cyl('wall', 0.16, 0.19, 3.0, -28 + i * 2.67, y0, -0.4, { seg: 10 });
+    b.box('wood', 1.3, 2.3, 0.14, -20, y0, -1.98, { col: [0.28, 0.4, 0.3] });
+    for (const sx of [-25, -15]) b.box('wood', 1.1, 1.4, 0.1, sx, y0 + 0.9, -1.98, { col: [0.28, 0.4, 0.3] });
+    b.collider(-20, -6, 8.5, 6); b.lamp(-18.4, y0 + 2.3, -0.6, 1.2, 1);
+    b.smoke(-23, y0 + 6.4, -8);
+    // the factory: three floors of withering lofts under corrugated iron
+    b.box('laterite', 13, 1.6, 27, 18, -1.2, -4);
+    b.box('plank', 12, 9.2, 26, 18, 0.4, -4, { col: [0.86, 0.84, 0.78], tile: 3 });
+    b.roofGable('tin', 28, 14, 3.2, 18, 9.5, -4, Math.PI / 2, 'plank');
+    for (let f = 0; f < 3; f++) for (let i = 0; i < 7; i++) {
+      b.box('wood', 0.08, 1.5, 2.2, 11.96, 1.6 + f * 2.9, -14.5 + i * 3.5, { col: [0.2, 0.22, 0.2] });
+      b.box('wood', 0.08, 1.5, 2.2, 24.04, 1.6 + f * 2.9, -14.5 + i * 3.5, { col: [0.2, 0.22, 0.2] });
+    }
+    b.box('wood', 3.2, 3.2, 0.16, 18, 0.4, 9.06, { col: DOOR });
+    b.cyl('laterite', 0.7, 0.95, 15, 27, 0, -12, { seg: 10 });
+    b.smoke(27, 15.4, -12); b.smoke(27, 15.4, -12);
+    b.collider(18, -4, 6.5, 13.5); b.circle(27, -12, 1.1);
+    b.lamp(18, 4.2, 9.5, 1.3, 1);
+    // store-shed where the kangani is held
+    b.box('laterite', 5.6, 1.6, 4.6, -4, -1.2, -30);
+    b.box('laterite', 5, 2.6, 4, -4, 0.4, -30);
+    b.roofGable('tin', 6.4, 5.4, 1.2, -4, 3.0, -30, 0, 'laterite');
+    b.box('wood', 1.2, 2.0, 0.14, -4, 0.4, -27.95, { col: DOOR });
+    b.box('paint', 0.16, 0.2, 0.08, -3.55, 1.35, -27.86, { col: [0.25, 0.25, 0.27] });
+    b.collider(-4, -30, 2.8, 2.3);
+    SPOTS.veluCell = b.world(-4, 0, -26.6);
+    // coolie lines
+    b.box('laterite', 22, 2.9, 4.2, -26, -0.4, 22);
+    b.roofGable('thatch', 23.5, 6, 1.5, -26, 2.5, 22, 0, 'laterite');
+    for (let i = 0; i < 6; i++) b.box('wood', 0.9, 1.8, 0.1, -35 + i * 3.6, 0, 24.12, { col: DOOR });
+    b.collider(-26, 22, 11, 2.2);
+    // gate
+    for (const sx of [-2.6, 2.6]) { b.box('wall', 0.8, 2.8, 0.8, sx, -0.4, 34); b.sphere('wall', 0.3, sx, 2.65, 34); b.collider(sx, 34, 0.4, 0.4); }
+    b.box('wood', 5.2, 0.5, 0.12, 0, 2.5, 34, { col: [0.2, 0.3, 0.22] });
+    b.lamp(-2.6, 3.1, 34, 1.2, 1);
+    for (const [cx, cz] of [[4, 2], [-8, 12], [8, 18], [-10, -18], [6, -22], [-2, 24]]) { const w = b.world(cx, 0, cz); crates(b, w.x, w.z, cx, rng, 4, 'mix'); b.place(ex, ez, 0); }
+    SPOTS.estateGate = b.world(0, 0, 40);
+    SPOTS.estateYard = b.world(0, 0, 8);
+    SPOTS.estateGuards = [
+      { post: b.world(1.6, 0, 31), face: 0 },
+      { route: [b.world(6, 0, 12), b.world(6, 0, -20), b.world(-6, 0, -20), b.world(-6, 0, 12)] },
+      { route: [b.world(-12, 0, -26), b.world(4, 0, -24), b.world(8, 0, -30), b.world(-10, 0, -34)] },
+    ];
+    b.yard(34, 0.7, 0, 0).clear(46, 0, -2).mark(46, 50);
+    bigTrees.push([ex - 36, ez - 22, 1, 1.2], [ex + 34, ez + 20, 1, 1.2]);
+  }
+
+  // ---- Azhimukham light, on the bar
+  {
+    b.place(LOC.lighthouse.x, LOC.lighthouse.z, 0);
+    b.cyl('stone', 4.2, 4.6, 1.4, 0, -0.4, 0, { seg: 12 });
+    b.cyl('wall', 2.1, 3.0, 19, 0, 1.0, 0, { seg: 16, uv: [6, 8] });
+    for (const yy of [6.2, 13]) b.cyl('paint', 2.75 - yy * 0.047, 2.82 - yy * 0.047, 2.4, 0, yy, 0, { seg: 16, col: [0.62, 0.12, 0.1] });
+    b.cyl('stone', 2.9, 2.6, 0.3, 0, 20, 0, { seg: 16 });
+    for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; b.box('wood', 0.06, 0.9, 0.06, Math.cos(a) * 2.75, 20.3, Math.sin(a) * 2.75); }
+    b.cyl('paint', 1.5, 1.5, 2.2, 0, 20.3, 0, { seg: 10, col: [0.95, 0.9, 0.6], open: true });
+    b.cone('paint', 1.9, 1.5, 0, 22.5, 0, { seg: 10, col: [0.16, 0.15, 0.14] });
+    b.box('wood', 1.1, 2.1, 0.2, 0, 1.0, 2.86, { col: DOOR });
+    b.lamp(0, 21.4, 0, 3.2, 1);
+    b.circle(0, 0, 3.4);
+    house(b, LOC.lighthouse.x - 13, LOC.lighthouse.z - 9, 0.5, { w: 6, d: 5, lamp: 1 });
+    b.place(LOC.lighthouse.x, LOC.lighthouse.z, 0);
+    for (let i = 0; i < 9; i++) rock(-6 + rng() * 16, -0.2, 24 + rng() * 8, 0.8 + rng() * 1.1);
+    SPOTS.lighthouse = b.world(0, 0, 7);
+    SPOTS.duel = b.world(5, 0, 13);
+    SPOTS.chest = b.world(1.6, 0, 4.2);
+    SPOTS.aground = b.world(38, 0, 31);
+    b.yard(11, 0.6).clear(13).mark(7, 7);
+  }
+
+  // ---- Azhikkal, a fishing hamlet on the sand-spit
+  {
+    const hx = LOC.hamlet.x, hz = LOC.hamlet.z;
+    for (const [dx, dz, ry] of [[-10, -14, 0.3], [8, -18, -0.2], [-14, 6, 1.5], [12, 16, -1.9], [-4, 24, 2.8], [16, -2, -1.4]]) house(b, hx + dx, hz + dz, ry, { w: 5, d: 4, roof: 'thatch', wall: 'laterite', overhang: 1.2 });
+    b.place(hx, hz, 0); b.yard(18, 0.55).clear(12);
+    // fish-drying racks and hung nets
+    for (const [dx, dz, ry] of [[2, 4, 0.2], [-2, -4, 1.3], [24, 10, 0.1]]) {
+      b.place(hx + dx, hz + dz, ry);
+      for (const sx of [-1.6, 1.6]) for (const sz of [-0.5, 0.5]) b.box('wood', 0.07, 1.1, 0.07, sx, 0, sz);
+      b.box('plank', 3.4, 0.05, 1.2, 0, 1.1, 0, { tile: 1 });
+      for (let i = 0; i < 14; i++) b.box('paint', 0.34, 0.03, 0.09, -1.4 + (i % 7) * 0.46, 1.15, -0.25 + Math.floor(i / 7) * 0.5, { col: [0.7, 0.68, 0.6], ry: 0.3 });
+      b.collider(0, 0, 1.7, 0.6, 0, 1.2);
+    }
+    b.place(hx + 6, hz - 6, 0.6);
+    for (const sx of [-2.4, 2.4]) b.box('wood', 0.08, 2.6, 0.08, sx, 0, 0);
+    b.box('net', 4.8, 2.0, 0.02, 0, 0.5, 0, { tile: 0.35 });
+    const jx = LOC.hamletJetty.x;
+    jetty(b, jx - 5, 150, Math.PI / 2, 22, 2.6, 0.75);
+    SPOTS.hamletBoat = new THREE.Vector3(jx + 14, 0, 152.6);
+    SPOTS.hamletJettyEnd = new THREE.Vector3(jx + 12, 0.75, 150);
+    lampPost(b, jx - 6, 147.4, 1);
+    SPOTS.hamlet = new THREE.Vector3(hx + 2, getHeight(hx + 2, hz + 10), hz + 10);
+  }
+
+  // ---- Kottappuram: a ruined Dutch factory-fort on the south shore
+  {
+    b.place(LOC.fort.x, LOC.fort.z, 0.25);
+    const seg = (x0, z0, x1, z1, h) => wallRun(b, 'laterite', x0, z0, x1, z1, h, 1.0, false);
+    seg(-16, -12, -4, -12, 3.4); seg(2, -12, 9, -12, 1.6); seg(13, -12, 16, -12, 3.0);
+    seg(-16, -12, -16, 2, 2.8); seg(-16, 6, -16, 12, 1.2); seg(16, -12, 16, 12, 2.2);
+    seg(-16, 12, -2, 12, 0.9); seg(4, 12, 16, 12, 2.6);
+    b.cyl('laterite', 4.2, 4.6, 4.4, -16, -1, -12, { seg: 12 }); b.circle(-16, -12, 4.4);
+    b.cyl('laterite', 3.6, 4.0, 2.2, 16, -1, 12, { seg: 12 }); b.circle(16, 12, 3.8);
+    // gate arch
+    b.box('laterite', 1.2, 4.2, 1.4, -4, -0.5, -12); b.box('laterite', 1.2, 4.2, 1.4, 2, -0.5, -12); b.box('laterite', 7.4, 1.0, 1.4, -1, 3.7, -12);
+    // a cannon on the bastion
+    b.cyl('paint', 0.16, 0.24, 2.4, -16, 3.7, -12, { seg: 8, rx: Math.PI / 2 - 0.12, ry: 0.8, col: [0.14, 0.15, 0.15] });
+    b.box('wood', 0.9, 0.4, 1.3, -16, 3.4, -12, { ry: 0.8 });
+    for (let i = 0; i < 12; i++) rock(-14 + rng() * 28, -0.2, -9 + rng() * 18, 0.4 + rng() * 0.7);
+    b.clear(14).mark(32, 24);
+    SPOTS.fort = b.world(0, 0, 0);
+    bigTrees.push([LOC.fort.x + 6, LOC.fort.z + 2, 2, 1.3], [LOC.fort.x - 9, LOC.fort.z - 3, 0, 1.2]);
+  }
+
+  // ---- Lotus Falls: boulders down the rock shelf
+  {
+    b.place(196, 190, 0, 0);
+    for (let i = 0; i < 26; i++) {
+      const a = (rng() - 0.5) * 2.4, r = 5 + rng() * 9;
+      const x = -Math.cos(a) * r * 0.55 + 1, z = Math.sin(a) * r * 1.4;
+      if (Math.abs(z) < 4.2) continue;
+      rock(x, getHeight(196 + x, 190 + z) - 0.3, z, 1.0 + rng() * 1.6, 0.8);
+    }
+    for (let i = 0; i < 8; i++) { const zz = (rng() - 0.5) * 16; rock(-9.5 - rng() * 3, -0.5, zz + Math.sign(zz) * 3, 0.7 + rng() * 0.9); }
+    SPOTS.falls = new THREE.Vector3(190.5, 0, 190);
+    SPOTS.fallsTop = new THREE.Vector3(195.2, getHeight(196, 190) + 0.25, 190);
+    SPOTS.fallsView = new THREE.Vector3(168, getHeight(168, 170), 170);
+    b.keepClear.push({ x: 196, z: 190, r: 9 });
+  }
+
+  // ---- toddy shop on the canal towpath
+  {
+    house(b, LOC.toddy.x, LOC.toddy.z - 4, 0, { w: 6, d: 4.5, roof: 'thatch', wall: 'laterite', lamp: 1, smoke: true });
+    b.place(LOC.toddy.x, LOC.toddy.z + 2.6, 0);
+    for (const sx of [-2.2, 2.2]) { b.box('plank', 1.8, 0.08, 0.45, sx, 0.45, 0, { tile: 1 }); b.box('wood', 0.1, 0.45, 0.4, sx - 0.7, 0, 0); b.box('wood', 0.1, 0.45, 0.4, sx + 0.7, 0, 0); }
+    SPOTS.toddy = b.world(0, 0, 1.6);
+    pots(b, LOC.toddy.x + 4.4, LOC.toddy.z + 1, 7, rng);
+  }
+
+  // ---- Sarpa Kavu: a serpent grove in the forest
+  {
+    b.place(LOC.kavu.x, LOC.kavu.z, 0.4);
+    b.cyl('stone', 3.4, 3.7, 0.9, 0, -0.3, 0, { seg: 12 });
+    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; b.box('stone', 0.45, 0.9 + (i % 3) * 0.25, 0.14, Math.cos(a) * 1.5, 0.6, Math.sin(a) * 1.5, { ry: -a + Math.PI / 2, col: [0.5, 0.52, 0.48] }); }
+    b.cyl('brass', 0.05, 0.14, 0.8, 0, 0.6, 0, { seg: 8, col: BRASS });
+    b.lamp(0, 1.5, 0, 1.2, 1);
+    b.clear(5); b.circle(0, 0, 3.6);
+    SPOTS.kavu = b.world(0, 0, 5.5);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.4; bigTrees.push([LOC.kavu.x + Math.cos(a) * 9, LOC.kavu.z + Math.sin(a) * 9, 2, 1.25 + rng() * 0.3]); }
+  }
+
+  // ---- the three farmsteads that hold their receipts (Act II)
+  SPOTS.farms = [[20, -300, 3.2], [-140, -300, 1.2], [150, 150, 0.4]].map(([x, z, ry]) => {
+    const fx = x + Math.sin(ry) * 7.5, fz = z + Math.cos(ry) * 7.5;
+    return new THREE.Vector3(fx, getHeight(fx, fz), fz);
+  });
+  // village life: coir, coconuts, benches
+  for (const [x, z] of [[-70, 22], [8, 8], [-140, 28], [-396, -368], [-412, -386], [60, -6]]) {
+    b.place(x, z, rng() * 3);
+    for (let i = 0; i < 9; i++) b.sphere('paint', 0.15, (rng() - 0.5) * 1.3, 0.13 + (i > 5 ? 0.2 : 0), (rng() - 0.5) * 1.1, { seg: 6, rings: 5, col: rng() < 0.5 ? [0.45, 0.32, 0.18] : [0.35, 0.42, 0.18] });
+  }
+
   const meshes = b.finish(scene, mats);
-  return { yards: b.yards, keepClear: b.keepClear, marks: b.marks, lamps: b.lamps, bigTrees, mats, meshes };
+  return { yards: b.yards, keepClear: b.keepClear, marks: b.marks, lamps: b.lamps, smokes: b.smokes, bigTrees, mats, meshes };
 }

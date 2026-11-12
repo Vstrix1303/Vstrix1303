@@ -13,6 +13,9 @@ import { Horse, Boat } from './entities.js';
 import { CAST, Quadruped, Elephant, Bird, makeVallam, makeKettuvallam } from './characters.js';
 import { makeRng, TAU, damp, angleDamp } from './util.js';
 import { groundAt } from './physics.js';
+import { FX } from './fx.js';
+import { setupActivities } from './activities.js';
+import { heightTex, GLSL_HUV } from './terrain.js';
 
 class Wanderer {
   constructor(scene, obj, x, z, radius, speed) {
@@ -114,22 +117,26 @@ export async function buildWorld(scene, progress) {
   buildFlora(scene, env, st.keepClear, st.bigTrees);
   await progress(0.78, 'Waking the village…');
   buildLamps(scene, st.lamps);
+  const fx = G.fx = new FX(scene);
+  const hearth = () => { const h = env.hour; return (h > 5.6 && h < 9.4) || (h > 16.6 && h < 21.5); };
+  st.smokes.forEach((p, i) => fx.addEmitter({ pos: p, type: 'smoke', rate: p.y > 40 ? 3.2 : 1.6, cond: p.y > 40 ? null : hearth, o: { size: p.y > 40 ? 0.9 : 0.45, alpha: 0.2 } }));
 
-  const W = G.world = { SPOTS, env, water, animals: [], birds: [], boats: [], riders: [], cast: {}, mapMarks: st.marks };
+  const W = G.world = { SPOTS, env, water, fx, animals: [], birds: [], boats: [], riders: [], extraBoats: [], cast: {}, mapMarks: st.marks, boatsUnlocked: false };
   const rng = makeRng(8811);
 
   // ---- mounts
   W.boat = new Boat(scene, SPOTS.villageBoat.x, SPOTS.villageBoat.z, -Math.PI / 2);
-  W.boat.usable = false;
+  W.vallams = [W.boat, new Boat(scene, SPOTS.portBoat.x, SPOTS.portBoat.z, 0), new Boat(scene, SPOTS.hamletBoat.x, SPOTS.hamletBoat.z, Math.PI / 2)];
   W.horse = new Horse(scene, SPOTS.stableHorse.x, SPOTS.stableHorse.z, SPOTS.stableFace, { name: 'Sultan' });
   W.horse.usable = false;
-  G.interactables.push({ pos: W.boat.pos, r: 3.6, label: 'Board the vallam', cond: () => W.boat.usable && G.player.mode === 'foot', action: () => G.player.mountBoat(W.boat) });
+  for (const b of W.vallams) G.interactables.push({ pos: b.pos, r: 3.6, label: 'Board the vallam', cond: () => W.boatsUnlocked && G.player.mode === 'foot' && !G.activity, action: () => G.player.mountBoat(b) });
   G.interactables.push({ pos: W.horse.pos, r: 2.8, label: 'Mount the horse', cond: () => W.horse.usable && G.player.mode === 'foot', action: () => G.player.mountHorse(W.horse) });
 
   // ---- decorative boats
   const moor = (x, z, yaw) => { const v = makeVallam(); v.root.position.set(x, 0.03, z); v.root.rotation.y = yaw; scene.add(v.root); return v; };
   moor(SPOTS.villageBoat.x + 4, SPOTS.villageBoat.z - 5.4, -1.3);
-  moor(SPOTS.portBoat.x - 7.6, SPOTS.portBoat.z - 4, 0.2); moor(SPOTS.portBoat.x - 8.2, SPOTS.portBoat.z + 3, -0.15);
+  moor(SPOTS.portBoat.x - 8.2, SPOTS.portBoat.z + 3, -0.15);
+  for (let i = 0; i < 3; i++) { const v = moor(LOC.hamlet.x + 20 + i * 2.2, LOC.hamlet.z - 16 + i * 5, 1.2 + i * 0.3); v.root.position.y = getHeight(v.root.position.x, v.root.position.z) + 0.22; v.root.rotation.z = 0.2; }
   for (let i = 0; i < 2; i++) {
     const k = makeKettuvallam(); scene.add(k);
     W.boats.push({ root: k, a: i * Math.PI + 0.6, cx: -400 + i * 20, cz: 60 - i * 30, rx: 120 - i * 35, rz: 230 - i * 50, sp: 0.012 + i * 0.004 });
@@ -156,6 +163,7 @@ export async function buildWorld(scene, progress) {
 
   // ---- named cast
   const C = W.cast;
+  const VM_ = CAST.villagerM, VF_ = CAST.villagerF;
   C.ammavan = new NPC(scene, 'Raman Ammavan', CAST.ammavan, SPOTS.ammavan.x, SPOTS.ammavan.z, Math.PI, { facePlayer: true, title: 'Ammavan', lines: ['The land remembers who tends it, Madhava.', 'Your grandfather planted these vines. I will not be the one to lose them.'] });
   C.devaki = new NPC(scene, 'Devaki', CAST.devaki, SPOTS.devaki.x, SPOTS.devaki.z, Math.PI, { facePlayer: true, lines: ['Numbers do not lie, chetta. Only the men who write them.', 'I taught myself from the mission school primers. Do not tell Ammavan how many I borrowed.'] });
   C.ouseph = new NPC(scene, 'Ouseph', CAST.ouseph, SPOTS.ouseph.x, SPOTS.ouseph.z, Math.PI / 2, { facePlayer: true, lines: ['Forty years on this water and she still surprises me.', 'The kayal gives fish to the patient and trouble to the proud.'] });
@@ -169,19 +177,31 @@ export async function buildWorld(scene, progress) {
     n.setActive(false);
     return n;
   });
-  C.toughs = [0, 1].map((i) => { const n = new NPC(scene, 'Company peon', CAST.guard, LOC.pepper.x - 60 - i * 3, LOC.pepper.z + 40, 0, { guard: true }); n.lantern.visible = false; n.setActive(false); return n; });
+  C.toughs = [0, 1].map((i) => { const n = new NPC(scene, 'Company peon', CAST.guard, LOC.pepper.x - 60 - i * 3, LOC.pepper.z + 40, 0, { guard: true, noLantern: true, relentless: true }); n.setActive(false); return n; });
+  C.thugs = [0, 1, 2].map((i) => { const n = new NPC(scene, 'Harrow\'s man', CAST.thug, 20 + i * 2, -310, 0, { guard: true, noLantern: true, health: 110, relentless: true }); n.setActive(false); return n; });
+  C.estateGuards = SPOTS.estateGuards.map((g) => {
+    const p = g.post || g.route[0];
+    const n = new NPC(scene, 'Estate watchman', CAST.guard, p.x, p.z, g.face ?? 0, { guard: true, route: g.route, speed: 1.5 });
+    n.setActive(false);
+    return n;
+  });
+  C.harrow = new NPC(scene, 'Sir Edmund Harrow', CAST.harrow, SPOTS.cutcherryYard.x - 4, SPOTS.cutcherryYard.z - 6, 1, { facePlayer: true }); C.harrow.setActive(false);
+  C.dacre = new NPC(scene, 'Captain Dacre', CAST.dacre, SPOTS.duel.x, SPOTS.duel.z, 0, { guard: true, noLantern: true, facePlayer: true, health: 340, boss: { block: 0.38, heavy: 0.42, dmg: 15, heavyDmg: 34 } }); C.dacre.setActive(false);
+  C.carmichael = new NPC(scene, 'Mr. Carmichael', CAST.carmichael, SPOTS.peishkar.x + 2, SPOTS.peishkar.z, 0, { y: SPOTS.peishkar.y, facePlayer: true }); C.carmichael.setActive(false);
+  C.velu = new NPC(scene, 'Velu', CAST.velu, SPOTS.veluCell.x, SPOTS.veluCell.z, 0, { facePlayer: true, lines: ['Every name, every anna. I wrote it down because nobody else would.', 'Kannimala tea is the best in the hills. It deserves a better master.'] }); C.velu.setActive(false);
+  const FM = [['Kunjipennu', VF_[2]], ['Pathrose', VM_[2]], ['Alikutty', VM_[3]]];
+  C.farmers = SPOTS.farms.map((f, i) => new NPC(scene, FM[i][0], FM[i][1], f.x, f.z, Math.atan2(-f.x, -f.z), { facePlayer: true, lines: ['The rain is kind this year. The Company was not.', 'Come and eat when the hearing is done, mone.'] }));
 
   // ---- villagers
   const VM = CAST.villagerM, VF = CAST.villagerF;
   const amb = (name, preset, x, z, yaw, o) => new NPC(scene, name, preset, x, z, yaw, o);
-  amb('Tea-seller', VM[3], SPOTS.teaShop.x, SPOTS.teaShop.z, 2.2, { facePlayer: true, lines: BARKS.tea });
   amb('Villager', VM[2], SPOTS.teaShop.x - 2.2, SPOTS.teaShop.z - 2.6, 0.6, { pose: 'talk', lines: BARKS.village });
   amb('Villager', VM[4], SPOTS.teaShop.x - 3.4, SPOTS.teaShop.z - 1.2, 1.4, { lines: BARKS.village });
   amb('Woman at the well', VF[0], -31.6, -6.4, 1.2, { lines: BARKS.well, pose: 'talk' });
   amb('Woman at the well', VF[1], -28.6, -9.4, -2, { lines: BARKS.well });
   amb('Villager', VM[0], -100, 26, 1, { route: [new THREE.Vector3(-150, 0, 33), new THREE.Vector3(-95, 0, 22), new THREE.Vector3(-42, 0, 11), new THREE.Vector3(18, 0, 1), new THREE.Vector3(-42, 0, 11), new THREE.Vector3(-95, 0, 22)], lines: BARKS.village });
   amb('Villager', VF[2], 30, -2, 1, { route: [new THREE.Vector3(66, 0, -11), new THREE.Vector3(20, 0, 0), new THREE.Vector3(-38, 0, 9), new THREE.Vector3(-33, 0, 76), new THREE.Vector3(-38, 0, 9), new THREE.Vector3(20, 0, 0)], lines: BARKS.village, speed: 1.2 });
-  amb('Priest', { skin: 0x8d5b3c, mundu: 0xf2ecdc, munduLong: true, kasavu: true, grey: true, shoulderCloth: 0xf2ecdc }, SPOTS.templeGate.x, SPOTS.templeGate.z + 2, Math.PI / 2, { facePlayer: true, lines: BARKS.priest });
+  amb('Priest', CAST.priest, SPOTS.templeGate.x, SPOTS.templeGate.z + 2, Math.PI / 2, { facePlayer: true, lines: BARKS.priest });
   for (let i = 0; i < 6; i++) {
     const x = -100 + i * 34 + rng() * 10, z = 250 + rng() * 60 + (i % 2) * 70;
     amb('Farmhand', i % 2 ? VF[i % 3] : VM[i % 5], x, z, rng() * TAU, { pose: 'work', lines: BARKS.paddy });
@@ -199,8 +219,67 @@ export async function buildWorld(scene, progress) {
   amb('Court clerk', { ...VM[3], headgear: 'turban', gearColor: 0xe9d9a8 }, SPOTS.cutcherryYard.x - 7, SPOTS.cutcherryYard.z - 4, 0.5, { facePlayer: true, lines: BARKS.hill });
   amb('Petitioner', VM[4], SPOTS.cutcherryYard.x + 6, SPOTS.cutcherryYard.z - 2, -0.6, { lines: BARKS.hill });
 
+  // ---- more of the world's people
+  const tp = (i) => ({ ...VF[i % 4], dirty: true });
+  for (let i = 0; i < 5; i++) amb('Tea-plucker', tp(i), LOC.estate.x - 46 + i * 9 + rng() * 4, LOC.estate.z + 52 + rng() * 14, rng() * TAU, { pose: 'work', lines: ['Two leaves and a bud, two leaves and a bud. The kangani counts every basket.'] });
+  amb('Fisherman', VM[1], LOC.hamlet.x + 3, LOC.hamlet.z + 3, 1, { pose: 'work', lines: ['The bar is deep on the ebb and wicked on the flood. Keep to the middle.', 'Mackerel when the monsoon breaks, sardine after. The sea keeps its own calendar.'] });
+  amb('Fisherwoman', VF[1], LOC.hamlet.x - 4, LOC.hamlet.z - 6, 2, { lines: ['The light at Azhimukham has saved more boats than all the prayers in Azhikkal.'], pose: 'talk' });
+  amb('Lighthouse keeper', VM[2], SPOTS.lighthouse.x + 2.5, SPOTS.lighthouse.z + 1, 0.4, { facePlayer: true, lines: ['Steamers for Cochin and Colombo stand off here for the pilot. I count their smoke for the Port Officer.', 'A hundred and eleven steps. I have counted them every evening for nineteen years.'] });
+  amb('Toddy-tapper', VM[6], SPOTS.toddy.x - 2.4, SPOTS.toddy.z, 1.6, { pose: 'bench', lines: ['Sweet in the morning, strong by evening. Like most things.', 'Sit. The canal is not going anywhere.'] });
+  amb('Toddy-tapper', VM[0], SPOTS.toddy.x + 2.2, SPOTS.toddy.z, -1.6, { pose: 'bench', lines: ['They say the Company\'s new man came by carriage from Quilon. A carriage! On our roads!'] });
+  amb('Pilgrim', VF[3], SPOTS.kavu.x, SPOTS.kavu.z, Math.PI, { pose: 'pray', lines: ['The serpents kept this grove before there was a village. We only borrow the shade.'] });
+  amb('Worshipper', VM[5], SPOTS.templeGate.x - 3, SPOTS.templeGate.z - 2.5, -Math.PI / 2, { pose: 'pray', lines: BARKS.priest });
+  amb('Old soldier', { ...VM[4], headgear: 'turban', gearColor: 0x7a3a2a }, SPOTS.fort.x + 3, SPOTS.fort.z + 3, 2, { facePlayer: true, lines: ['The Dutch built it, the Raja took it, the rain is finishing it.', 'My grandfather stood on that bastion with a matchlock. Now goats do.'] });
+
+  // ---- Azhimukham light: a turning beam at night
+  {
+    const beam = new THREE.Group();
+    const gm = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.4, 0.9), transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+    for (const s of [-1, 1]) { const c = new THREE.Mesh(new THREE.ConeGeometry(5, 150, 12, 1, true), gm); c.rotation.z = s * Math.PI / 2; c.position.x = -s * 75; c.layers.set(1); beam.add(c); }
+    beam.position.set(LOC.lighthouse.x, getHeight(LOC.lighthouse.x, LOC.lighthouse.z) + 21.4, LOC.lighthouse.z);
+    scene.add(beam);
+    G.updaters.push((dt, t) => { beam.rotation.y = t * 0.5; beam.visible = env.night > 0.2; gm.opacity = 0.016 * env.night * (1 + env.rain * 1.5); });
+  }
+  // ---- Lotus Falls
+  {
+    const top = SPOTS.fallsTop, H = top.y;
+    const g = new THREE.PlaneGeometry(7.5, 1, 6, 14);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const u = pos.getX(i), v = 0.5 - pos.getY(i);            // v: 0 at lip, 1 at pool
+      const out = v * v * 4.6 + v * 2.4;
+      pos.setXYZ(i, top.x - out, H - v * H * (0.25 + 0.75 * v) - 0.2 * v, top.z + u * (1 + v * 0.35));
+    }
+    g.computeVertexNormals();
+    const u = { uTime: env.u.uTime, uNoise: { value: TEX.noise }, uLight: { value: new THREE.Color(1, 1, 1) } };
+    const m = new THREE.ShaderMaterial({
+      uniforms: u, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false,
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform sampler2D uNoise; uniform float uTime; uniform vec3 uLight; varying vec2 vUv;
+        void main(){ float v = 1.0 - vUv.y;
+          float n = texture2D(uNoise, vec2(vUv.x * 1.6, v * 0.9 - uTime * 0.85)).r * 0.6 + texture2D(uNoise, vec2(vUv.x * 4.0 + 0.3, v * 2.2 - uTime * 1.5)).a * 0.4;
+          float a = smoothstep(0.3, 0.62, n + v * 0.12) * smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x) * (0.55 + 0.45 * v);
+          gl_FragColor = vec4(uLight * (0.8 + 0.5 * n), min(1.0, a * 1.15)); }`,
+    });
+    const fall = new THREE.Mesh(g, m); fall.layers.set(1); fall.renderOrder = 3; fall.frustumCulled = false;
+    scene.add(fall);
+    fx.addEmitter({ pos: new THREE.Vector3(SPOTS.falls.x - 0.5, 0.2, SPOTS.falls.z), type: 'mist', rate: 9 });
+    G.updaters.push(() => { u.uLight.value.copy(env.u.uAmb.value).multiplyScalar(2.2).add(env.u.uSunCol.value.clone().multiplyScalar(0.8)); });
+  }
+  // race-course and regatta flags
+  W.makeFlag = (x, z, color) => {
+    const g = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 9, 6), new THREE.MeshStandardMaterial({ color: 0x8a7a50, roughness: 0.8 })); pole.position.y = 0.5; g.add(pole);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.1), new THREE.MeshStandardMaterial({ color, roughness: 0.8, side: THREE.DoubleSide, emissive: color, emissiveIntensity: 0.25 })); fl.position.set(0.95, 4.3, 0); g.add(fl);
+    g.position.set(x, 0, z); g.traverse((o) => o.layers.set(1));
+    scene.add(g);
+    g.dispose = () => scene.remove(g);
+    return g;
+  };
+  setupActivities(scene, W, amb);
+
   await progress(0.92, 'Inking the survey map…');
-  W.mapImage = buildMapImage(st.marks);
+  W.mapImage = buildMapImage(st.marks, 1024);
 
   // ---- per-frame ambient update
   G.updaters.push((dt, t) => {
@@ -220,7 +299,10 @@ export async function buildWorld(scene, progress) {
       k.root.position.set(x, Math.sin(t * 0.8 + k.a) * 0.03, z);
       k.root.rotation.y = Math.atan2(-Math.sin(k.a) * k.rx, Math.cos(k.a) * k.rz);
     }
-    W.boat.update(dt); W.horse.update(dt);
+    for (const b of W.vallams) b.update(dt);
+    for (const b of W.extraBoats) b.update(dt);
+    W.horse.update(dt);
+    fx.update(dt);
     for (const r of W.riders) r.update(dt);
   });
   return W;

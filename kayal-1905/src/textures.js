@@ -30,6 +30,7 @@ function speckle(ctx, w, h, rng, n, colors, minS, maxS, alpha = 0.25) {
 export const TEX = {};
 
 export function buildTextures() {
+  if (TEX.noise) return TEX;
   const rng = makeRng(1905);
 
   // --- tileable RGBA noise (data, linear) ---
@@ -266,6 +267,17 @@ export function buildTextures() {
     for (let y = 0; y <= 256; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke(); }
     for (let r = 0; r < 4; r++) for (let x = (r % 2) * 64; x <= 256; x += 128) { g.beginPath(); g.moveTo(x, r * 64); g.lineTo(x, r * 64 + 64); g.stroke(); }
     TEX.stone = tex(c);
+  }
+  // --- corrugated iron (tea factory) ---
+  {
+    const [c, g] = mk(128, 128);
+    for (let x = 0; x < 128; x += 8) {
+      const grd = g.createLinearGradient(x, 0, x + 8, 0);
+      grd.addColorStop(0, '#6f7477'); grd.addColorStop(0.5, '#a9aeb0'); grd.addColorStop(1, '#5d6265');
+      g.fillStyle = grd; g.fillRect(x, 0, 8, 128);
+    }
+    speckle(g, 128, 128, rng, 70, ['#7a4a2a', '#5a3a22', '#8a5a34'], 3, 16, 0.3);
+    TEX.tin = tex(c);
   }
   // --- fishing net ---
   {

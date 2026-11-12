@@ -14,7 +14,7 @@ export const terrainU = {
 export let heightTex = null;
 export let maskTex = null;
 
-const ROAD_W = { main: 5, north: 4.6, hill: 4.2, south: 3.2, home: 3, quay: 6, temple: 4 };
+const ROAD_W = { main: 5, north: 4.6, hill: 4.2, south: 3.2, home: 3, quay: 6, temple: 4, bar: 3, coast: 3, estate: 3.4, towpath: 2.4, hamlet: 3 };
 const TEA = [[365, -120, 100, 72], [335, 95, 88, 78], [425, -480, 95, 64], [305, 335, 74, 62], [520, 120, 80, 90]];
 
 export function maskAt(x, z, ch) {
@@ -91,11 +91,11 @@ const GLSL_COLOR = /* glsl */`
   tcol = mix(tcol, SRGB(0.42, 0.38, 0.33) * (0.7 + 0.6 * n4), smoothstep(0.2, 0.4, tslope + (n1 - 0.5) * 0.12));
   float shore = smoothstep(1.25, 0.25, vWPos.y + (n1 - 0.5) * 0.8);
   tcol = mix(tcol, SRGB(0.70, 0.61, 0.44) * (0.85 + 0.3 * n3), shore);
-  tcol = mix(tcol, mix(SRGB(0.25, 0.30, 0.16), SRGB(0.30, 0.42, 0.14), n4) , tmask.g * (1.0 - shore * 0.4));
+  tcol = mix(tcol, mix(SRGB(0.20, 0.25, 0.14), SRGB(0.24, 0.35, 0.13), n4) , tmask.g * (1.0 - shore * 0.4));
   float troad = smoothstep(0.25, 0.75, tmask.r + (n3 - 0.5) * 0.4);
   tcol = mix(tcol, mix(SRGB(0.44, 0.27, 0.19), SRGB(0.60, 0.34, 0.22), n4) * (0.85 + 0.3 * n1), troad);
   tcol = mix(tcol, SRGB(0.30, 0.25, 0.16), smoothstep(0.1, -1.2, vWPos.y));
-  float tPuddle = max(uWet * troad * smoothstep(0.48, 0.6, n1), tmask.g * 0.55 * smoothstep(0.35, 0.6, n1));
+  float tPuddle = max(uWet * troad * smoothstep(0.48, 0.6, n1), tmask.g * 0.22 * smoothstep(0.4, 0.62, n1));
   tcol *= 1.0 - 0.32 * uWet;
   diffuseColor.rgb = tcol;
 `;
@@ -182,8 +182,7 @@ export function buildTerrain(scene, yards) {
 export const GLSL_HUV = `vec2 huv(vec2 p){ return (p / ${WORLD.toFixed(1)} + 0.5) * ${(GRID / N).toFixed(6)} + ${(0.5 / N).toFixed(6)}; }`;
 
 // A parchment-style survey map used by the minimap
-export function buildMapImage(marks = []) {
-  const S = 512;
+export function buildMapImage(marks = [], S = 512) {
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d');

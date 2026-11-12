@@ -125,7 +125,13 @@ export class AudioSys {
       case 'crow': for (let k = 0; k < 3; k++) { const o = this.tone('sawtooth', 560, 430, 0.045 * v, 0.02, 0.17, k * 0.3); } break;
       case 'chirp': for (let k = 0; k < 3; k++) this.tone('sine', 3200 + Math.random() * 1400, 2600 + Math.random() * 800, 0.035 * v, 0.008, 0.06, k * 0.09); break;
       case 'frog': for (let k = 0; k < 4; k++) this.tone('square', 260, 210, 0.03 * v, 0.01, 0.07, k * 0.16); break;
-      case 'elephant': this.tone('sawtooth', 300, 520, 0.12 * v, 0.2, 0.9); break;
+      case 'elephant': this.tone('sawtooth', 300, 560, 0.14 * v, 0.2, 0.9); this.tone('square', 310, 590, 0.05 * v, 0.2, 0.9, 0.03); break;
+      case 'clang': [1840, 2760, 3975].forEach((f, i) => this.tone('triangle', f, f * 0.98, 0.2 / (i + 1), 0.001, 0.22)); this.burst('highpass', 4000, 0.5, 0.2, 0.001, 0.06); break;
+      case 'growl': this.tone('sawtooth', 120, 80, 0.2 * v, 0.08, 0.5); this.burst('bandpass', 500, 2, 0.14, 0.1, 0.5, null, 0, 1800); break;
+      case 'hiss': this.burst('highpass', 3200, 0.4, 0.4, 0.02, 1.3, null, 0, 6000); break;
+      case 'drum': this.drum(0, true); this.drum(0.16, false); break;
+      case 'whistle': this.tone('sine', 1500, 2500, 0.16, 0.05, 0.22); this.tone('sine', 2500, 1700, 0.14, 0.03, 0.3, 0.26); break;
+      case 'passed': [0, 4, 7, 12, 16].forEach((st, i) => this.pluck(this.tonic * 2 * Math.pow(2, st / 12), 0.22, i * 0.13)); this.tone('sine', this.tonic, null, 0.2, 0.3, 2.6, 0, this.musicBus); break;
     }
   }
   thunder(delay = 1) {
