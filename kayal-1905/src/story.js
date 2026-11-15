@@ -281,7 +281,7 @@ export class Story {
         const me = p.worldPos(), h = who === 'M' ? p.h : who.h;
         if (h) { faces.add(h); h.setExpression(ex || moodOf(text)); h.talking = true; }
         try {
-          if (who === 'M') { if (other) focus(me, other.pos); await ui.say('Madhavan', text); }
+          if (who === 'M') { if (other) focus(me, other.pos); const po = p.poseOverride; if (!po && p.mode === 'foot') p.poseOverride = 'talk'; try { await ui.say('Madhavan', text); } finally { p.poseOverride = po; } }
           else { other = who; who.talkT = 6; focus(who.pos, me); await ui.say(who.name, text); }
         } finally { if (h) h.talking = false; }
         chk();

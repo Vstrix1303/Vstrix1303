@@ -210,30 +210,62 @@ export class Quadruped {
     this.phase = Math.random() * 6; this.t = Math.random() * 10; this.speed = 0;
     this.graze = !!o.graze;
   }
+  // Four gaits, each with its own footfall order: the four-beat walk, the
+  // two-beat trot on diagonal pairs, the rocking three-beat canter and the
+  // gallop with all feet off the ground — blended by speed.
   update(dt) {
+    dt = Math.min(dt, 0.1);
     this.t += dt;
-    const sp = this.speed, t = this.t;
-    this.phase += dt * (2.2 + sp * 0.95) * (sp > 0.05 ? 1 : 0);
-    const p = this.phase;
-    const gallop = clamp((sp - 6) / 4, 0, 1);
-    const amp = sp > 0.05 ? clamp(0.28 + sp * 0.06, 0, 0.95) : 0;
+    const sp = this.speed, t = this.t, d = QUAD[this.type], horse = this.type === 'horse';
+    const LL = d.legU + d.legL, ss = (a, b, x) => { const u = clamp((x - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); };
+    const wT = ss(1.9, 2.7, sp), wC = ss(5.6, 6.8, sp), wG = ss(8.8, 10.2, sp), mix = (a, b, c, e) => lerp(lerp(lerp(a, b, wT), c, wC), e, wG);
+    const stride = mix(1.25 + 0.25 * sp, 2.0 + 0.2 * sp, 2.6 + 0.15 * sp, 3.2 + 0.2 * sp) * (horse ? 1 : 0.75);
+    const duty = mix(0.66, 0.46, 0.38, 0.28), moving = sp > 0.05;
+    if (moving) this.cyc = ((this.cyc || 0) + sp / stride * dt) % 1;
+    const cyc = this.cyc || 0, go = this.go = damp(this.go || 0, moving ? 1 : 0, 6, dt);
+    // how the body is being ridden: turning, speeding up, pulling up
+    const yaw = this.root.rotation.y, dy = Math.atan2(Math.sin(yaw - (this.pyaw ?? yaw)), Math.cos(yaw - (this.pyaw ?? yaw)));
+    this.turn = damp(this.turn || 0, clamp(dy / dt, -4, 4), 6, dt); this.pyaw = yaw;
+    this.acc = damp(this.acc || 0, clamp((sp - (this.psp ?? sp)) / dt, -12, 12), 5, dt); this.psp = sp;
+    const A = clamp(duty * stride / (2 * LL) * 0.9, 0.15, 0.72);
+    // resting a hind leg when standing about
+    const restSide = Math.sin(t * 0.11 + (this.seed || (this.seed = Math.random() * 9))) > 0 ? 1 : -1, rest = (1 - go) * (this.graze ? 0.5 : 1);
     for (const l of this.legs) {
-      // trot: diagonal pairs; gallop: fronts then hinds
-      const trotPh = (l.front ? 0 : Math.PI) + (l.side > 0 ? 0 : Math.PI);
-      const galPh = (l.front ? 0 : 2.4) + (l.side > 0 ? 0 : 0.5);
-      const ph = p + lerp(trotPh, galPh, gallop);
-      const tx = -Math.sin(ph) * amp, kx = Math.max(0, Math.cos(ph)) * amp * (l.front ? 1.5 : 1.0);
-      l.hp.rotation.x = damp(l.hp.rotation.x, tx, 18, dt);
-      l.kn.rotation.x = damp(l.kn.rotation.x, l.front ? kx : -kx * 0.2 + Math.max(0, Math.cos(ph)) * amp * 0.9, 18, dt);
+      const off = l.front ? (l.side < 0 ? mix(0.25, 0.5, 0.3, 0.42) : mix(0.75, 1.0, 0.6, 0.55)) : (l.side < 0 ? 0 : mix(0.5, 0.5, 0.3, 0.12));
+      const p = (cyc + off) % 1;
+      let hip, knee;
+      if (p < duty) { const u = p / duty; hip = lerp(-A, A, u); knee = (l.front ? 0.04 : 0.16) * Math.sin(Math.PI * u) + (l.front ? 0 : 0.1 * wC); }
+      else {
+        const v = (p - duty) / (1 - duty), e = v * v * (3 - 2 * v);
+        hip = lerp(A, -A, e) - (l.front ? 0.12 : 0.05) * Math.sin(Math.PI * v) * (0.5 + wT * 0.5);
+        knee = (l.front ? mix(0.75, 1.25, 1.5, 1.6) : mix(0.55, 0.85, 1.1, 1.25)) * Math.sin(Math.PI * Math.pow(v, 0.8));
+      }
+      hip *= go; knee *= go;
+      if (!l.front && l.side === restSide) { hip += -0.1 * rest; knee += 0.34 * rest; }
+      l.hp.rotation.x = damp(l.hp.rotation.x, hip, 22, dt);
+      l.kn.rotation.x = damp(l.kn.rotation.x, knee, 22, dt);
     }
-    this.body.position.y = this.baseY + Math.sin(p * 2) * 0.035 * amp + Math.sin(p) * 0.06 * gallop * amp;
-    this.body.rotation.x = Math.sin(p + 0.6) * 0.05 * gallop * amp;
-    this.tail.rotation.z = Math.sin(t * 1.3) * 0.25;
-    this.tail.rotation.x = 0.35 + gallop * 0.9;
-    const d = QUAD[this.type];
-    let neckT = d.neck[3] + Math.sin(p) * 0.06 * amp + gallop * 0.2;
+    const c2 = Math.cos(cyc * Math.PI * 2), s2 = Math.sin(cyc * Math.PI * 2), c4 = Math.cos(cyc * Math.PI * 4);
+    const breath = Math.sin(t * (1.1 + Math.min(sp, 10) * 0.35)) * 0.006;
+    const bob = go * mix(0.012 * c4, 0.035 * c4, 0.055 * Math.sin((cyc - 0.15) * Math.PI * 2), 0.075 * Math.sin((cyc - 0.15) * Math.PI * 2));
+    this.body.position.y = this.baseY + bob - 0.02 * rest;
+    this.body.scale.set(1 + breath * 1.6, 1 + breath, 1);
+    const rock = go * mix(0, 0.012 * s2, -0.065 * c2, -0.085 * c2);
+    this.body.rotation.x = damp(this.body.rotation.x, rock - clamp(this.acc * 0.012, -0.14, 0.1), 14, dt);
+    this.body.rotation.z = damp(this.body.rotation.z, go * mix(0.022 * s2, 0.008 * s2, 0, 0) + clamp(-this.turn * Math.min(sp, 12) * 0.014, -0.2, 0.2) + 0.03 * rest * restSide, 8, dt);
+    // tail: streams out at speed, swishes at rest, lags through turns
+    const sw = Math.max(0, Math.sin(t * 0.37 + (this.seed || 0)) - 0.55) * 2.2;
+    this.tail.rotation.x = damp(this.tail.rotation.x, 0.3 + 0.35 * wT + 0.55 * wC + 0.25 * wG + bob * 3, 6, dt);
+    this.tail.rotation.z = damp(this.tail.rotation.z, Math.sin(t * 6.5) * 0.45 * sw * (1 - go) + Math.sin(t * 1.3) * 0.12 + clamp(this.turn * 0.25, -0.6, 0.6) + go * 0.1 * s2, 8, dt);
+    // neck and head: nodding at the walk, reaching out at the gallop, tossing now and then
+    let neckT = d.neck[3] + go * mix(0.07 * c4, 0.025 * c4, 0.09 * Math.cos((cyc + 0.1) * Math.PI * 2) + 0.12, 0.11 * Math.cos((cyc + 0.1) * Math.PI * 2) + 0.3) - clamp(this.acc * 0.012, -0.12, 0.2);
+    const toss = Math.max(0, Math.sin(t * 0.23 + (this.seed || 0) * 3) - 0.93) * 14;
     if (this.graze && sp < 0.05) neckT = d.neck[3] + 1.25 + Math.sin(t * 0.7) * 0.12;
-    this.neck.rotation.x = damp(this.neck.rotation.x, neckT, 3, dt);
+    else neckT += (1 - go) * (Math.sin(t * 0.31 + (this.seed || 0)) * 0.08 - toss * 0.22 * Math.abs(Math.sin(t * 9)));
+    this.neck.rotation.x = damp(this.neck.rotation.x, neckT, this.graze && sp < 0.05 ? 2.5 : 9, dt);
+    this.neck.rotation.z = damp(this.neck.rotation.z, clamp(-this.turn * 0.18, -0.35, 0.35) + (1 - go) * Math.sin(t * 0.19 + (this.seed || 0) * 2) * 0.12, 4, dt);
+    this.head.rotation.x = damp(this.head.rotation.x, d.headRot + go * mix(0.05 * c4, 0, -0.06 * c2, -0.08 * c2 - 0.12) + toss * 0.1, 8, dt);
+    this.wT = wT; this.wC = wC; this.wG = wG;
   }
 }
 
@@ -285,16 +317,23 @@ export class Elephant {
   }
   update(dt) {
     this.t += dt; const t = this.t;
-    this.phase += dt * 1.6 * (this.speed > 0.05 ? 1 : 0);
-    const amp = this.speed > 0.05 ? 0.28 : 0;
+    // an elephant ambles: each side's hind foot then fore foot, the great body rolling over them
+    const go = this.go = damp(this.go || 0, this.speed > 0.05 ? 1 : 0, 3, dt);
+    this.phase += dt * 1.25 * (this.speed > 0.05 ? 1 : 0);
+    const amp = 0.3 * go;
     for (const l of this.legs) {
-      const ph = this.phase + (l.front ? 0 : Math.PI) + (l.side > 0 ? 0 : Math.PI);
-      l.hp.rotation.x = damp(l.hp.rotation.x, -Math.sin(ph) * amp, 8, dt);
+      const ph = this.phase + (l.side > 0 ? 0 : Math.PI) + (l.front ? 1.2 : 0);
+      const sw = Math.sin(ph), lift = Math.max(0, Math.cos(ph));
+      l.hp.rotation.x = damp(l.hp.rotation.x, -sw * amp - lift * 0.08 * go, 8, dt);
+      l.hp.position.y = (l.baseY ?? (l.baseY = l.hp.position.y)) + lift * 0.09 * go;
     }
+    this.body.position.y = (this.baseBodyY ?? (this.baseBodyY = this.body.position.y)) + Math.cos(this.phase * 2) * 0.03 * go + Math.sin(t * 0.9) * 0.008;
+    this.body.rotation.x = Math.sin(this.phase * 2 + 0.6) * 0.012 * go;
+    this.head.rotation.x = Math.sin(this.phase * 2 + 1.2) * 0.05 * go + Math.sin(t * 0.27) * 0.04;
     this.trunk.forEach((g, i) => { g.rotation.x = (i === 0 ? 0.25 : 0.06) + Math.sin(t * 0.8 - i * 0.5) * 0.09 + (i > 3 ? 0.18 : 0); g.rotation.z = Math.sin(t * 0.55 - i * 0.4) * 0.08; });
     for (const e of this.ears) e.g.rotation.y = e.s * (0.25 + Math.max(0, Math.sin(t * 1.9)) * 0.5);
-    this.body.rotation.z = Math.sin(t * 0.6) * 0.012;
-    this.head.rotation.y = Math.sin(t * 0.33) * 0.12;
+    this.body.rotation.z = Math.sin(this.phase) * 0.035 * this.go + Math.sin(t * 0.6) * 0.012;
+    this.head.rotation.y = Math.sin(t * 0.33) * 0.12 + Math.sin(this.phase) * 0.04 * this.go;
   }
 }
 
@@ -318,8 +357,12 @@ export class Bird {
   }
   update(dt) {
     this.t += dt;
-    const a = Math.sin(this.t * 7.5) * 0.7;
+    // a few deep beats, then a glide on set wings
+    const burst = Math.sin(this.t * 0.9) > -0.25 ? 1 : 0;
+    this.flap = damp(this.flap ?? 1, burst, 4, dt);
+    const a = Math.sin(this.t * 7.5) * 0.75 * this.flap + 0.12 * (1 - this.flap);
     for (const w of this.wings) w.g.rotation.z = w.s * a;
+    if (this.body) this.body.position.y = -Math.sin(this.t * 7.5) * 0.03 * this.flap;
   }
 }
 

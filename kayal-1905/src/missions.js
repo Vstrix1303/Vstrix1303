@@ -295,7 +295,7 @@ async function seniorPartner(S, A, W, p, env) {
   ]);
   A.obj('Mount Sultan — Devaki will ride behind you', W.horse.pos);
   await A.until(() => p.mode === 'horse');
-  C.devaki.attachTo(W.horse.root, 0, W.horse.q.seatY + 0.02, -0.5, Math.PI / 2, 'sidesaddle');
+  C.devaki.attachTo(W.horse.q.body, 0, W.horse.q.seatY - W.horse.q.baseY + 0.02, -0.5, Math.PI / 2, 'sidesaddle');
   A.obj('Ride with Devaki to the hill Cutcherry', SPOTS.cutcherryYard);
   const d0 = A.dist(SPOTS.cutcherryYard);
   let line = 0;
@@ -609,7 +609,7 @@ async function elephantRoad(S, A, W, p, env, cp) {
   }
   // ---- down the elephant road
   C.velu.follow = null;
-  C.velu.attachTo(W.horse.root, 0, W.horse.q.seatY, -0.48, 0, 'ride');
+  C.velu.attachTo(W.horse.q.body, 0, W.horse.q.seatY - W.horse.q.baseY, -0.48, 0, 'ride');
   G.audio?.setMood('chase');
   // the herd, standing on the estate road
   const herd = [[347, -262, 1.0], [341, -251, 0.62], [356, -247, 1.08]].map(([x, z, sc], i) => {

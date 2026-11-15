@@ -105,6 +105,7 @@ export class NPC {
       this.blockT = 0.45; G.audio?.sfx('clang'); return false;
     }
     this.health -= dmg; this.stun = this.boss ? 0.3 : 0.55;
+    this.h.flinch(fx, fz, this.boss ? 0.8 : 1.4);
     const d = Math.hypot(this.pos.x - fx, this.pos.z - fz) || 1, kb = this.boss ? 2 : 5;
     this.kx = (this.pos.x - fx) / d * kb; this.kz = (this.pos.z - fz) / d * kb;
     if (this.guard && !this.hostile) this.becomeHostile(true);
@@ -247,6 +248,9 @@ export class NPC {
     }
     if (!this.fixedY) this.pos.y = damp(this.pos.y, groundAt(this.pos.x, this.pos.z, this.pos.y + 0.4), 14, dt);
     this.h.state = state; this.h.speed = this.speed;
+    this.h.lod = dp > 42 ? 1 : 0; this.h.near = dp < 12; this.h.staff = !!this.stick; this.h.grip = !!this.stick;
+    this.h.setWorld(this.pos.x, this.pos.y, this.pos.z, this.yaw);
+    if (dp < 6.5 && !this.ko) { const g = this._gz || (this._gz = { x: 0, y: 0, z: 0 }); g.x = pp.x; g.y = pp.y + 1.55; g.z = pp.z; this.h.gaze = g; } else this.h.gaze = null;
     this.h.update(dt);
     this.sync();
   }
@@ -265,9 +269,9 @@ export class Rider {
     this.scene = scene;
     this.q = new Quadruped('horse', { saddle: true, color: 0x2a1d16, dark: 0x0e0a08 });
     this.h = new Human(preset);
-    this.q.root.add(this.h.root);
-    this.h.root.position.set(0, this.q.seatY, -0.06);
-    this.h.state = 'ride';
+    this.q.body.add(this.h.root);
+    this.h.root.position.set(0, this.q.seatY - this.q.baseY, -0.06);
+    this.h.state = 'ride'; this.h.mountQ = this.q;
     this.lantern = this.h.hold(makeLantern(), false);
     scene.add(this.q.root);
     this.pos = new THREE.Vector3(x, getHeight(x, z), z);

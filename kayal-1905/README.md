@@ -132,6 +132,35 @@ Built from twelve hand-supplied reference sheets (cast, expressions, outfits, ho
   over a soft *tanpura*-style drone — a flute by day, a plucked string at night, a faster drum-led
   pattern for chases — with a touch of reverb.
 
+## Version 5 — people who look and move like people
+
+- **Bodies rebuilt to human proportions.** The broad action-figure build is gone: figures are about
+  seven and a half heads tall with real shoulder, chest, waist and hip widths, shaped limbs (deltoid,
+  biceps, the belly of the calf), hands with a thumb and fingers that close round what they hold, and
+  feet that bend at the toes.
+- **Faces with relief.** The head is no longer a painted egg: brow ridge, eye sockets, a nose with a
+  bridge and nostrils, lips, chin and jaw are modelled, with separate ears and hair that has volume.
+  Eyes blink.
+- **A fuller skeleton** — 24 joints instead of 16 (neck, collar-bones, finger and toe joints, a bone for
+  the hem of the *mundu*).
+- **Feet that plant.** Walking and running are no longer a looping leg-swing: each foot is placed on the
+  ground, stays where it lands, and the legs are solved backwards from the feet (inverse kinematics).
+  Nothing slides; steps, plinths and slopes are stepped on properly; stopping or turning on the spot
+  produces real corrective steps. Stride length and rhythm change continuously from stroll to sprint.
+- **Weight.** The pelvis rises over the standing leg and turns with the stride, shoulders counter-rotate,
+  the body leans into acceleration and banks into turns, landings are absorbed, movement has momentum.
+- **Life at rest.** Breathing (heavier after a sprint), weight shifting from leg to leg, glances,
+  looking at whoever is near, small habits — scratching the head, re-tucking the *mundu*, hands on hips.
+  People talking use a vocabulary of gestures rather than one loop; field workers bend, gather and
+  straighten their backs.
+- **Fighting and falling.** Strikes have wind-up, a lunge and follow-through and alternate between
+  cuts; blows make the body recoil; a knocked-down man buckles, falls and settles instead of tipping over.
+- **Riding.** Horses have four distinct gaits with correct footfall order — walk, trot, canter, gallop —
+  and lean into turns, rock at the canter, rest a hind leg when standing, swish and stream their tails.
+  The rider sits on the moving back, rises to the trot, and swings up into the saddle.
+- **Other animals**: cattle share the gait system, the elephant ambles with a rolling body, egrets flap
+  in bursts and glide.
+
 ## A note on the setting
 
 Travancore in 1905 was a princely state under a British Resident; its district officers were the Dewan

@@ -154,12 +154,13 @@ export class SGB {
   }
   loft(rings, seg, region, o = {}) {
     const base = this.count, W = seg + 1, R = rings.length, T = this.T;
+    const tOf = o.tOf || ((k) => k / seg);          // angular parameter of column k (lets a loft crowd its columns where detail is)
     const [x0, y0, x1, y1] = region;
     const P = [];
     for (let j = 0; j < R; j++) {
       const r = rings[j];
       for (let k = 0; k <= seg; k++) {
-        const th = (k / seg) * Math.PI * 2 + Math.PI;
+        const th = tOf(k) * Math.PI * 2 + Math.PI;
         const m = r.mod ? r.mod(th, k / seg) : 1;
         const s = Math.sin(th) * m, c = Math.cos(th) * m;
         const zv = c < 0 && r.azB ? r.azB : r.az;
@@ -187,9 +188,9 @@ export class SGB {
         if (l < 1e-9) { nx = p[0] - r.c[0]; ny = p[1] - r.c[1]; nz = p[2] - r.c[2]; l = Math.hypot(nx, ny, nz) || 1; }
         else if (flip) { nx = -nx; ny = -ny; nz = -nz; }
         this.p.push(p[0], p[1], p[2]); this.n.push(nx / l, ny / l, nz / l);
-        const u = o.mirrorU ? 1 - k / seg : k / seg;
+        const u = o.mirrorU ? 1 - tOf(k) : tOf(k);
         this.uv.push((x0 + (x1 - x0) * u) / T, 1 - (y0 + (y1 - y0) * r.v) / T);
-        const th = (k / seg) * Math.PI * 2 + Math.PI;
+        const th = tOf(k) * Math.PI * 2 + Math.PI;
         this._skin(typeof r.w === 'function' ? r.w(th, p) : (r.w || [[0, 1]]));
       }
     }

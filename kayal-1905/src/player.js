@@ -39,8 +39,10 @@ export class Player {
     if (!CAST.outfits[key]) key = 'everyday';
     const def = CAST.outfits[key];
     const old = this.h;
-    this.h = new Human({ ...def.look, build: 1.06 });
+    this.h = new Human({ ...def.look, build: 1.03, hero: G.quality === 'high' });
     if (old) { this.root.remove(old.root); this.h.state = old.state; }
+    this.h.near = true; this.h.grip = true;
+    this.h.onStep = () => { if (this.mode === 'foot' && this.grounded && this.speedNow > 0.4) G.audio?.sfx(this.swimming || this.pos.y < -0.1 ? 'wade' : 'step', this.crouch ? 0.3 : this.speedNow > 5 ? 0.85 : 0.6); };
     this.root.add(this.h.root);
     this.h.hold(this.stick); this.h.hold(this.paddle); this.h.hold(this.rod); this.h.hold(this.bucket, false);
     this.outfit = key;
@@ -64,9 +66,9 @@ export class Player {
   mountHorse(horse) {
     if (this.mount) return;
     this.mode = 'horse'; this.mount = horse; horse.rider = this;
-    horse.root.add(this.root);
-    this.root.position.set(0, horse.q.seatY, -0.06); this.root.rotation.set(0, 0, 0);
-    this.h.state = 'ride'; this.crouch = false;
+    horse.q.body.add(this.root);          // sit on the moving back, not the ground point beneath it
+    this.root.position.set(0, horse.q.seatY - horse.q.baseY, -0.06); this.root.rotation.set(0, 0, 0);
+    this.h.state = 'ride'; this.crouch = false; this.h.mountQ = horse.q; this.h.mountT = 0;
     this.stick.visible = false;
     G.audio?.sfx('mount');
   }
@@ -93,6 +95,7 @@ export class Player {
       this.yaw = Math.atan2(land.x - m.pos.x, land.z - m.pos.z);
     }
     m.rider = null; this.mount = null; this.mode = 'foot';
+    this.h.mountQ = null; this.h.mountT = null; if (!silent) this.h.land = 1;
     this.h.state = 'idle'; this.stick.visible = true; this.paddle.visible = false;
     this.vel.set(0, 0, 0); this.vy = 0;
     this.root.position.copy(this.pos); this.root.rotation.set(0, this.yaw, 0);
@@ -113,6 +116,7 @@ export class Player {
       }
     }
     this.health -= n; this.hurtT = 0; this.shake = Math.max(this.shake, 0.5);
+    if (fromX != null) this.h.flinch(fromX, fromZ, 1.2);
     G.ui?.hurt();
     G.audio?.sfx('hit');
     if (fromX != null) { const d = Math.hypot(this.pos.x - fromX, this.pos.z - fromZ) || 1; this.vel.x += (this.pos.x - fromX) / d * 4; this.vel.z += (this.pos.z - fromZ) / d * 4; }
@@ -172,7 +176,8 @@ export class Player {
       if (this.swimming) sp = 2.1;
       else if (getHeight(this.pos.x, this.pos.z) < -0.25 && !this.onDeck) sp *= 0.62;
       if (sprinting) this.stamina = Math.max(0, this.stamina - 11 * dt); else this.stamina = Math.min(100, this.stamina + (wl > 0.1 ? 8 : 16) * dt);
-      const k = this.grounded ? 11 : 2.5;
+      // momentum: it takes a stride or two to get going, and to pull up
+      const cur = Math.hypot(this.vel.x, this.vel.z), k = !this.grounded ? 2.5 : wl * sp > cur ? 6.5 : 8.5;
       this.vel.x = damp(this.vel.x, wx * sp, k, dt); this.vel.z = damp(this.vel.z, wz * sp, k, dt);
       if (this.health <= 0) { this.vel.x = damp(this.vel.x, 0, 8, dt); this.vel.z = damp(this.vel.z, 0, 8, dt); }
       this.pos.x += this.vel.x * dt; this.pos.z += this.vel.z * dt;
@@ -190,7 +195,7 @@ export class Player {
       const hsp = Math.hypot(this.vel.x, this.vel.z);
       this.speedNow = hsp;
       if (this.blocking) { const tgt = this.nearestHostile(6); if (tgt) this.yaw = angleDamp(this.yaw, Math.atan2(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z), 14, dt); }
-      else if (wl > 0.1 && this.h.strikeT < 0) this.yaw = angleDamp(this.yaw, Math.atan2(wx, wz), 12, dt);
+      else if (wl > 0.1 && this.h.strikeT < 0) this.yaw = angleDamp(this.yaw, Math.atan2(wx, wz), hsp > 5 ? 6.5 : 10, dt);
       this.h.speed = hsp;
       if (this.health > 0) this.h.state = this.poseOverride || (this.swimming ? 'swim' : this.crouch ? 'crouch' : hsp > 0.25 ? 'move' : 'idle');
       this.root.position.copy(this.pos); this.root.rotation.set(0, this.yaw, 0);
@@ -206,7 +211,7 @@ export class Player {
         if (this.pendingHit < 0) this.resolveHit();
       }
       // footsteps
-      if (this.grounded && hsp > 0.5) {
+      if (this.grounded && hsp > 0.5 && this.h.ik < 0.5) {
         this.footT -= dt * (2.2 + hsp * 0.42);
         if (this.footT <= 0) { this.footT = 1; G.audio?.sfx(this.swimming || ground < -0.1 ? 'wade' : 'step', this.crouch ? 0.3 : 0.7); }
       }
@@ -234,6 +239,18 @@ export class Player {
       if (m.paddling) { this.footT -= dt * 0.67; if (this.footT <= 0) { this.footT = 1; G.audio?.sfx('paddle', 0.6); } }
     }
     if (this.hurtT > 6 && this.health > 0) this.health = Math.min(100, this.health + 7 * dt);
+    if (this.mode === 'foot') {
+      this.h.setWorld(this.pos.x, this.pos.y, this.pos.z, this.yaw);
+      this.h.air = !this.grounded && !this.swimming && this.health > 0;
+      // glance at whoever is close by
+      this.gazeT = (this.gazeT || 0) - dt;
+      if (this.gazeT <= 0) {
+        this.gazeT = 0.4; let best = null, bd = 5.5;
+        for (const n of G.npcs) { if (!n.active || n.ko) continue; const d = Math.hypot(n.pos.x - this.pos.x, n.pos.z - this.pos.z); if (d < bd) { bd = d; best = n; } }
+        this.h.gaze = best ? { x: best.pos.x, y: best.pos.y + 1.55 * best.h.S, z: best.pos.z } : null;
+      }
+    } else { this.h.air = false; this.h.gaze = null; }
+    this.h.staff = this.stick.visible && this.mode === 'foot';
     this.h.update(dt);
     this.updateCamera(dt);
   }
@@ -318,6 +335,9 @@ export class Player {
     } else {
       this.cineBlend = 0;
       cam.position.copy(desired);
+      // the camera is carried, not bolted on: it rides the stride and drifts a little
+      if (mode === 'foot' && this.h.moving) cam.position.y += Math.cos(this.h.gait * Math.PI * 4) * 0.012 * (this.h.walkAmp || 0);
+      cam.position.y += Math.sin(G.time * 0.7) * 0.006; cam.position.x += Math.sin(G.time * 0.43) * 0.005;
       if (this.shake > 0) { cam.position.x += (Math.random() - 0.5) * this.shake * 0.12; cam.position.y += (Math.random() - 0.5) * this.shake * 0.12; }
       cam.lookAt(look);
     }
