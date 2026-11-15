@@ -132,7 +132,7 @@ export function updateMotion(h, dt) {
     g.twist = -lerp(0.07, 0.14, runT) * walkA * Math.cos(ph) * 1.2;      // shoulders counter the pelvis
     g.hipY = RIG.hipY - 0.012 * walkA - 0.03 * runT;
     g.head = -g.spine * 0.5;
-    if (crouch) { g.hipY -= 0.25; g.spine += 0.5; g.elL = g.elR = -0.95; g.armL *= 0.5; g.armR *= 0.5; g.head = -0.42; g.armLz = -0.2; g.armRz = 0.2; }
+    if (crouch) { g.hipY -= 0.18; g.spine += 0.55; g.elL = g.elR = -0.95; g.armL *= 0.5; g.armR *= 0.5; g.head = -0.42; g.armLz = -0.2; g.armRz = 0.2; }
     if (h.ik < 0.5) {          // far away or off the ground: a plain swinging gait
       h.phase += dt * (4.0 + sp * 0.86);
       const p = h.phase, amp = clamp(0.3 + sp * 0.115, 0, 1.08) * (sp > 0.05 ? 1 : 0);
