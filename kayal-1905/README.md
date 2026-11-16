@@ -226,7 +226,8 @@ preferred on laptops, and saves kept on the computer.
 The app is not code-signed (that needs paid developer certificates), so the first launch shows a warning:
 
 - **Windows** — SmartScreen: *More info* → *Run anyway*.
-- **macOS** — right-click the app → *Open* → *Open*. If macOS says the app "is damaged", run
+- **macOS** — open it once, then go to *System Settings → Privacy & Security* and click *Open Anyway*
+  (on older macOS, right-click the app → *Open* also works). If macOS says the app "is damaged", run
   `xattr -cr "/Applications/Kayal 1905.app"` in Terminal once, then open it again.
 
 Saves made in a browser do not carry over to the desktop app (each keeps its own).

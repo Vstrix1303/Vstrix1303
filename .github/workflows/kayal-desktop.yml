@@ -20,7 +20,7 @@ jobs:
             cmd: npx electron-builder --win
           - os: macos-latest
             name: macos
-            cmd: npx electron-builder --mac -c.mac.identity=-
+            cmd: npx electron-builder --mac
           - os: ubuntu-latest
             name: linux
             cmd: npx electron-builder --linux

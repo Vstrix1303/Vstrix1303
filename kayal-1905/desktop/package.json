@@ -92,7 +92,8 @@
       "icon": "build/icon.png",
       "category": "Game"
     },
-    "artifactName": "Kayal-1905-${version}-${os}-${arch}.${ext}"
+    "artifactName": "Kayal-1905-${version}-${os}-${arch}.${ext}",
+    "afterPack": "build/after-pack.cjs"
   },
   "repository": {
     "type": "git",
