@@ -120,10 +120,11 @@ function well(b, x, z) {
 }
 
 const CART_WOOD = [0.62, 0.5, 0.4];
-function cartWheel(b, cx, cy) {
-  b.geo('wood', new THREE.TorusGeometry(0.72, 0.05, 6, 22), new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(cx, cy, 0), CART_WOOD);
-  b.cyl('wood', 0.1, 0.1, 0.24, cx, cy - 0.12, 0, { seg: 10, rz: Math.PI / 2, col: CART_WOOD });
-  for (let i = 0; i < 6; i++) b.box('wood', 0.035, 1.38, 0.05, cx, cy - 0.69, 0, { rx: i * Math.PI / 6, col: CART_WOOD });
+function cartWheel(b, cx, cy, r = 0.72, col = CART_WOOD) {
+  b.geo('wood', new THREE.TorusGeometry(r, 0.05, 6, 22), new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(cx, cy, 0), col);
+  b.cyl('wood', 0.1, 0.1, 0.24, cx, cy - 0.12, 0, { seg: 10, rz: Math.PI / 2, col });
+  const L = r * 2 - 0.06;
+  for (let i = 0; i < 6; i++) b.box('wood', 0.035, L, 0.05, cx, cy - L / 2, 0, { rx: i * Math.PI / 6, col });
 }
 function cartBody(b, wheels = true) {
   const WOOD = CART_WOOD;
@@ -147,13 +148,44 @@ function cart(b, x, z, ry) {
   cartBody(b);
   b.collider(0, 0, 1.05, 1.5);
 }
-// A cart that travels: its body and its two wheels as separate pieces so the wheels can turn.
-export function makeCart(mats) {
-  const piece = (fn) => { const b = new Builder(); b.collider = b.circle = b.platform = () => b; b.place(0, 0, 0, 0); fn(b); const g = new THREE.Group(); b.finish(g, mats); return g; };
+// Things that travel are built as separate pieces (body, each wheel) so the wheels can turn.
+const piece = (mats, fn) => { const b = new Builder(); b.collider = b.circle = b.platform = () => b; b.place(0, 0, 0, 0); fn(b); const g = new THREE.Group(); b.finish(g, mats); return g; };
+export function makeCart(mats, load = 0) {
   const root = new THREE.Group();
-  root.add(piece((b) => cartBody(b, false)));
-  const wheels = [-1, 1].map((sx) => { const w = piece((b) => cartWheel(b, 0, 0)); w.position.set(sx * 0.9, 0.77, 0); root.add(w); return w; });
-  return { root, wheels };
+  root.add(piece(mats, (b) => {
+    cartBody(b, false);
+    // what it carries shows at the tail under the cover: sacks, coconuts, or cut hay
+    if (load === 1) for (let i = 0; i < 5; i++) b.sphere('sack', 0.3, (i % 2) * 0.55 - 0.28, 1.14 + (i > 2 ? 0.3 : 0), -0.95 + Math.floor(i / 2) * 0.42 - (i > 2 ? 0.2 : 0), { sx: 1.25, sy: 0.72, sz: 0.9 });
+    else if (load === 2) for (let i = 0; i < 14; i++) b.sphere('paint', 0.13, ((i * 7) % 5) * 0.22 - 0.44, 1.1 + (i % 3) * 0.16, -1.1 + ((i * 3) % 4) * 0.2, { col: i % 4 ? [0.42, 0.3, 0.16] : [0.36, 0.42, 0.18] });
+    else if (load === 3) b.box('thatch', 1.2, 0.55, 1.0, 0, 1.0, -0.85, { col: [1.2, 1.05, 0.6] });
+  }));
+  const wheels = [-1, 1].map((sx) => { const w = piece(mats, (b) => cartWheel(b, 0, 0)); w.position.set(sx * 0.9, 0.77, 0); root.add(w); return w; });
+  return { root, wheels, wheelR: 0.74 };
+}
+// A jutka: the light two-wheeled horse carriage of South Indian roads, a bench for the driver,
+// a seat under a curved mat canopy, long shafts for one horse.
+export function makeJutka(mats) {
+  const DARK = [0.3, 0.2, 0.15], RED = [0.5, 0.14, 0.1];
+  const root = new THREE.Group();
+  root.add(piece(mats, (b) => {
+    b.box('plank', 1.12, 0.07, 1.7, 0, 0.8, -0.1, { tile: 1, col: DARK });
+    for (const sx of [-1, 1]) {
+      b.box('paint', 0.045, 0.34, 1.7, sx * 0.56, 0.86, -0.1, { col: RED });
+      b.box('wood', 0.06, 0.06, 3.5, sx * 0.44, 0.98, 1.5, { rx: -0.05, col: DARK });           // shafts
+      for (const sz of [-0.9, 0.05]) b.cyl('wood', 0.022, 0.022, 0.95, sx * 0.53, 1.2, sz, { seg: 6, col: DARK });   // canopy posts
+    }
+    b.box('paint', 1.12, 0.34, 0.045, 0, 0.86, -0.95, { col: RED });
+    b.box('plank', 1.0, 0.07, 0.4, 0, 1.12, 0.52, { tile: 1, col: DARK });        // the driver's bench
+    b.box('plank', 0.07, 0.3, 0.38, -0.45, 0.84, 0.52, { tile: 1, col: DARK }); b.box('plank', 0.07, 0.3, 0.38, 0.45, 0.84, 0.52, { tile: 1, col: DARK });
+    b.box('plank', 1.0, 0.07, 0.5, 0, 1.12, -0.5, { tile: 1, col: DARK });        // the passenger's seat
+    b.box('sack', 0.96, 0.06, 0.46, 0, 1.19, -0.5, { col: [0.75, 0.2, 0.16] });
+    b.cyl('wood', 0.05, 0.05, 1.5, 0, 0.62 - 0.75, 0, { seg: 7, rz: Math.PI / 2, col: DARK });
+    const hoop = new THREE.CylinderGeometry(0.6, 0.6, 1.25, 12, 1, true, 0, Math.PI);
+    b.geo('thatch', hoop, new THREE.Matrix4().makeRotationY(Math.PI / 2).multiply(new THREE.Matrix4().makeRotationZ(Math.PI / 2)).setPosition(0, 1.62, -0.42), [0.75, 0.82, 0.6]);
+    b.box('wood', 1.1, 0.05, 0.05, 0, 1.0, 3.18, { col: DARK });
+  }));
+  const wheels = [-1, 1].map((sx) => { const w = piece(mats, (b) => cartWheel(b, 0, 0, 0.6, DARK)); w.position.set(sx * 0.72, 0.62, 0); root.add(w); return w; });
+  return { root, wheels, wheelR: 0.62 };
 }
 
 function haystack(b, x, z, s = 1) {

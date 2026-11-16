@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import { G, QUALITY } from './state.js';
 import { initHeights, initRoads, getHeight, LOC, canalZ, ROADS } from './heightfield.js';
 import { buildTextures, TEX } from './textures.js';
-import { buildStructures, SPOTS, makeCart } from './structures.js';
-import { Human } from './human.js';
+import { buildStructures, SPOTS } from './structures.js';
+import { setupTraffic } from './traffic.js';
 import { buildTerrain, buildMapImage } from './terrain.js';
 import { Env } from './env.js';
 import { Water } from './water.js';
@@ -49,65 +49,6 @@ class Wanderer {
     }
     this.o.update(dt);
     this.sync();
-  }
-}
-
-// A bullock cart on its rounds along a road: two oxen under the yoke, a driver on the bed, wheels
-// that turn with the ground. It keeps to the left, waits at each end, and stops for people in its way.
-class BullockCart {
-  constructor(scene, mats, path, o = {}) {
-    const c = makeCart(mats);
-    this.g = c.root; this.wheels = c.wheels;
-    this.oxen = [-0.55, 0.55].map((x, i) => { const q = new Quadruped('cow', { hump: true, color: i ? 0xcdc3b0 : 0xe4ddcf }); q.root.position.set(x, 0, 2.42); this.g.add(q.root); return q; });
-    this.h = new Human(o.driver || CAST.villagerM[0]);
-    this.h.root.position.set(0.12, 0.13, 1.0); this.h.state = 'bench';
-    this.g.add(this.h.root);
-    this.pts = path; this.len = [0];
-    for (let i = 1; i < path.length; i++) this.len.push(this.len[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
-    this.total = this.len[this.len.length - 1];
-    this.s = (o.at ?? 0.5) * this.total; this.dir = o.dir || 1; this.speed = 0; this.wait = 0; this.max = o.speed || 1.15;
-    this.pos = new THREE.Vector3(); this.yaw = 0;
-    this.g.traverse((ob) => ob.layers.set(1));
-    scene.add(this.g);
-    this.place(0);
-  }
-  sample(s) {
-    const L = this.len; let i = 1;
-    while (i < L.length - 1 && L[i] < s) i++;
-    const a = this.pts[i - 1], b = this.pts[i], k = (s - L[i - 1]) / Math.max(1e-6, L[i] - L[i - 1]);
-    const dx = (b[0] - a[0]) * this.dir, dz = (b[1] - a[1]) * this.dir, l = Math.hypot(dx, dz) || 1;
-    return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, fx: dx / l, fz: dz / l };
-  }
-  place(dt) {
-    const p = this.sample(this.s), keep = 1.55;     // keep to the left of the road
-    const x = p.x - p.fz * -keep, z = p.z + p.fx * -keep;
-    const yaw = Math.atan2(p.fx, p.fz);
-    this.yaw = dt ? angleDamp(this.yaw, yaw, 1.6, dt) : yaw;
-    this.pos.set(x, dt ? damp(this.pos.y, getHeight(x, z), 6, dt) : getHeight(x, z), z);
-    this.g.position.copy(this.pos); this.g.rotation.y = this.yaw;
-  }
-  update(dt, pp) {
-    const d = Math.hypot(pp.x - this.pos.x, pp.z - this.pos.z);
-    this.g.visible = d < 200;
-    if (!this.g.visible) return;
-    // anyone standing in the road ahead?
-    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-    const ahead = (q) => { const dx = q.x - this.pos.x, dz = q.z - this.pos.z, f = dx * fx + dz * fz, side = Math.abs(dx * fz - dz * fx); return f > 0.5 && f < 5.5 && side < 1.6; };
-    let block = ahead(pp);
-    if (!block) for (const n of G.npcs) if (n.active && n.root.visible && Math.abs(n.pos.x - this.pos.x) < 6 && Math.abs(n.pos.z - this.pos.z) < 6 && ahead(n.pos)) { block = true; break; }
-    let target = this.max;
-    if (this.wait > 0) { this.wait -= dt; target = 0; }
-    if (block) target = 0;
-    this.speed = damp(this.speed, target, block ? 4 : 1.2, dt);
-    const ds = this.speed * dt;
-    this.s += ds * this.dir;
-    if (this.s >= this.total || this.s <= 0) { this.s = THREE.MathUtils.clamp(this.s, 0, this.total); this.dir *= -1; this.wait = 8 + Math.random() * 10; this.speed = 0; }
-    this.place(dt);
-    for (const w of this.wheels) w.rotation.x += ds / 0.74;
-    if (d < 90) {
-      for (const q of this.oxen) { q.speed = this.speed; q.update(dt); }
-      this.h.speed = 0; this.h.lod = d > 42 ? 1 : 0; this.h.update(dt);
-    }
   }
 }
 
@@ -337,16 +278,8 @@ export async function buildWorld(scene, progress) {
   }
   amb('Villager', VM[3], -20, 6, 1, { umbrella: true, route: [new THREE.Vector3(-46, 0, 14), new THREE.Vector3(-20, 0, 7.4), new THREE.Vector3(14, 0, -1.6), new THREE.Vector3(40, 0, -8), new THREE.Vector3(14, 0, -1.6), new THREE.Vector3(-20, 0, 7.4)], lines: BARKS.bazaar });
   amb('Villager', VF[1], 10, 3, 1, { umbrella: true, headLoad: true, route: [new THREE.Vector3(36, 0, -4.4), new THREE.Vector3(10, 0, 2.6), new THREE.Vector3(-24, 0, 12), new THREE.Vector3(-58, 0, 19), new THREE.Vector3(-24, 0, 12), new THREE.Vector3(10, 0, 2.6)], speed: 1.2, lines: BARKS.bazaar });
-  // ---- bullock carts on the main road
-  {
-    const M = ROADS.main;
-    const seg = (x0, x1) => M.filter(([x]) => x >= x0 && x <= x1);
-    W.carts = [
-      new BullockCart(scene, st.mats, seg(-150, 70), { at: 0.35, dir: 1, driver: { ...VM[1], headgear: 'thorthu', gearColor: 0xe8e0cc } }),
-      new BullockCart(scene, st.mats, seg(-60, 160), { at: 0.7, dir: -1, driver: VM[5], speed: 1.05 }),
-    ];
-    W.animals.push(...W.carts);
-  }
+  // ---- carts, riders, walkers and boats on every road
+  setupTraffic(scene, W, st.mats);
   amb('Priest', CAST.priest, SPOTS.templeGate.x, SPOTS.templeGate.z + 2, Math.PI / 2, { facePlayer: true, lines: BARKS.priest });
   for (let i = 0; i < 6; i++) {
     const x = -100 + i * 34 + rng() * 10, z = 250 + rng() * 60 + (i % 2) * 70;

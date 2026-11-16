@@ -17,7 +17,7 @@ export const terrainU = {
 export let heightTex = null;
 export let maskTex = null;
 
-const ROAD_W = { laneE: 2.8, laneS: 2.8, laneW: 2.6, main: 6, north: 4.6, hill: 4.2, south: 3.2, home: 3, quay: 6, temple: 4, bar: 3, coast: 3, estate: 3.4, towpath: 2.4, hamlet: 3 };
+export const ROAD_W = { laneE: 2.8, laneS: 2.8, laneW: 2.6, main: 6, north: 4.6, hill: 4.2, south: 3.2, home: 3, quay: 6, temple: 4, bar: 3, coast: 3, estate: 3.4, towpath: 2.4, hamlet: 3 };
 const TEA = [[365, -120, 100, 72], [335, 95, 88, 78], [425, -480, 95, 64], [305, 335, 74, 62], [520, 120, 80, 90]];
 
 export function maskAt(x, z, ch) {
