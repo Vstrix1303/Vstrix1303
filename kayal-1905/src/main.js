@@ -4,6 +4,7 @@ import { loadRealTextures, loadHumans } from './assets.js';
 import { G, QUALITY } from './state.js';
 import { UI, EQUIP } from './ui.js';
 import { setupWheel } from './wheel.js';
+import { setupBlobs } from './blobs.js';
 import { Input } from './input.js';
 import { AudioSys } from './audio.js';
 import { Player } from './player.js';
@@ -24,6 +25,7 @@ const store = {
 };
 
 function pickQuality(gl) {
+  if (params.has('igpu')) G.integrated = true;          // testing: behave as on integrated graphics
   const q = params.get('q') || store.get('kayal1905.quality');
   if (q && QUALITY[q]) return q;
   if (matchMedia('(pointer: coarse)').matches) return 'low';
@@ -51,14 +53,14 @@ async function boot() {
   G.quality = pickQuality(renderer.getContext());
   if (G.integrated) {
     // integrated GPU: keep the look, drop what costs most — multisampling, reflection resolution, grass density
-    for (const k of ['medium', 'high', 'ultra']) QUALITY[k] = { ...QUALITY[k], msaa: 0, reflection: Math.min(QUALITY[k].reflection, 256), grass: Math.round(QUALITY[k].grass * 0.55), shadow: Math.min(QUALITY[k].shadow, 1536) };
+    for (const k of ['medium', 'high', 'ultra']) QUALITY[k] = { ...QUALITY[k], msaa: 0, reflection: Math.min(QUALITY[k].reflection, 256), grass: Math.round(QUALITY[k].grass * 0.55), shadow: Math.min(QUALITY[k].shadow, 2048) };
   }
   const q = QUALITY[G.quality];
   // how far people are drawn, how far they cast shadows, how often the shadow map is redrawn
   const light = G.integrated || G.quality === 'low' || G.quality === 'medium';
   G.viewPeople = G.quality === 'low' ? 60 : G.integrated ? 70 : light ? 85 : 115;
-  G.shadowPeople = G.quality === 'low' ? 18 : light ? 28 : 45;
-  G.shadowEvery = light ? 2 : 1;
+  G.shadowPeople = G.quality === 'low' ? 26 : light ? 40 : 52;
+  G.shadowEvery = 1;
   const basePR = () => (G.quality === 'low' ? 0.75 * Math.min(devicePixelRatio || 1, 1) : G.quality === 'medium' ? Math.min(devicePixelRatio || 1, 1) : Math.min(devicePixelRatio || 1, 1.5));
   let prScale = G.integrated ? 0.85 : 1, stage = 0, frameN = 0;
   renderer.setPixelRatio(basePR() * prScale);
@@ -84,6 +86,7 @@ async function boot() {
   await nextFrame();
   const W = await buildWorld(scene, async (p, t) => { ui.loading(p, t); await nextFrame(); await nextFrame(); });
   setupWheel(EQUIP);
+  setupBlobs(scene);
   ui.attach(scene);
   const post = new Post(renderer, scene, camera);
   const story = G.story = new Story();
@@ -95,10 +98,10 @@ async function boot() {
   const base = { view: G.viewPeople, shadowP: G.shadowPeople, every: G.shadowEvery };
   const degrade = (st) => {
     if (post.bloom) post.bloom.enabled = st < 1;
-    G.shadowEvery = st >= 1 ? Math.max(3, base.every) : base.every;
+    G.shadowEvery = st >= 2 ? 3 : st >= 1 ? 2 : base.every;
     water.enabled = st < 2 && !!water.wantEnabled;
     G.viewPeople = st >= 2 ? Math.min(base.view, 65) : base.view;
-    G.shadowPeople = st >= 3 ? Math.min(base.shadowP, 16) : base.shadowP;
+    G.shadowPeople = st >= 3 ? Math.min(base.shadowP, 26) : base.shadowP;
   };
   G.perf = () => ({ prScale, stage });
   const resize = () => {

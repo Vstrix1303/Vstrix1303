@@ -137,10 +137,12 @@ export class Env {
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(q.shadow, q.shadow);
     const sc = this.sun.shadow.camera;
-    sc.left = -62; sc.right = 62; sc.top = 62; sc.bottom = -62; sc.near = 1; sc.far = 420;
+    // the shadow map is spent on what is near: sharp shadows close by rather than a blur over a wide field
+    const R = G.quality === 'low' ? 30 : G.quality === 'medium' || G.integrated ? 42 : 56;
+    sc.left = -R; sc.right = R; sc.top = R; sc.bottom = -R; sc.near = 1; sc.far = 420;
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.09;
-    this.sun.shadow.radius = 3.5;
+    this.sun.shadow.radius = 1.6;
     scene.add(this.sun); scene.add(this.sun.target);
 
     // shared uniforms for custom shaders (grass, water)
@@ -274,7 +276,10 @@ export class Env {
     // apply
     this.sunI = sunI; this.hemiI = hemiI;
     this.sun.color.copy(c.sun); this.sun.intensity = sunI;
-    this.hemi.color.copy(c.hemi); this.hemi.intensity = hemiI * 0.6 * (1 + fl * 5);
+    // sky fill is held back in sunlight so shade reads as shade; it returns as the sun weakens
+    const shade = THREE.MathUtils.clamp(sunI / 3, 0, 1) * (1 - rain);
+    this.hemi.color.copy(c.hemi); this.hemi.intensity = hemiI * (0.6 - 0.16 * shade) * (1 + fl * 5);
+    this.scene.environmentIntensity = 0.6 - 0.18 * shade;
     const ek = this.hour * 4 + this.rain * 6;
     if (Math.abs(ek - this.envKey) > (G.quality === 'low' ? 2 : 0.8)) {
       this.envKey = ek;
@@ -288,7 +293,7 @@ export class Env {
     this.hemi.groundColor.copy(c.hemi).multiplyScalar(0.55).lerp(new THREE.Color(0.2, 0.15, 0.09), 0.35);
     this.scene.fog.color.copy(c.fog);
     this.scene.fog.density = fogD;
-    this.sun.target.position.set(Math.round(focus.x / 2) * 2, focus.y, Math.round(focus.z / 2) * 2);
+    { const st = (this.sun.shadow.camera.right * 2) / this.sun.shadow.mapSize.x * 8; this.sun.target.position.set(Math.round(focus.x / st) * st, focus.y, Math.round(focus.z / st) * st); }
     this.sun.position.copy(this.sun.target.position).addScaledVector(this.lightDir, 200);
 
     const u = this.u;
