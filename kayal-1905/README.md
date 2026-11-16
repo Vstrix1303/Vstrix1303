@@ -307,6 +307,31 @@ The remaining block-built models were rebuilt as smooth, shaped surfaces.
 - **Smaller fixes:** the mundu hangs looser below the hips, so thighs no longer show through it, and small
   sums show as annas ("4 as") rather than "Rs 0 · 4 as".
 
+## Performance — 40 fps on integrated graphics
+
+Measured at the busiest spot in the game (the bazaar at dusk, with traffic and about 50 people in range), per frame:
+
+| | Before | After |
+|---|---|---|
+| Triangles, main view | 5.1 million | 1.6 million |
+| Triangles, shadow pass | 1.5 million | 0.8 million |
+| Draw calls (main + shadow) | 1,234 | ~800 |
+| Script time | 6.7 ms | ~3 ms |
+
+- **Trees:** palms and trees have a light build with the same silhouette, drawn beyond 65 m. Before, all
+  ~2,000 triangles of every tree were drawn out to the horizon.
+- **Buildings:** they're merged per 150 m tile instead of across the whole map, so buildings that are
+  off-screen or outside the shadow area are skipped. Far tiles are hidden.
+- **People:**
+  - They're now culled when off-screen (they never were).
+  - They switch to lighter models sooner.
+  - Eyes and small parts are dropped past 22 m.
+  - Far figures animate at a reduced rate and stop casting shadows.
+- **Shadows and lights:** on integrated graphics the shadow map is redrawn every other frame, and two night lights are used instead of four.
+- **Automatic quality:** it aims for at least **40 fps**. It first lowers the resolution (integrated GPUs start at
+  85%), then switches off bloom, redraws shadows less often, drops the water reflection, and shortens the shadow range.
+  **F3** shows the frame rate, the resolution and how much has been trimmed.
+
 ## A note on the setting
 
 Travancore in 1905 was a princely state under a British Resident; its district officers were the Dewan
