@@ -70,7 +70,7 @@ export class Water {
     const open = smoothstep(-15.0, -500.0, infoV.g);         // 1 in the open sea
     const shore = smoothstep(-4.0, -60.0, infoV.g);
     const camD = length(positionLocal.xz);
-    const amp = open.mul(0.85).add(shore.mul(0.12)).add(0.03).mul(smoothstep(3500.0, 600.0, camD));
+    const amp = open.mul(0.85).add(shore.mul(0.12)).add(0.03).mul(smoothstep(3500.0, 600.0, camD)).mul(U.storm.mul(1.3).add(1));
 
     // Gerstner displacement + analytic slope (vertex stage)
     const t = U.time;
@@ -108,7 +108,9 @@ export class Water {
     const detail = smoothstep(1800.0, 60.0, camDist);
     const calm = mix(float(0.45), float(1.0), openF);
     const nT = n1.xy.add(n2.xy.mul(0.6)).add(n3.xy.mul(0.8)).mul(calm).mul(mix(float(0.25), float(0.55), detail));
-    const nWorld = normalize(vec3(vSlope.x.negate().add(nT.x), 1.0, vSlope.y.negate().add(nT.y)));
+    // rain: a fizz of tiny ripples over every surface
+    const rr = ns(1.13, 0.7, 0.0, -0.9).xy.add(ns(0.71, 2.2, 0.6, 0.0).xy).mul(U.rain.mul(0.45)).mul(detail);
+    const nWorld = normalize(vec3(vSlope.x.negate().add(nT.x).add(rr.x), 1.0, vSlope.y.negate().add(nT.y).add(rr.y)));
     m.normalNode = transformNormalToView(nWorld);
 
     // colour: backwater greens in the lagoon, Arabian Sea blues offshore

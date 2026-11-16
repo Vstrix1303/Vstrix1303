@@ -52,6 +52,16 @@ export class Sky {
     this.sky.cloudScale.value = 0.00022;
     this.sky.frustumCulled = false;
     scene.add(this.sky);
+    // monsoon overcast: blend the physical sky towards a low grey ceiling
+    const overcast = (mesh) => {
+      const base = mesh.material.colorNode;
+      const dy = normalize(positionWorld.sub(cameraPosition)).y;
+      const grey = mix(vec3(0.16, 0.175, 0.19), vec3(0.06, 0.068, 0.078), smoothstep(0.0, 0.5, dy)).mul(float(1).sub(U.storm.mul(0.35)));
+      const k = U.cloud.mul(mix(float(0.88), float(0.98), smoothstep(-0.05, 0.4, dy))).mul(smoothstep(0.15, 0.6, U.cloud).mul(0.7).add(0.3));
+      mesh.material.colorNode = vec4(mix(base.xyz, grey.mul(base.xyz.length().mul(0.25).add(0.75)).min(base.xyz.add(grey)), k), 1);
+    };
+    overcast(this.sky);
+    this.overcast = overcast;
 
     // Night dome (stars + soft moonlit gradient), additive over the sky.
     this.night = this.makeNight();
@@ -81,6 +91,7 @@ export class Sky {
     for (const k of ['turbidity', 'rayleigh', 'mieCoefficient', 'mieDirectionalG', 'sunPosition']) this.envSky[k] = this.sky[k];
     this.envSky.cloudCoverage.value = 0; this.envSky.showSunDisc.value = 0;
     this.envSky.scale.setScalar(1000);
+    this.overcast(this.envSky);
     this.envScene.add(this.envSky);
     const glow = new THREE.Mesh(new THREE.SphereGeometry(900, 16, 8), new THREE.MeshBasicNodeMaterial({ side: THREE.BackSide, color: 0x0b1222 }));
     this.envNight = glow.material;
@@ -128,6 +139,7 @@ export class Sky {
     const dome = new THREE.Mesh(new THREE.SphereGeometry(31000, 32, 16), dm);
     dome.frustumCulled = false; dome.renderOrder = -2;
     pts.add(dome);
+
     return pts;
   }
 
@@ -176,23 +188,45 @@ export class Sky {
     U.fogDensity.value = k.fogD;
     U.mist.value = k.mist;
     this.exposure = k.exp;
-    this.sky.cloudCoverage.value = 0.38;
+    this.base = { sunI: k.sunI, hemi: this.hemi.intensity, fog: k.fog.clone(), fogD: k.fogD, mist: k.mist, exp: k.exp };
+    this.applyWeather();
     this.envNight.color.setRGB(0.03 * nightF, 0.05 * nightF, 0.11 * nightF);
     if (force || Math.abs(hr - this.lastEnvHour) > 0.25) this.bakeEnv();
   }
 
   bakeEnv() {
     this.lastEnvHour = G.hour;
+    this.lastEnvCloud = U.cloud.value;
     const old = this.envTarget;
     this.envTarget = this.pmrem.fromScene(this.envScene, 0, 1, 2000);
     this.scene.environment = this.envTarget.texture;
-    this.scene.environmentIntensity = 0.5 + 0.1 * (1 - U.night.value);
+    this.scene.environmentIntensity = (0.5 + 0.1 * (1 - U.night.value)) * (1 - 0.35 * U.cloud.value);
     if (old) old.dispose();
   }
 
+  // Monsoon modifiers on top of the hour's lighting (weather.js sets this.wx).
+  applyWeather() {
+    const w = this.wx || { cloud: 0, rain: 0, storm: 0, flash: 0 };
+    const b = this.base; if (!b) return;
+    const dim = 1 - 0.72 * w.cloud - 0.15 * w.storm;
+    this.sun.intensity = b.sunI * dim;
+    U.sunColor.value.copy(this.sun.color).multiplyScalar(this.sun.intensity / 3);
+    this.hemi.intensity = b.hemi * (1 + 0.6 * w.cloud) + w.flash * 6;
+    const grey = new THREE.Color(0x5c6268).multiplyScalar((1 - U.night.value * 0.85) * (1 - 0.3 * w.storm));
+    U.fogColor.value.copy(b.fog).lerp(grey, 0.75 * w.cloud);
+    U.fogDensity.value = b.fogD * (1 + 2.5 * w.rain + 2 * w.storm);
+    U.mist.value = Math.max(b.mist, 0.35 * w.rain);
+    this.exposure = b.exp * (1 + 0.15 * w.cloud) * (1 + w.flash * 1.5);
+    this.sky.cloudCoverage.value = 0.38 + 0.55 * w.cloud;
+    this.sky.cloudDensity.value = 0.5 + 0.45 * w.cloud;
+    this.sky.turbidity.value = 2.4 + 6 * w.cloud;
+  }
+
   update(dt) {
+    if (Math.abs(U.cloud.value - (this.lastEnvCloud ?? 0)) > 0.08) this.bakeEnv();
     if (G.timeScale > 0) this.setHour(G.hour + dt * G.timeScale);
-    else { this.sun.position.copy(U.sunDir.value).multiplyScalar(2000).add(G.focus); this.sun.target.position.copy(G.focus); }
+    else {
+      this.applyWeather(); this.sun.position.copy(U.sunDir.value).multiplyScalar(2000).add(G.focus); this.sun.target.position.copy(G.focus); }
     this.night.position.copy(this.camera.position);
     this.moon.position.copy(this.moonDir).multiplyScalar(26000).add(this.camera.position);
   }

@@ -17,6 +17,8 @@ import { UI } from './game/ui.js';
 import { Colliders } from './game/physics.js';
 import { Villagers } from './game/npcs.js';
 import { Traffic } from './render/traffic.js';
+import { Weather } from './render/weather.js';
+import { Audio } from './game/audio.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -116,6 +118,10 @@ async function boot() {
   G.focus.copy(fly.enabled ? fly.pos : player.pos);
   villagers.prefill(G.focus); traffic.prefill(G.focus);
   status('Compiling shaders…', 0.94); await tick();
+  const audio = new Audio();
+  const weather = new Weather(scene, sky, audio);
+  if (params.get('weather')) weather.set(params.get('weather'), true);
+  ui.weather = weather;
   const post = new Post(renderer, scene, camera);
   G.focus.copy(fly.enabled ? fly.pos : player.pos);
   terrain.buildAll(G.focus);
@@ -140,7 +146,7 @@ async function boot() {
   const clock = new THREE.Timer();
   const _dir = new THREE.Vector3(); let glareS = 0;
   let frames = 0, fpsT = 0, fps = 0;
-  window.__vaikara = { G, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
+  window.__vaikara = { G, weather, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
   renderer.setAnimationLoop(() => {
     clock.update(); const dt = Math.min(0.05, clock.getDelta());
     G.dt = dt; G.time += dt; U.time.value = G.time;
@@ -148,7 +154,9 @@ async function boot() {
     if (fly.enabled) fly.update(dt); else player.update(dt);
     G.focus.copy(fly.enabled ? fly.pos : player.pos);
     U.camPos.value.copy(camera.position);
+    weather.update(dt, camera.position);
     sky.update(dt);
+    post.sat.value = 1.1 - 0.28 * weather.w.cloud;
     // simple eye adaptation: stop down when looking into a low sun; soften the disc at dawn/dusk
     camera.getWorldDirection(_dir);
     const sd = sky.sunDir, low = 1 - THREE.MathUtils.smoothstep(sd.y, 0.08, 0.5);

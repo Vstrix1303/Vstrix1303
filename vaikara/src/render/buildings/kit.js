@@ -3,7 +3,7 @@
 // domes, towers, stairs.
 import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { float, vec3, mix, smoothstep, sin, positionWorld, texture, uv } from 'three/tsl';
+import { float, vec3, vec4, mix, smoothstep, sin, positionWorld, texture, uv, vertexColor } from 'three/tsl';
 import { pbr } from '../textures.js';
 import { U } from '../../state.js';
 
@@ -14,7 +14,12 @@ export function materials() {
   if (MATS) return MATS;
   const std = (name, o = {}) => {
     const s = pbr(name);
-    return new THREE.MeshStandardNodeMaterial({ map: s.map, normalMap: s.normalMap, roughnessMap: s.arm, aoMap: s.arm, roughness: 1, metalness: 0, color: o.color ?? 0xffffff, side: o.side ?? THREE.FrontSide, vertexColors: true });
+    const m = new THREE.MeshStandardNodeMaterial({ map: s.map, normalMap: s.normalMap, roughnessMap: s.arm, aoMap: s.arm, roughness: 1, metalness: 0, color: o.color ?? 0xffffff, side: o.side ?? THREE.FrontSide, vertexColors: true });
+    // wet in the rain: glossier and a little darker
+    m.roughnessNode = texture(s.arm, uv()).g.mul(float(1).sub(U.rain.mul(0.6)));
+    const tc = new THREE.Color(o.color ?? 0xffffff);
+    m.colorNode = vec4(texture(s.map, uv()).rgb.mul(vec3(tc.r, tc.g, tc.b)).mul(vertexColor().rgb).mul(float(1).sub(U.rain.mul(0.25))), 1);
+    return m;
   };
   const win = new THREE.MeshStandardNodeMaterial({ color: 0x0c0907, roughness: 0.92 });
   // windows glow warm after dusk (only some of them: hash of position)

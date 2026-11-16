@@ -138,6 +138,7 @@ export class UI {
     if (Input.down('BracketRight')) this.sky.setHour(G.hour + dt * 2.5);
     if (Input.down('BracketLeft')) this.sky.setHour(G.hour - dt * 2.5);
     if (Input.hit('KeyP')) G.timeScale = G.timeScale ? 0 : 1 / 40;
+    if (Input.hit('KeyR') && this.weather) { this.weather.cycle(); this.toast?.(`Weather: ${this.weather.state}`); }
     if (Input.hit('KeyG')) {
       const order = ['low', 'medium', 'high', 'ultra'];
       const next = order[(order.indexOf(G.quality) + 1) % order.length];
@@ -162,7 +163,7 @@ export class UI {
     const W = 40 * 16;
     const wrap = $('compass').clientWidth;
     strip.style.left = `${wrap / 2 - 20 - (deg / 360) * W - W}px`;
-    $('clockTime').textContent = fmt(G.hour) + (G.timeScale ? '' : ' ·');
+    $('clockTime').textContent = fmt(G.hour) + (G.timeScale ? '' : ' ·') + (this.weather ? ` · ${this.weather.state}` : '');
   }
 
   stats(fps, info, people = 0) {

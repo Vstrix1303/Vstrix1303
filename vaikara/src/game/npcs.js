@@ -5,7 +5,7 @@
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
-import { G } from '../state.js';
+import { G, U } from '../state.js';
 import { W, getHeight, nearestRoad } from '../world/data.js';
 import { PLACES, placeById as P } from '../world/layout.js';
 import { makeRng } from '../world/noise.js';
@@ -144,7 +144,7 @@ export class Villagers {
 
   update(dt, focus, camera) {
     if (!this.pool.length) return;
-    const target = Math.round(MAX * hourFactor(G.hour) * Math.min(1, this.liveliness(focus.x, focus.z) * 1.4 + 0.15));
+    const target = Math.round(MAX * hourFactor(G.hour) * (1 - U.rain.value * 0.75) * Math.min(1, this.liveliness(focus.x, focus.z) * 1.4 + 0.15));
     const active = this.pool.filter((n) => n.active);
     this.timer -= dt;
     if (this.timer <= 0) {

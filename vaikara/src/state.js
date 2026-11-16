@@ -32,6 +32,8 @@ export const U = {
   fogDensity: uniform(0.00012),
   mist: uniform(0),
   rain: uniform(0),
+  storm: uniform(0),
+  cloud: uniform(0),
   camPos: uniform(new THREE.Vector3()),
 };
 export const UP = vec3(0, 1, 0);

@@ -185,7 +185,8 @@ function windNode(strength, flutter) {
 
 function leafMaterial(map, { strength = 0.0015, flutter = 0.12, color = 0xffffff, rough = 1 } = {}) {
   const m = new THREE.MeshStandardNodeMaterial({ map, side: THREE.DoubleSide, alphaTest: 0.45, roughness: rough, metalness: 0, color });
-  m.envMapIntensity = 0.35; // leaves are matte: no sky sheen
+  m.envMapIntensity = 0.35; // leaves are matte: no sky sheen…
+  m.roughnessNode = float(rough).sub(U.rain.mul(0.18)); // …a little glossier in the rain
   m.positionNode = windNode(strength, flutter);
   // a touch of translucency: leaves glow when the sun is behind them
   return m;

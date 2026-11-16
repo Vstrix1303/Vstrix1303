@@ -173,13 +173,19 @@ export async function terrainMaterial() {
   col = mix(col, col.mul(vec3(0.55, 0.68, 0.42)), forestShade.mul(0.8));
   // wet shoreline: darker and glossier near/below the water line
   const h = positionWorld.y;
-  const wet = smoothstep(1.4, 0.1, h);
+  const shoreWet = smoothstep(1.4, 0.1, h);
+  // monsoon: everything darkens and turns glossy; puddles collect on flat ground
+  const flat = smoothstep(0.985, 0.998, nW.y);
+  const puddle = smoothstep(0.62, 0.7, nz2.g.mul(0.6).add(nz.r.mul(0.4))).mul(flat).mul(smoothstep(0.3, 0.8, U.rain));
+  const wet = max(shoreWet, U.rain.mul(0.75));
   col = col.mul(mix(float(1), float(0.55), wet));
+  col = mix(col, col.mul(0.22), puddle);
   rough = mix(rough, float(0.0), wet.mul(0.8));
+  rough = mix(rough, float(-1.0), puddle); // clamped below → mirror-like puddles
   // normal: UDN blend in world space (tiles are planar in XZ)
   const nWorld = normalize(vec3(nW.x.add(nrm.x), nW.y, nW.z.add(nrm.y)));
   mat.colorNode = vec4(col, 1);
-  mat.roughnessNode = clamp(rough.mul(0.5).add(0.5), 0.62, 1.0);
+  mat.roughnessNode = clamp(rough.mul(0.5).add(0.5), mix(float(0.62), float(0.12), max(puddle, U.rain.mul(0.5))), 1.0);
   mat.envMapIntensity = 0.6;
   mat.normalNode = transformNormalToView(nWorld);
   mat.aoNode = mix(float(1), ao, 0.7);
