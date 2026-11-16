@@ -36,3 +36,19 @@ export function realMaterial(slot, o = {}) {
   if (o.tint) m.color.setRGB(...o.tint);
   return m;
 }
+
+// Realistic human bodies (MakeHuman, CC0) — desktop app only; otherwise the drawn figures are used.
+export const HUMANS = { ready: false, presets: {}, data: {}, eyeTex: null };
+export async function loadHumans(onProgress) {
+  if (location.protocol === 'file:') return false;
+  let man;
+  try { const r = await fetch('assets/humans/manifest.json'); if (!r.ok) return false; man = await r.json(); } catch { return false; }
+  try {
+    const keys = Object.keys(man.presets);
+    let done = 0;
+    await Promise.all(keys.map(async (k) => { const r = await fetch(`assets/humans/${k}.bin`); if (!r.ok) throw new Error(k); HUMANS.data[k] = await r.arrayBuffer(); onProgress?.(++done / keys.length); }));
+    HUMANS.eyeTex = await new THREE.TextureLoader().loadAsync('assets/humans/eye.png').catch(() => null);
+  } catch (e) { console.warn('realistic people unavailable', e); return false; }
+  HUMANS.presets = man.presets; HUMANS.ready = true;
+  return true;
+}

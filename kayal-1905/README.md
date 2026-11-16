@@ -208,6 +208,29 @@ The remaining block-built models were rebuilt as smooth, shaped surfaces.
   Choose it with the *Graphics* button on the title screen.
 - The browser version keeps the hand-painted textures (the photo-scanned set is 36 MB).
 
+## Version 9 — realistic people (desktop app)
+
+- **Bodies from MakeHuman** (makehumancommunity.org; base mesh, morph targets, skeleton and skin weights
+  are all CC0). `tools/mh-build.mjs` blends MakeHuman's sex, age, muscle, weight and ancestry targets into
+  ten body types — young, lean, heavy and older men, young and older women, a boy and a girl, and two
+  European builds for the Company men — re-poses them from MakeHuman's A-pose to the game's rest pose, and
+  folds MakeHuman's 163 bones onto the game's animation rig, so every movement built earlier drives them.
+- **Each body's own skeleton**: joints sit where that body's joints are, and the walking/foot-planting
+  code reads each character's own leg lengths.
+- **Clothing drawn by a shader on the body's surface** (from its rest-pose position): mundu, kasavu
+  borders, checked lungi, shirts, kurtas, coats with lapels and buttons, uniforms with belts and
+  cross-straps, blouses with the neriyathu, the chatta, the shoulder cloth, sacred thread, charms, bangles,
+  rosaries, trousers, boots, puttees, sandals — no texture per outfit, sharp at any distance. Faces get
+  lips, eyebrows, moustaches, beards and forehead marks the same way.
+- **Hair** grown as a shell from each body's own scalp and trimmed along a soft hairline; the mundu is a
+  separate cloth fitted to each body's hips and legs; real eyes; a jaw that moves when people talk and
+  eyelids that blink and narrow with expressions.
+- **Three levels of detail** (27,000 / 8,000 / 2,700 triangles) chosen by distance, so a street full of
+  people stays affordable on integrated graphics.
+- **Integrated GPUs** (Radeon Vega, Intel UHD/Iris) are detected and start on Medium with the costliest
+  effects trimmed; **F3** shows the frame rate.
+- The browser version keeps the drawn figures.
+
 ## A note on the setting
 
 Travancore in 1905 was a princely state under a British Resident; its district officers were the Dewan

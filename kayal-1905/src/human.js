@@ -11,6 +11,7 @@ import { damp, clamp, lerp, makeRng } from './util.js';
 import { bodyGeometry, headScale, B, RIG, R_HEAD, R_TORSO, R_ARM, R_LEG, R_SKIRT, R_HAND, R_FOOT, R_CLOTH } from './body.js';
 import { initMotion, updateMotion, flinch } from './motion.js';
 import { normalFromCanvas } from './texmaps.js';
+import { pickBody, buildBody, legacyAnchors, updateFace } from './mhuman.js';
 import { hairGeo, hairMat, clothMat, feltMat, earGeo, bunGeo, braidGeo, hatGeo, bandGeo, knotGeo, bagGeo, capeGeo, hoodGeo, canopyGeo } from './wear.js';
 
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
@@ -545,6 +546,18 @@ export class Human {
     this.body = new THREE.Group(); this.root.add(this.body);
     const bone = (parent, x, y, z) => { const b = new THREE.Bone(); b.position.set(x, y, z); parent.add(b); return b; };
     const fem = !!o.female, SX = RIG.shoulderX(fem);
+    const bodyKey = pickBody(o);
+    let AH, AC, AP;
+    this.handAnchor = [null, null];
+    if (bodyKey) {
+      // a realistic MakeHuman body; old accessories ride in anchor groups set to the old proportions
+      this.skirtMaterial = makeTexture(look, 512);
+      buildBody(this, o, bodyKey);
+      const an = legacyAnchors(this, o, RIG);
+      this.head.add(an.head); this.chest.add(an.chest); this.hips.add(an.hips); this.armL.hand.add(an.handL); this.armR.hand.add(an.handR);
+      AH = an.head; AC = an.chest; AP = an.hips; this.handAnchor = [an.handL, an.handR]; this.chestAnchor = an.chest;
+      initMotion(this);
+    } else {
     const hips = this.hips = bone(this.body, 0, RIG.hipY, 0);
     const spine = this.spine = bone(hips, 0, RIG.spine, 0);
     const chest = this.chest = bone(spine, 0, RIG.chest, 0);
@@ -564,14 +577,17 @@ export class Human {
     this.root.updateMatrixWorld(true);
     mesh.bind(new THREE.Skeleton(bones));
     initMotion(this);
+    AH = head; AC = chest; AP = hips;
+    }
+    const head = AH, chest = AC;
 
     // ---- ears, hair, and what is worn on the head: all shaped surfaces
     const hsc = headScale(o), skinM = AM(shadeN(o.skin, 0.92), 0.6);
-    for (const s of [-1, 1]) { const e = new THREE.Mesh(earGeo(), skinM); e.position.set(s * (0.0757 * hsc - 0.003), 0.1, -0.008); e.rotation.set(0, -s * 0.3, -s * Math.PI / 2); e.castShadow = true; head.add(e); }
+    if (!bodyKey) for (const s of [-1, 1]) { const e = new THREE.Mesh(earGeo(), skinM); e.position.set(s * (0.0757 * hsc - 0.003), 0.1, -0.008); e.rotation.set(0, -s * 0.3, -s * Math.PI / 2); e.castShadow = true; head.add(e); }
     const hairC = o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e), hairM = hairMat(hairC);
     const gear = o.headgear, gc = o.gearColor, hat = gear && gear !== 'thorthu';
     const put = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
-    if (!o.bald) put(head, hairGeo(fem, !!o.receding, hsc, !!hat), hairM);
+    if (!o.bald && !bodyKey) put(head, hairGeo(fem, !!o.receding, hsc, !!hat), hairM);
     if (o.bun) { const b = put(head, bunGeo(), hairM, 0, 0.1, -0.112 * hsc); b.rotation.x = -1.15; if (o.flowers) { const f = put(head, new THREE.TorusGeometry(0.036, 0.011, 6, 14), AM(0xf3efe2, 0.9), 0, 0.1, -0.118 * hsc); f.rotation.x = 0.42; } }
     const onHead = (geo, mat) => { const m = put(head, geo, mat, 0, 0, 0.002); m.scale.set(hsc, 1, hsc); return m; };
     if (gear === 'turban') { const cm = clothMat(gc ?? 0xb02a22, true); onHead(hatGeo('turban'), cm).rotation.x = -0.12; const k = put(head, knotGeo(), cm, -0.05, 0.15, -0.105); k.rotation.set(0.3, 0, 0.2); }
@@ -589,7 +605,7 @@ export class Human {
       if (o.flowers) for (let i = 0; i < 3; i++) put(br, new THREE.TorusGeometry(0.03, 0.01, 6, 12), AM(0xf6f2e6, 0.9), 0, 0.02 - i * 0.075, -0.016).rotation.x = Math.PI / 2;
       this.dangles.push({ obj: br, k: 0.6, x: 0, z: 0, vx: 0, vz: 0 });
     }
-    if (o.bag != null) put(this.hips, bagGeo(), clothMat(o.bag), 0.225, -0.01, 0.02);
+    if (o.bag != null) put(AP, bagGeo(), clothMat(o.bag), 0.225, -0.01, 0.02);
     if (o.cape) {          // the woven palm-leaf rain cape of the monsoon
       put(chest, capeGeo(), leafMat(), 0, -0.08, -0.005).rotation.x = 0.07;
       put(head, hoodGeo(), leafMat(), 0, -0.05, -0.02).rotation.x = -0.2;
@@ -607,6 +623,7 @@ export class Human {
     flinch(this, (dx * c - dz * s) / l, (dx * s + dz * c) / l, k);
   }
   refreshFace() {
+    if (this.mh) return;          // realistic faces move their lids and jaw instead (see updateFace)
     const plain = this.expr === 'neutral' && !this.mouthOpen && !this.blink;
     this.mesh.material = plain ? makeTexture(this.look, this.res) : paintFace(this);
   }
@@ -624,21 +641,22 @@ export class Human {
       const sh = new THREE.Mesh(G_CYL, AM(0x4a3a26, 0.9)); sh.scale.set(0.011, 0.74, 0.011); sh.position.set(0.185, 0.45, 0.22); sh.rotation.set(-0.27, 0, 0.18); u.add(sh);
       const cn = new THREE.Mesh(canopyGeo(), leafMat()); cn.position.set(0.12, 0.84, 0.12); cn.castShadow = true; u.add(cn);
       const tip = new THREE.Mesh(G_SPH, AM(0x4a3a26, 0.9)); tip.scale.setScalar(0.022); tip.position.set(0.12, 0.95, 0.12); u.add(tip);
-      this.chest.add(u);
+      (this.chestAnchor || this.chest).add(u);
     }
     if (this.umb) this.umb.visible = !!on;
     this.umbrella = !!on;
   }
-  hold(obj, right = true) { (right ? this.armR : this.armL).hand.add(obj); return obj; }
+  hold(obj, right = true) { (this.handAnchor[right ? 1 : 0] || (right ? this.armR : this.armL).hand).add(obj); return obj; }
 
   update(dt) {
     if (this.exprT > 0) { this.exprT -= dt; if (this.exprT <= 0) this.setExpression('neutral'); }
     const t = this.t, mo = this.talking && (Math.sin(t * 17) + Math.sin(t * 7.3)) > 0.15;
     if (mo !== this.mouthOpen) { this.mouthOpen = mo; this.refreshFace(); }
-    if (this.near && !this.relief) { this.relief = true; addRelief(this.look, this.res); if (this.faceMat) this.faceMat.normalMap = makeTexture(this.look, this.res).normalMap; }
+    if (this.near && !this.relief && !this.mh) { this.relief = true; addRelief(this.look, this.res); if (this.faceMat) this.faceMat.normalMap = makeTexture(this.look, this.res).normalMap; }
     // walked out of sight with a plain face: give the private face texture back
     if (this.faceCanvas && !this.near && this.mesh.material !== this.faceMat) freeFace(this);
     updateMotion(this, dt);
+    updateFace(this, dt);
   }
 }
 

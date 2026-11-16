@@ -41,7 +41,7 @@ export class Player {
     const old = this.h;
     this.h = new Human({ ...def.look, build: 1.03, hero: G.quality === 'high' });
     if (old) { this.root.remove(old.root); this.h.state = old.state; }
-    this.h.near = true; this.h.grip = true;
+    this.h.near = true; this.h.grip = true; this.h.heroLOD = true;
     this.h.onStep = () => { if (this.mode === 'foot' && this.grounded && this.speedNow > 0.4) G.audio?.sfx(this.swimming || this.pos.y < -0.1 ? 'wade' : 'step', this.crouch ? 0.3 : this.speedNow > 5 ? 0.85 : 0.6); };
     this.root.add(this.h.root);
     this.h.hold(this.stick); this.h.hold(this.paddle); this.h.hold(this.rod); this.h.hold(this.bucket, false);

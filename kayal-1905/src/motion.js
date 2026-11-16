@@ -13,25 +13,25 @@ import { damp, clamp, lerp, smoothstep, angleDiff } from './util.js';
 const TAU = Math.PI * 2;
 const frac = (x) => x - Math.floor(x);
 const ease = (s) => s * s * (3 - 2 * s);
-const L1 = RIG.thigh, L2 = RIG.shin, LMAX = (L1 + L2) * 0.996;
 const _d = new THREE.Vector3(), _t = new THREE.Vector3(), _n = new THREE.Vector3(), _m = new THREE.Vector3(), _x = new THREE.Vector3(), _p = new THREE.Vector3(), _hj = new THREE.Vector3();
 const _mat = new THREE.Matrix4(), _q = new THREE.Quaternion(), _qp = new THREE.Quaternion(), _qi = new THREE.Quaternion(), _e = new THREE.Euler();
 
-const BASE = () => ({
+const BASE = (R = RIG) => ({
   legL: 0, legR: 0, kneeL: 0.03, kneeR: 0.03, legLz: 0, legRz: 0,
   armL: 0, armR: 0, elL: -0.14, elR: -0.14, armLz: -0.07, armRz: 0.07, clavL: 0, clavR: 0, wristL: 0, wristR: 0, fingL: 0.35, fingR: 0.35,
   spine: 0, twist: 0, sway: 0, head: 0, headY: 0, headZ: 0,
-  hipY: RIG.hipY, hipX: 0, hipZ: 0, pelvX: 0, pelvY: 0, pelvZ: 0, bodyX: 0, bodyY: 0,
+  hipY: R.hipY, hipX: 0, hipZ: 0, pelvX: 0, pelvY: 0, pelvZ: 0, bodyX: 0, bodyY: 0,
 });
 
 export function initMotion(h) {
-  h.j = BASE();
+  h.rig = h.rig || RIG;
+  h.j = BASE(h.rig);
   h.state = 'idle';
   h.phase = Math.random() * 6; h.t = Math.random() * 10; h.speed = 0;
   h.strikeT = -1; h.strikeDur = 0.42; h.strikeN = 0; h.blocking = false; h.carry = false;
   h.w = { x: 0, y: 0, z: 0, yaw: 0, ok: false, had: false, px: 0, pz: 0, pyaw: 0, vx: 0, vz: 0 };
   h.gait = 0; h.moving = false; h.ik = 0; h.air = false; h.lod = 0; h.near = false;
-  h.feet = [0, 1].map(() => ({ x: 0, z: 0, gy: 0, sw: -1, fx: 0, fz: 0, fy: 0, dur: 0.25, yaw: 0, fyaw: 0, idle: false, ax: 0, ay: RIG.ankle, az: 0, pitch: 0, stance: 0 }));
+  h.feet = [0, 1].map(() => ({ x: 0, z: 0, gy: 0, sw: -1, fx: 0, fz: 0, fy: 0, dur: 0.25, yaw: 0, fyaw: 0, idle: false, ax: 0, ay: h.rig.ankle, az: 0, pitch: 0, stance: 0 }));
   h.stepCd = 0;
   h.vf = 0; h.vs = 0; h.af = 0; h.omega = 0; h.lean = 0; h.bank = 0;
   h.exert = 0; h.breath = Math.random() * 6;
@@ -56,7 +56,7 @@ function resetFeet(h) {
   for (let i = 0; i < 2; i++) {
     const f = h.feet[i], lx = (i ? 1 : -1) * 0.085;
     f.x = w.x + lx * c * S; f.z = w.z - lx * s * S; f.gy = w.y; f.sw = -1; f.yaw = w.yaw; f.idle = false;
-    f.ax = lx; f.ay = RIG.ankle; f.az = 0; f.pitch = 0;
+    f.ax = lx; f.ay = h.rig.ankle; f.az = 0; f.pitch = 0;
   }
 }
 
@@ -80,8 +80,9 @@ export function updateMotion(h, dt) {
   dt = Math.min(dt, 0.1);
   h.t += dt;
   const s = h.state, t = h.t, S = h.S, w = h.w;
+  const R = h.rig, L1 = R.thigh, L2 = R.shin, LMAX = (L1 + L2) * 0.996, HZ = R.hipZ || 0;
   const sp = h.speed / S;                 // speed in the figure's own scale
-  const g = BASE();
+  const g = BASE(R);
   let k = 12;
 
   // ---- how the body is travelling through the world
@@ -117,7 +118,7 @@ export function updateMotion(h, dt) {
       g.armR += beat; g.elR += beat * 1.5; g.head = Math.sin(t * 2.1) * 0.05 + (h.talking ? Math.sin(t * 5.2) * 0.03 : 0); g.headZ = Math.sin(t * 0.9) * 0.05;
       k = 7;
     }
-    if (s === 'cheer') { const wv = Math.sin(t * 9); g.armL = -2.7 + wv * 0.25; g.armR = -2.7 - wv * 0.25; g.elL = g.elR = -0.3; g.armLz = -0.35; g.armRz = 0.35; g.hipY = RIG.hipY - 0.03 + Math.abs(Math.sin(t * 4.5)) * 0.05; g.head = -0.2; g.fingL = g.fingR = 1.2; g.clavL = g.clavR = 0.2; }
+    if (s === 'cheer') { const wv = Math.sin(t * 9); g.armL = -2.7 + wv * 0.25; g.armR = -2.7 - wv * 0.25; g.elL = g.elR = -0.3; g.armLz = -0.35; g.armRz = 0.35; g.hipY = R.hipY - 0.03 + Math.abs(Math.sin(t * 4.5)) * 0.05; g.head = -0.2; g.fingL = g.fingR = 1.2; g.clavL = g.clavR = 0.2; }
   } else if (s === 'move' || s === 'crouch') {
     const crouch = s === 'crouch';
     // arms swing against the legs; elbows fold up as the pace rises
@@ -130,7 +131,7 @@ export function updateMotion(h, dt) {
     if (h.staff) { g.armR = -0.12 - A * 0.35 * Math.cos(ph); g.elR = -0.38 - 0.25 * runT; g.armRz = 0.14; }      // a staff is carried low at the side
     g.spine = 0.02 + sp * 0.017 + runT * 0.02;
     g.twist = -lerp(0.07, 0.14, runT) * walkA * Math.cos(ph) * 1.2;      // shoulders counter the pelvis
-    g.hipY = RIG.hipY - 0.012 * walkA - 0.03 * runT;
+    g.hipY = R.hipY - 0.012 * walkA - 0.03 * runT;
     g.head = -g.spine * 0.5;
     if (crouch) { g.hipY -= 0.18; g.spine += 0.55; g.elL = g.elR = -0.95; g.armL *= 0.5; g.armR *= 0.5; g.head = -0.42; g.armLz = -0.2; g.armRz = 0.2; }
     if (h.ik < 0.5) {          // far away or off the ground: a plain swinging gait
@@ -198,7 +199,7 @@ export function updateMotion(h, dt) {
     // bend, gather, straighten the back — not a metronome
     const c = frac(t / 4.4 + h.shiftSeed), down = c < 0.72 ? ease(clamp(c / 0.12, 0, 1)) : 1 - ease(clamp((c - 0.72) / 0.14, 0, 1));
     const pick = Math.sin(t * 5.2) * down;
-    g.spine = 0.12 + down * 0.82; g.hipY = RIG.hipY - down * 0.1; g.hipZ = -down * 0.1;
+    g.spine = 0.12 + down * 0.82; g.hipY = R.hipY - down * 0.1; g.hipZ = -down * 0.1;
     g.armL = -0.25 - down * 0.75 + pick * 0.28; g.armR = -0.25 - down * 0.75 - pick * 0.28; g.elL = g.elR = -0.35 - down * 0.2 + Math.abs(pick) * 0.2;
     g.head = -down * 0.35; g.fingL = g.fingR = 0.6 + pick * 0.5;
     if (c > 0.88) { g.armR = -0.2; g.elR = -1.8; g.armRz = -0.5; g.spine = -0.08; g.head = -0.12; }      // a hand to the small of the back
@@ -251,7 +252,7 @@ export function updateMotion(h, dt) {
     const buckle = ease(clamp(kt / 0.28, 0, 1)), fall = clamp((kt - 0.18) / 0.5, 0, 1), fl = fall * fall, down = kt > 0.68;
     const bounce = down ? Math.exp(-(kt - 0.68) * 7) * Math.sin((kt - 0.68) * 22) * 0.09 : 0;
     Object.assign(g, {
-      bodyX: -1.52 * fl + bounce, bodyY: 0.14 * fl - 0.06 * buckle * (1 - fl), hipY: RIG.hipY - 0.2 * buckle * (1 - fl),
+      bodyX: -1.52 * fl + bounce, bodyY: 0.14 * fl - 0.06 * buckle * (1 - fl), hipY: R.hipY - 0.2 * buckle * (1 - fl),
       spine: -0.3 * buckle * (1 - fl) + (down ? 0.04 : 0), head: -0.45 * buckle * (1 - fl) + (down ? 0.1 : 0), headY: down ? lerp(-0.6, 0.6, v) : 0,
       armL: lerp(-1.4, 0.1, fl) * buckle, armR: lerp(-1.2, -0.3 * v, fl) * buckle, armLz: -0.5 - 0.7 * fl, armRz: 0.4 + 0.9 * fl * (0.6 + v * 0.4), elL: -0.9 + 0.6 * fl, elR: -0.8 + 0.5 * fl,
       legL: -0.5 * buckle * (1 - fl) - 0.05, legR: -0.7 * buckle * (1 - fl) + (down ? -0.25 * v : 0), kneeL: 0.9 * buckle * (1 - fl) + 0.08, kneeR: 1.1 * buckle * (1 - fl) + (down ? 0.25 + 0.5 * v : 0.1),
@@ -391,11 +392,11 @@ export function updateMotion(h, dt) {
         else if (u > 0.6) { const r = ease((u - 0.6) / 0.4); pitch = -(0.8 + 0.3 * runT) * r * amp; az += 0.1 * r * amp; }
       }
       const heel = pitch < 0 && f.sw < 0 ? 0.105 * Math.sin(-pitch) : 0;
-      const ty = gy + RIG.ankle + lift + heel;
+      const ty = gy + R.ankle + lift + heel;
       const kk = f.sw >= 0 || jumped ? 40 : 60;
       f.ax = jumped ? ax : damp(f.ax, ax, kk, dt); f.ay = jumped ? ty : damp(f.ay, ty, kk, dt); f.az = jumped ? az : damp(f.az, az, kk, dt);
       f.pitch = damp(f.pitch, pitch, 30, dt);
-      if (f.sw < 0) { const hd2 = (f.ax - (hx + (i ? 1 : -1) * RIG.hipX)) ** 2 + (f.az - hz) ** 2; low = Math.min(low, f.ay + RIG.hipDrop + Math.sqrt(Math.max(0.02, LMAX * LMAX - hd2))); }
+      if (f.sw < 0) { const hd2 = (f.ax - (hx + (i ? 1 : -1) * R.hipX)) ** 2 + (f.az - hz - HZ) ** 2; low = Math.min(low, f.ay + R.hipDrop + Math.sqrt(Math.max(0.02, LMAX * LMAX - hd2))); }
     }
     // pelvis: rises over the standing leg, drops and turns with the stride
     if (moving) {
@@ -438,7 +439,7 @@ export function updateMotion(h, dt) {
       continue;
     }
     _e.set(pvX, pvY - j.twist * 0.4, pvZ + j.sway); _qp.setFromEuler(_e); _qi.copy(_qp).invert();
-    _hj.set(side * RIG.hipX, -RIG.hipDrop, 0).applyQuaternion(_qp); _hj.x += hx; _hj.y += hy; _hj.z += hz;
+    _hj.set(side * R.hipX, -R.hipDrop, HZ).applyQuaternion(_qp); _hj.x += hx; _hj.y += hy; _hj.z += hz;
     _d.set(f.ax - _hj.x, f.ay - _hj.y, f.az - _hj.z).applyQuaternion(_qi);
     let len = _d.length();
     len = clamp(len, 0.22, LMAX); _d.normalize();
@@ -465,7 +466,7 @@ export function updateMotion(h, dt) {
   const hp = h.hemP;
   const tx = clamp(-h.vs * 0.012 - h.omega * 0.012, -0.07, 0.07), tz = clamp(-h.vf * 0.014 - h.af * 0.004, -0.09, 0.05);
   hp.vx += ((tx - hp.x) * 60 - hp.vx * 7) * dt; hp.vz += ((tz - hp.z) * 60 - hp.vz * 7) * dt; hp.x += hp.vx * dt; hp.z += hp.vz * dt;
-  h.hem.position.set(hp.x, RIG.hem, hp.z);
+  h.hem.position.set(hp.x, R.hem, hp.z);
   for (const dg of h.dangles) {
     const txr = clamp(h.af * 0.03 + h.vf * 0.02 + j.spine * -0.6, -0.9, 0.9) * dg.k, tzr = clamp(h.omega * 0.08 + h.vs * 0.05, -0.6, 0.6) * dg.k;
     dg.vx += ((txr - dg.x) * 45 - dg.vx * 5) * dt; dg.vz += ((tzr - dg.z) * 45 - dg.vz * 5) * dt; dg.x += dg.vx * dt; dg.z += dg.vz * dt;

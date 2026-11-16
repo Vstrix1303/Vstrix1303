@@ -1,6 +1,6 @@
 // KAYAL — Travancore, 1905. Entry point & main loop.
 import * as THREE from 'three';
-import { loadRealTextures } from './assets.js';
+import { loadRealTextures, loadHumans } from './assets.js';
 import { G, QUALITY } from './state.js';
 import { UI } from './ui.js';
 import { Input } from './input.js';
@@ -30,6 +30,8 @@ function pickQuality(gl) {
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
     const r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : '';
     if (/SwiftShader|llvmpipe|Software/i.test(r)) return 'low';
+    // graphics built into the processor (Radeon Vega / 'Radeon Graphics', Intel UHD / Iris): share system memory
+    if (/Vega|Radeon\(TM\) Graphics|Radeon Graphics|Intel|UHD|Iris/i.test(r) && !/RX|Arc/i.test(r)) { G.integrated = true; return 'medium'; }
     if (/NVIDIA|GeForce|RTX|GTX|Radeon (RX|Pro)|Apple M|Arc\(TM\)/i.test(r)) return 'high';
   } catch (e) { /* ignore */ }
   return 'medium';
@@ -46,6 +48,10 @@ async function boot() {
   }
   G.renderer = renderer;
   G.quality = pickQuality(renderer.getContext());
+  if (G.integrated) {
+    // integrated GPU: keep the look, drop what costs most — multisampling, reflection resolution, grass density
+    for (const k of ['medium', 'high', 'ultra']) QUALITY[k] = { ...QUALITY[k], msaa: 0, reflection: Math.min(QUALITY[k].reflection, 320), grass: Math.round(QUALITY[k].grass * 0.6), shadow: Math.min(QUALITY[k].shadow, 2048) };
+  }
   const q = QUALITY[G.quality];
   const basePR = () => (G.quality === 'low' ? 0.75 * Math.min(devicePixelRatio || 1, 1) : G.quality === 'medium' ? Math.min(devicePixelRatio || 1, 1) : Math.min(devicePixelRatio || 1, 1.5));
   let prScale = 1;
@@ -66,6 +72,7 @@ async function boot() {
   buildTextures();
   ui.loading(0.02, 'Loading surfaces');
   await loadRealTextures(renderer, (p) => ui.loading(0.02 + p * 0.08, 'Loading surfaces'));
+  await loadHumans((p) => ui.loading(0.1 + p * 0.04, 'Loading people'));
   const player = G.player = new Player(scene, camera);
 
   await nextFrame();
@@ -187,6 +194,16 @@ async function boot() {
 
   // ---------------- main loop ----------------
   let last = performance.now(), landT = 0, landing = null, fpsT = 0, fpsN = 0;
+  // F3 shows the frame rate — useful for choosing a Graphics setting
+  let fpsEl = null;
+  addEventListener('keydown', (e) => {
+    if (e.code !== 'F3') return;
+    e.preventDefault();
+    if (fpsEl) { fpsEl.remove(); fpsEl = null; return; }
+    fpsEl = document.createElement('div');
+    fpsEl.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99;font:12px monospace;color:#fff;background:rgba(0,0,0,.55);padding:3px 7px;border-radius:3px;pointer-events:none';
+    fpsEl.textContent = 'measuring…'; document.body.appendChild(fpsEl);
+  });
   const sunUV = new THREE.Vector2();
   const tmp = new THREE.Vector3();
 
@@ -285,6 +302,7 @@ async function boot() {
       if (fpsT > 2.5) {
         const fps = fpsN / fpsT; fpsT = 0; fpsN = 0;
         const old = prScale;
+        if (fpsEl) fpsEl.textContent = `${Math.round(fps)} fps · ${G.quality}${G.integrated ? ' (integrated GPU)' : ''} · ${Math.round(prScale * 100)}% resolution`;
         if (fps < 27 && prScale > 0.5) prScale = Math.max(0.5, prScale * 0.85);
         else if (fps > 56 && prScale < 1) prScale = Math.min(1, prScale * 1.08);
         if (old !== prScale) resize();
