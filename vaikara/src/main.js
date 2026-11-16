@@ -20,6 +20,8 @@ import { Traffic } from './render/traffic.js';
 import { Weather } from './render/weather.js';
 import { Audio } from './game/audio.js';
 import { Interact } from './game/interact.js';
+import { HumanFactory } from './game/human.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -94,14 +96,15 @@ async function boot() {
   await props.build();
   const traffic = new Traffic(scene);
   traffic.build();
-  status('Waking the villagers…', 0.89); await tick();
+  status('Dressing the people of Vaikara…', 0.89); await tick();
+  const humans = new HumanFactory(await new GLTFLoader().loadAsync(`${G.base}models/Xbot.glb`));
   const villagers = new Villagers(scene);
-  try { await villagers.load(); } catch (e) { console.warn('villagers', e); }
+  try { await villagers.load(humans); } catch (e) { console.warn('villagers', e); }
 
   status('Waking the traveller…', 0.9); await tick();
   Input.init(canvas);
   const player = new Player(scene, camera);
-  await player.load();
+  await player.load(humans);
   G.player = player;
   const fly = new FlyCam(camera);
   const ui = new UI({ player, fly, sky, camera });
@@ -116,6 +119,22 @@ async function boot() {
     fly.enable(true); fly.pos.set(x, y, z); fly.yaw = yaw || 0; fly.pitch = pitch || 0;
   }
 
+  const lineup = [];
+  if (params.has('lineup')) { // test hook: one of each character, standing in a row
+    const roles = ['traveller', 'villager', 'trader', 'fisher', 'farmer', 'woman', 'setmundu', 'official', 'pilgrim', 'colonial'];
+    const p0 = player.pos.clone();
+    roles.forEach((r, i) => {
+      const h = humans.create(r, 7 + i);
+      const x = p0.x + (i - (roles.length - 1) / 2) * 1.1, z = p0.z - 4;
+      h.position.set(x, getHeight(x, z), z);
+      scene.add(h);
+      const mx = new THREE.AnimationMixer(h); const a = mx.clipAction(humans.gltf.animations.find((c) => c.name === 'idle')); a.play(); a.time = i * 0.3;
+      lineup.push(mx);
+    });
+    villagers.pool.forEach((n) => (n.active = false));
+    const lx = params.has('lx') ? (+params.get('lx') - (roles.length - 1) / 2) * 1.1 : 0, close = params.has('close');
+    fly.enable(true); fly.pos.set(p0.x + lx, getHeight(p0.x, p0.z - 4) + (close ? 1.55 : 1.35), p0.z + (close ? -2.3 : 1.2)); fly.yaw = 0; fly.pitch = close ? -0.05 : -0.08;
+  }
   if (params.has('board')) { // test hook: start in the nearest canoe
     let bt = null, bd = 1e9;
     for (const x of scene.userData.boats || []) { const d = Math.hypot(x.position.x - player.pos.x, x.position.z - player.pos.z); if (d < bd) { bd = d; bt = x; } }
@@ -170,7 +189,7 @@ async function boot() {
   const clock = new THREE.Timer();
   const _dir = new THREE.Vector3(); let glareS = 0;
   let frames = 0, fpsT = 0, fps = 0;
-  window.__vaikara = { Input, data: { getHeight, waterLevelAt, W: WD }, G, weather, interact, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
+  window.__vaikara = { humans, Input, data: { getHeight, waterLevelAt, W: WD }, G, weather, interact, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
   renderer.setAnimationLoop(() => {
     clock.update(); const dt = Math.min(0.05, clock.getDelta());
     G.dt = dt; G.time += dt; U.time.value = G.time;
@@ -198,6 +217,7 @@ async function boot() {
     towns.update(dt);
     props.update(dt, camera.position);
     traffic.update(dt, G.focus);
+    for (const m of lineup) m.update(dt);
     villagers.update(dt, G.focus, camera);
     if (params.has('nopost')) renderer.render(scene, camera); else post.render();
     Input.endFrame();

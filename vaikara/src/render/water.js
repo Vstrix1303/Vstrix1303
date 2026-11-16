@@ -13,7 +13,7 @@ import { WORLD_W, WORLD_H } from '../world/layout.js';
 import { waterNormalTexture, noiseTexture } from './textures.js';
 
 let infoTex = null;
-function waterInfoTexture() {
+export function waterInfoTexture() {
   if (infoTex) return infoTex;
   const { QX, QZ, H, NX, COAST } = W;
   const data = new Uint16Array(QX * QZ * 4);

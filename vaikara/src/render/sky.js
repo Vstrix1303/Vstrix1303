@@ -73,12 +73,13 @@ export class Sky {
     this.sun = new THREE.DirectionalLight(0xffffff, 3);
     this.sun.castShadow = G.Q.shadows;
     this.sun.shadow.mapSize.setScalar(G.Q.shadowMap);
-    this.sun.shadow.bias = -0.0004;
-    this.sun.shadow.normalBias = 0.6;
+    this.sun.shadow.bias = -0.0003;
+    this.sun.shadow.normalBias = 0.35;
+    this.sun.shadow.radius = 2;
     this.sun.shadow.camera.near = 1; this.sun.shadow.camera.far = 6000;
     scene.add(this.sun, this.sun.target);
     if (G.Q.shadows) {
-      this.csm = new CSMShadowNode(this.sun, { cascades: G.Q.cascades, maxFar: 900, mode: 'practical', lightMargin: 400 });
+      this.csm = new CSMShadowNode(this.sun, { cascades: G.Q.cascades, maxFar: G.Q.shadowFar, mode: 'practical', lightMargin: 500 });
       this.csm.fade = true;
       this.sun.shadow.shadowNode = this.csm;
     }
@@ -181,7 +182,7 @@ export class Sky {
     this.sun.color.copy(k.sunCol);
     this.sun.intensity = k.sunI;
     U.sunColor.value.copy(k.sunCol).multiplyScalar(k.sunI / 3);
-    this.hemi.intensity = k.amb * (nightF > 0.5 ? 0.9 : 0.3);
+    this.hemi.intensity = k.amb * (nightF > 0.5 ? 0.9 : 0.24);
     this.hemi.color.set(nightF > 0.5 ? 0x5a6fa8 : 0xe8eef8);
     this.hemi.groundColor.set(nightF > 0.5 ? 0x0c0e14 : 0x4a3a24);
     U.fogColor.value.copy(k.fog);
@@ -200,7 +201,7 @@ export class Sky {
     const old = this.envTarget;
     this.envTarget = this.pmrem.fromScene(this.envScene, 0, 1, 2000);
     this.scene.environment = this.envTarget.texture;
-    this.scene.environmentIntensity = (0.5 + 0.1 * (1 - U.night.value)) * (1 - 0.35 * U.cloud.value);
+    this.scene.environmentIntensity = (0.5 - 0.06 * (1 - U.night.value)) * (1 - 0.3 * U.cloud.value) + 0.12 * U.cloud.value;
     if (old) old.dispose();
   }
 

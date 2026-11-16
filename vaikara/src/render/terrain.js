@@ -5,12 +5,13 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, texture, uniform, vec2, vec3, vec4, float, int, positionWorld, normalWorld, mix, smoothstep, clamp, max, pow,
-  abs, normalize, transformNormalToView, dot, length, exp, sin, attribute, select,
+  abs, normalize, transformNormalToView, dot, length, exp, sin, attribute, select, Loop, min, cameraPosition,
 } from 'three/tsl';
 import { G, U } from '../state.js';
 import { W, getHeight } from '../world/data.js';
 import { WORLD_W, WORLD_H } from '../world/layout.js';
 import { loadTerrainArrays, dataTex, noiseTexture } from './textures.js';
+import { waterInfoTexture } from './water.js';
 import { makeNoise, fbm } from '../world/noise.js';
 
 const CELLS = 128;                 // heightmap cells per chunk
@@ -182,6 +183,23 @@ export async function terrainMaterial() {
   col = mix(col, col.mul(0.22), puddle);
   rough = mix(rough, float(0.0), wet.mul(0.8));
   rough = mix(rough, float(-1.0), puddle); // clamped below → mirror-like puddles
+  // distant terrain shadows: march towards the sun over the heightmap, beyond the shadow maps' reach
+  const info = waterInfoTexture();
+  const farShadow = Fn(() => {
+    const vis = float(1).toVar();
+    const t = float(10).toVar();
+    const sd = normalize(U.sunDir);
+    Loop(18, () => {
+      const q = positionWorld.add(sd.mul(t));
+      const hq = texture(info, vec2(q.x.sub(W.X0).div(WORLD_W), q.z.sub(W.Z0).div(WORLD_H))).r;
+      vis.assign(min(vis, smoothstep(-3.0, t.mul(0.04).add(4.0), q.y.sub(hq))));
+      t.mulAssign(1.38);
+    });
+    return vis;
+  })();
+  const camDist = length(positionWorld.sub(cameraPosition));
+  const farW = smoothstep(G.Q.shadowFar * 0.55, G.Q.shadowFar * 0.95, camDist).mul(smoothstep(-0.05, 0.08, U.sunDir.y));
+  col = col.mul(mix(float(1), float(0.42), float(1).sub(farShadow).mul(farW).mul(float(1).sub(U.cloud.mul(0.8)))));
   // normal: UDN blend in world space (tiles are planar in XZ)
   const nWorld = normalize(vec3(nW.x.add(nrm.x), nW.y, nW.z.add(nrm.y)));
   mat.colorNode = vec4(col, 1);

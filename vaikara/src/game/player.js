@@ -26,11 +26,11 @@ export class Player {
     this.mode = 'foot'; this.boat = null; this.boatSpeed = 0;
   }
 
-  async load() {
+  async load(humans) {
     try {
-      const gltf = await new GLTFLoader().loadAsync(`${G.base}models/Xbot.glb`);
-      const model = gltf.scene;
-      model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+      const gltf = humans.gltf;
+      const model = humans.create('traveller', 1905);
+      this.model = model;
       this.root.add(model);
       this.mixer = new THREE.AnimationMixer(model);
       const clip = (n) => gltf.animations.find((a) => a.name.toLowerCase() === n);
@@ -102,9 +102,24 @@ export class Player {
     this.yaw = this.boatYaw; this.swimming = false; this.speed = 0;
     this.root.position.copy(this.pos);
     this.root.rotation.set(0, this.yaw, 0);
-    this.root.scale.set(1, 0.72, 1); // crouched (placeholder for a seated pose)
+    this.root.position.y -= 0.55; // hips down on the thwart
     if (this.mixer) { this.actions.idle?.setEffectiveWeight(1); this.actions.walk?.setEffectiveWeight(0); this.actions.run?.setEffectiveWeight(0); this.mixer.update(dt); }
+    this.sitPose(turn, thrust);
     this.followCamera(dt, 1.4);
+  }
+
+  // seated, paddling: override the leg and arm bones after the animation
+  sitPose(turn = 0, thrust = 0) {
+    const B = this.model?.userData.bones; if (!B) return;
+    const SIT = +(new URLSearchParams(location.search).get('sit') || 1);
+    for (const s of ['Left', 'Right']) {
+      B[s + 'UpLeg'].rotation.set(-1.5 * SIT, 0, s === 'Left' ? -0.12 : 0.12);
+      B[s + 'Leg'].rotation.set(1.7 * SIT, 0, 0);
+      B[s + 'Foot'].rotation.set(-0.3 * SIT, 0, 0);
+    }
+    const t = G.time * 2.2, k = Math.abs(thrust) > 0 ? 1 : 0.15;
+    B.Spine.rotation.x = 0.15 + Math.sin(t) * 0.08 * k;
+    B.Spine1.rotation.y = Math.sin(t) * 0.25 * k - turn * 0.2;
   }
 
   followCamera(dt, h = 1.55) {

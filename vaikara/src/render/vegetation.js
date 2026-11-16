@@ -6,7 +6,7 @@
 import * as THREE from 'three/webgpu';
 import {
   positionLocal, positionWorld, vec3, vec4, float, uniform, length, step, select, texture, uv, mix, sin, attribute, hash, instanceIndex,
-  modelWorldMatrix, smoothstep, max, cameraPosition, normalize, instance,
+  modelWorldMatrix, smoothstep, max, cameraPosition, normalize, instance, transformNormalToView,
 } from 'three/tsl';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { G, U } from '../state.js';
@@ -168,6 +168,9 @@ export class Vegetation {
         geo.setIndex(I);
         const fm = new THREE.MeshStandardNodeMaterial({ map: rt.texture, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 1, color: 0xaca67e });
         fm.envMapIntensity = 0.25;
+        fm.emissiveNode = texture(rt.texture, uv()).rgb.mul(vec3(0.68, 0.65, 0.5)).mul(U.sunColor).mul(0.3);
+        // a flat card has no real orientation: light it as a crown half-turned to the sun
+        fm.normalNode = transformNormalToView(normalize(vec3(U.sunDir.x.mul(0.55), 0.8, U.sunDir.z.mul(0.55))));
         // collapse impostors inside the near radius and beyond the far radius
         const list = this.trees[sp].filter((t) => t.v === vi);
         const im = new THREE.InstancedMesh(geo, fm, Math.max(1, list.length));

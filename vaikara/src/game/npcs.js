@@ -3,8 +3,6 @@
 // shore by the fishing hamlets, and thin out at night. Placeholder bodies are
 // clones of the Xbot mannequin, tinted by role.
 import * as THREE from 'three/webgpu';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { G, U } from '../state.js';
 import { W, getHeight, nearestRoad } from '../world/data.js';
 import { PLACES, placeById as P } from '../world/layout.js';
@@ -14,9 +12,10 @@ const TAU = Math.PI * 2;
 const MAX = 20, RADIUS = 160, FULL = 70, SHADOW = 35;
 // clothing washes: white mundu, saffron, indigo, earth, khaki (officials), red
 const ROLES = [
-  { name: 'villager', body: 0xf2ece0, w: 4 }, { name: 'trader', body: 0xd89a3a, w: 2 },
-  { name: 'fisher', body: 0x3a4f6e, w: 2 }, { name: 'farmer', body: 0x8a6a48, w: 2 },
-  { name: 'official', body: 0xb8a878, w: 1 }, { name: 'pilgrim', body: 0xa83a2a, w: 1 },
+  { name: 'villager', body: 0xece6d6, w: 4 }, { name: 'trader', body: 0xe2d4b6, w: 2 },
+  { name: 'fisher', body: 0x30568c, w: 2 }, { name: 'farmer', body: 0xe2d4b6, w: 2 },
+  { name: 'woman', body: 0x2c6040, w: 4 }, { name: 'setmundu', body: 0xece6d6, w: 2 },
+  { name: 'official', body: 0xa8926a, w: 1 }, { name: 'pilgrim', body: 0xd6842a, w: 1 }, { name: 'colonial', body: 0xf0ece4, w: 1 },
 ];
 // how lively each place is (0..1)
 const LIVELY = { vaikara_town: 1, old_bazaar: 1, river_ghat: 0.9, district_court: 0.7, juma_mosque: 0.6, ponnambalam: 0.7, st_thomas: 0.5, puliyur: 0.6, karimulam: 0.6, muthalappuzha: 0.7, veliyathura: 0.6, kayalore: 0.5, southern_ferry: 0.5, kalliyar_ferry: 0.5, hill_trading_post: 0.4, thenga_paddy: 0.3, kanmala: 0.5, salt_pans: 0.3, residency: 0.3, bridge: 0.6 };
@@ -33,32 +32,14 @@ const hourFactor = (h) => {
 export class Villagers {
   constructor(scene) { this.scene = scene; this.pool = []; this.rnd = makeRng(77); this.timer = 0; }
 
-  async load() {
-    const gltf = await new GLTFLoader().loadAsync(`${G.base}models/Xbot.glb`);
+  async load(humans) {
     this.clips = {};
-    for (const n of ['idle', 'walk']) this.clips[n] = gltf.animations.find((a) => a.name.toLowerCase() === n);
-    // shared tinted material sets, one per role
-    const sets = ROLES.map((r) => {
-      const map = new Map();
-      gltf.scene.traverse((o) => {
-        if (!o.isMesh || map.has(o.material)) return;
-        const m = o.material.clone();
-        const joints = /joint/i.test(o.material.name || o.name);
-        m.color = new THREE.Color(joints ? 0x3a2a20 : r.body);
-        m.roughness = 0.85; m.metalness = 0;
-        map.set(o.material, m);
-      });
-      return map;
-    });
+    for (const n of ['idle', 'walk']) this.clips[n] = humans.gltf.animations.find((a) => a.name.toLowerCase() === n);
     const roleBag = ROLES.flatMap((r, i) => Array(r.w).fill(i));
     for (let i = 0; i < MAX; i++) {
-      const root = skeletonClone(gltf.scene);
-      const role = roleBag[i % roleBag.length];
-      root.traverse((o) => {
-        if (o.isMesh) { o.material = sets[role].get(o.material) || o.material; o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; }
-      });
-      const meshes = []; root.traverse((o) => { if (o.isMesh) meshes.push(o); });
-      root.scale.setScalar(0.92 + this.rnd() * 0.14);
+      const role = roleBag[(i * 7) % roleBag.length];
+      const root = humans.create(ROLES[role].name, 100 + i);
+      const meshes = [root.userData.mesh];
       root.visible = false;
       this.scene.add(root);
       const mixer = new THREE.AnimationMixer(root);
