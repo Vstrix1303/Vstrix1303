@@ -23,6 +23,8 @@ export function materials() {
   MATS = {
     roof: std('roof', { side: THREE.DoubleSide, color: 0xd8b8a8 }),
     thatch: std('thatch', { side: THREE.DoubleSide, color: 0xb8a078 }),
+    roofOld: std('roof', { side: THREE.DoubleSide, color: 0x9c8070 }),
+    canopy: new THREE.MeshStandardNodeMaterial({ color: 0x2f4a1e, roughness: 0.95 }),
     plaster: std('plaster', { color: 0xfff0dc }),
     whitewash: std('plaster', { color: 0xfff8f0 }),
     yplaster: std('yplaster', { color: 0xffe8b8 }),

@@ -17,6 +17,8 @@ export class Colliders {
     const c = Math.cos(ry), s = Math.sin(ry), r = Math.abs(hx * c) + Math.abs(hz * s), r2 = Math.abs(hx * s) + Math.abs(hz * c);
     this.insert({ t: 0, x, z, hx, hz, c, s, y0, y1 }, x - r, z - r2, x + r, z + r2);
   }
+  // keep an area clear of generated buildings and trees (does not block walking)
+  addReserve(x, z, r) { this.insert({ t: 3, x, z, r }, x - r, z - r, x + r, z + r); }
   addCircle(x, z, r, y0 = -100, y1 = 1000) { this.insert({ t: 1, x, z, r, y0, y1 }, x - r, z - r, x + r, z + r); }
   // walkable raised surfaces (bridge decks, jetties, plinths): box with a top height
   addDeck(x, z, hx, hz, ry, y) {
@@ -26,7 +28,7 @@ export class Colliders {
   // is a footprint of radius r at (x,z) free of buildings?
   blocked(x, z, r) {
     for (const o of this.near(x, z)) {
-      if (o.t === 1) { if (Math.hypot(x - o.x, z - o.z) < o.r + r) return true; continue; }
+      if (o.t === 1 || o.t === 3) { if (Math.hypot(x - o.x, z - o.z) < o.r + r) return true; continue; }
       const dx = x - o.x, dz = z - o.z, lx = dx * o.c - dz * o.s, lz = dx * o.s + dz * o.c;
       if (Math.abs(lx) < o.hx + r && Math.abs(lz) < o.hz + r) return true;
     }
@@ -44,7 +46,7 @@ export class Colliders {
   }
   resolve(p, radius, y) {
     for (const o of this.near(p.x, p.z)) {
-      if (o.t === 2 || y > o.y1 || y + 1.7 < o.y0) continue;
+      if (o.t >= 2 || y > o.y1 || y + 1.7 < o.y0) continue;
       if (o.t === 1) {
         const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), m = o.r + radius;
         if (d < m && d > 1e-5) { p.x = o.x + dx / d * m; p.z = o.z + dz / d * m; }

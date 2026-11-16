@@ -44,7 +44,7 @@ Every place on the parchment map is in the world, in the same arrangement:
   the Abandoned Fort (bastions, breaches, cannons), the Southern Ferry.
 - **River and backwaters**: the Vaikara river estuary, River Ghat steps, the 11-arch stone **Vaikara Bridge**,
   Kalliyar Ferry, and the long **Kuttan Canal** lagoon with cruising kettuvallam rice boats.
-- **Vaikara Town**: shophouse streets with balconies and awnings, the Old Bazaar stalls, **St. Thomas Church**,
+- **Vaikara Town**: a compact bazaar of terraced shophouse rows (shared roofs, lanes between them) around a town square with a banyan platform and well, walled house compounds along the lanes, the Old Bazaar stalls, **St. Thomas Church**,
   the **Juma Mosque**, the **Ponnambalam Temple** (gopuram, copper-roofed sreekovil, lamp pillar, temple tank),
   the **District Court** arcade and the **Colonial Residency** with its portico and walled garden.
 - **Inland**: Thenga Paddy (rice fields with bunds), Puliyur, the Monsoon Shrine, Hill Trading Post, Karimulam
@@ -67,7 +67,7 @@ banana. Near the camera you also get grass, rice, tea bushes and ferns.
 | Sky & light | `src/render/sky.js` | Physical sky with clouds, day/night cycle (sunset over the Arabian Sea), moon, stars, cascaded shadow maps, sky-baked image-based light, distance haze and dawn mist |
 | Post | `src/render/post.js` | GTAO ambient occlusion, bloom, ACES tone mapping, colour grade, vignette, FXAA |
 | Flora | `src/render/trees.js`, `vegetation.js` | Procedural species with wind sway; full meshes near the camera, impostors (rendered from the real trees at load) far away, handed over per instance on the GPU |
-| Buildings | `src/render/buildings/` | A kit of primitives (Kerala hip-and-gable roofs, arcades, domes, towers, stairs) merged into a few static meshes; every landmark has its own builder |
+| Buildings | `src/render/buildings/` | A kit of primitives (Kerala hip-and-gable roofs, arcades, domes, towers, stairs) merged into a few static meshes; every landmark has its own builder. Settlements are planned, not scattered: bazaar terraces only near the square, walled compounds every 40–70 m along lanes, fishing huts clustered on the shore facing the water, farmhouses on the paddy edge (~185 buildings in all) |
 | Props | `src/render/props.js` | Boats, sailing ships, fishing nets, rocks, cannons, train, logs, elephants, birds |
 | Player | `src/game/player.js` | Placeholder Xbot mannequin (three.js examples) with idle/walk/run blending, collisions, decks (bridge, jetties, ghat), wading and swimming |
 

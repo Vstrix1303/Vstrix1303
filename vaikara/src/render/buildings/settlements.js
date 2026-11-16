@@ -21,6 +21,7 @@ export class Settlements {
     this.beams = [];
     this.lamps = [];
     this.jetties = []; // used by props for boats
+    this.counts = { shop: 0, house: 0, hut: 0 };
   }
 
   // ── helpers
@@ -85,11 +86,12 @@ export class Settlements {
     return y;
   }
 
-  shophouse(x, z, ry, w) {
+  shophouse(x, z, ry, w, o = {}) {
     const k = this.kit, r = this.rnd;
-    const d = 9 + r() * 3;
-    const { y } = this.footY(x, z, w, d, ry);
-    const wall = r() < 0.6 ? 'plaster' : r() < 0.5 ? 'yplaster' : 'laterite';
+    const d = o.d || 9 + r() * 3;
+    const floors = o.floors || 2;
+    const y = o.y ?? this.footY(x, z, w, d, ry).y;
+    const wall = o.wall || (r() < 0.6 ? 'plaster' : r() < 0.5 ? 'yplaster' : 'laterite');
     k.lbox('laterite', x, z, ry, 0, y - 2.5, 0.4, w + 0.2, 2.8, d + 0.8);
     // ground floor: back and sides closed, front open shop with dark interior and shutters
     k.lbox(wall, x, z, ry, 0, y + 0.3, -0.5, w, 3.4, d - 1);
@@ -104,6 +106,11 @@ export class Settlements {
       this.kit.push(cloth, g, x + (d / 2 + 0.6) * s, y + 3.0, z + (d / 2 + 0.6) * c, ry);
       for (const sx of [-1, 1]) k.cyl('wood', x + sx * (w / 2 - 0.3) * c + (d / 2 + 1.6) * s, y + 0.3, z - sx * (w / 2 - 0.3) * s + (d / 2 + 1.6) * c, 0.06, 0.05, 2.5, 5);
     }
+    if (floors < 2) {
+      if (o.roof !== false) k.roof(o.roofMat || 'roof', x + s * 0.4, y + 3.75, z + c * 0.4, w + 0.4, d + 0.8, ry, { over: 0.9, pitch: 0.8 });
+      this.collide(x, z, w, d, ry, y, 7);
+      return y;
+    }
     // upper floor with wooden balcony
     k.lbox(wall, x, z, ry, 0, y + 3.7, -0.3, w, 3.0, d - 0.6);
     k.lbox('planks', x, z, ry, 0, y + 3.7, d / 2 + 0.3, w, 0.18, 1.6);
@@ -116,7 +123,7 @@ export class Settlements {
       k.lbox('wood', x, z, ry, ox + 0.62, y + 4.3, d / 2 - 0.84, 0.14, 1.8, 0.08);
     }
     for (const sx of [-1, 1]) k.cyl('wood', x + sx * (w / 2 - 0.15) * c + (d / 2 + 1.0) * s, y + 3.88, z - sx * (w / 2 - 0.15) * s + (d / 2 + 1.0) * c, 0.08, 0.07, 2.9, 6);
-    k.roof('roof', x + s * 0.4, y + 6.75, z + c * 0.4, w + 0.4, d + 0.8, ry, { over: 0.9, pitch: 0.85 });
+    if (o.roof !== false) k.roof(o.roofMat || 'roof', x + s * 0.4, y + 6.75, z + c * 0.4, w + 0.4, d + 0.8, ry, { over: 0.9, pitch: 0.85 });
     this.collide(x, z, w, d, ry, y, 10);
     return y;
   }
@@ -189,56 +196,238 @@ export class Settlements {
     return [sx, sz, best.a];
   }
 
-  village(place, nHouses, nHuts, opts = {}) {
-    const r = this.rnd;
-    const R = opts.r || place.r;
-    let tries = 0, placed = 0;
-    const total = nHouses + nHuts;
-    while (placed < total && tries++ < total * 40) {
-      const a = r() * TAU, d = Math.sqrt(r()) * R;
-      const x = place.x + Math.cos(a) * d, z = place.z + Math.sin(a) * d;
-      const h = getHeight(x, z);
-      if (h < (opts.minH ?? 1.2) || getSlope(x, z) > 0.22) continue;
-      const rd = nearestRoad(x, z);
-      if (rd.d < 7) continue;
-      if (opts.nearRoad && rd.d > opts.nearRoad) continue;
-      const isHut = placed >= nHouses;
-      if (!this.free(x, z, isHut ? 4.5 : 7)) continue;
-      const ry = opts.faceSea ? Math.atan2(-1, 0) + (r() - 0.5) * 0.6 : this.faceRoad(x, z) + (r() - 0.5) * 0.3;
-      if (isHut) this.hut(x, z, ry); else this.house(x, z, ry, opts.house);
-      placed++;
-    }
-  }
+  // ── planned layout ───────────────────────────────────────────────────────
+  // How far a point is from every road (used to keep buildings off other roads).
+  clearOfRoads(x, z, m) { return nearestRoad(x, z).d > m; }
+  siteOK(x, z, minH = 1.0, maxSlope = 0.22) { return getHeight(x, z) > minH && getSlope(x, z) < maxSlope; }
 
-  // shophouses lining roads inside the town
-  street(roadName, from, to, centre, R) {
-    const road = W.meta.roads.find((r) => r.name === roadName);
+  // Walk a road outward from the end nearest `centre`, calling fn every `step` metres
+  // with (x, z, tx, tz, s) where s = distance from that end.
+  walkRoad(name, centre, s0, s1, stepFn) {
+    const road = W.meta.roads.find((r) => r.name === name);
     if (!road) return;
-    const line = road.line;
-    let acc = 0, next = 4;
-    for (let i = 1; i < line.length; i++) {
+    let line = road.line;
+    const dA = Math.hypot(line[0][0] - centre.x, line[0][1] - centre.z);
+    const dB = Math.hypot(line[line.length - 1][0] - centre.x, line[line.length - 1][1] - centre.z);
+    if (dB < dA) line = [...line].reverse();
+    let acc = 0, next = s0;
+    for (let i = 1; i < line.length && next <= s1; i++) {
       const [ax, az] = line[i - 1], [bx, bz] = line[i];
       const seg = Math.hypot(bx - ax, bz - az);
-      while (next <= acc + seg) {
+      if (seg < 1e-3) continue;
+      while (next <= acc + seg && next <= s1) {
         const t = (next - acc) / seg;
-        const x = ax + (bx - ax) * t, z = az + (bz - az) * t;
-        const tx = (bx - ax) / seg, tz = (bz - az) / seg;
-        if (Math.hypot(x - centre.x, z - centre.z) < R) {
-          for (const side of [-1, 1]) {
-            const w = 6 + this.rnd() * 3;
-            const off = 5.5 + 5.5;
-            const hx = x - tz * off * side, hz = z + tx * off * side;
-            if (getHeight(hx, hz) < 1 || getSlope(hx, hz) > 0.25) continue;
-            if (!this.free(hx, hz, 4)) continue;
-            const ry = Math.atan2(x - hx, z - hz);
-            this.shophouse(hx, hz, ry, w);
-          }
-        }
-        next += 9.5 + this.rnd() * 2;
+        const adv = stepFn(ax + (bx - ax) * t, az + (bz - az) * t, (bx - ax) / seg, (bz - az) / seg, next);
+        next += adv;
       }
       acc += seg;
     }
-    void from; void to;
+  }
+
+  // Terraced bazaar frontage: runs of 3–5 shops under one roof, broken by lanes.
+  bazaarRow(name, centre, s0, s1, roadHalf = 3.5) {
+    const r = this.rnd;
+    for (const side of [-1, 1]) {
+      let run = null;
+      const flush = () => {
+        if (run && run.units.length >= 2) {
+          // one continuous roof over the whole run
+          const { units, ry, d, floors, y } = run;
+          const first = units[0], last = units[units.length - 1];
+          const cx = (first.x + last.x) / 2, cz = (first.z + last.z) / 2;
+          const len = units.reduce((t, u) => t + u.w, 0);
+          const c = Math.cos(ry), sn = Math.sin(ry);
+          const roofY = y + (floors > 1 ? 6.75 : 3.75);
+          this.kit.roof(run.roofMat, cx + sn * 0.4, roofY, cz + c * 0.4, len + 0.4, d + 0.8, ry, { over: 0.9, pitch: floors > 1 ? 0.8 : 0.75, gable: 0.8 });
+          this.counts.shop += units.length;
+        } else if (run && run.units.length === 1) {
+          const u = run.units[0];
+          this.kit.roof(run.roofMat, u.x + Math.sin(run.ry) * 0.4, run.y + (run.floors > 1 ? 6.75 : 3.75), u.z + Math.cos(run.ry) * 0.4, u.w + 0.4, run.d + 0.8, run.ry, { over: 0.9, pitch: 0.85 });
+          this.counts.shop += 1;
+        }
+        run = null;
+      };
+      this.walkRoad(name, centre, s0, s1, (x, z, tx, tz, s) => {
+        const w = 6.5 + r() * 3;
+        if (!run) {
+          // start a new run: fixed facing, depth, height, finish for the whole terrace
+          const d = 9 + r() * 2.5;
+          const off = roadHalf + 1.8 + d / 2;
+          const ry = Math.atan2(tz * side, -tx * side); // face the road
+          run = { units: [], ry, d, off, floors: r() < 0.65 ? 2 : 1, wall: r() < 0.55 ? 'plaster' : r() < 0.5 ? 'yplaster' : 'laterite', roofMat: r() < 0.6 ? 'roof' : 'roofOld', target: 3 + Math.floor(r() * 3), ox: x, oz: z, tx, tz, y: null };
+        }
+        // units in a run follow the run's straight line so the roof stays continuous
+        const along = run.units.reduce((t, u) => t + u.w, 0) + w / 2;
+        const px = run.ox + run.tx * along, pz = run.oz + run.tz * along;
+        const hx = px - run.tz * run.off * side, hz = pz + run.tx * run.off * side;
+        // the run's line drifts from a curving road: stop the run if it does
+        const drift = Math.abs(nearestRoad(hx, hz).d - run.off);
+        const ok = this.siteOK(hx, hz, 1.0, 0.25) && drift < 3 && this.clearOfRoads(hx, hz, run.off - 2.5)
+          && this.free(hx, hz, Math.min(w, run.d) / 2 - 1.2);
+        if (!ok) { flush(); return 4; }
+        if (run.y == null) run.y = this.footY(hx, hz, w * run.target, run.d, run.ry).y;
+        this.shophouse(hx, hz, run.ry, w, { d: run.d, floors: run.floors, wall: run.wall, y: run.y, roof: false });
+        run.units.push({ x: hx, z: hz, w });
+        if (run.units.length >= run.target) { flush(); return w / 2 + 6 + r() * 6; } // lane between terraces
+        return w;
+      });
+      flush();
+    }
+  }
+
+  // A Kerala house in its own walled compound, set back from the lane.
+  compound(x, z, ry, o = {}) {
+    const k = this.kit, r = this.rnd;
+    const w = 7.5 + r() * 3, d = 6 + r() * 2;
+    const PW = w + 12 + r() * 6, PD = d + 14 + r() * 6;   // plot
+    const c = Math.cos(ry), s = Math.sin(ry);
+    // house sits towards the back of the plot, facing the gate
+    const hx = x - s * 2, hz = z - c * 2;
+    if (!this.free(hx, hz, Math.max(w, d) / 2 + 2)) return false;
+    this.house(hx, hz, ry, { w, d, roofMat: o.roofMat || (r() < 0.55 ? 'roof' : 'roofOld'), wall: o.wall });
+    // low laterite compound wall with a gate gap on the lane side
+    const wallH = 1.15, t = 0.45;
+    const seg = (ox, oz, len, along) => {
+      const wx = x + ox * c + oz * s, wz = z - ox * s + oz * c;
+      const gy = getHeight(wx, wz);
+      const rot = along ? ry : ry + Math.PI / 2;
+      k.box('laterite', wx, gy - 0.6, wz, len, wallH + 0.6, t, rot, 1.6);
+      k.box('roofOld', wx, gy + wallH, wz, len + 0.1, 0.12, t + 0.18, rot, 2);
+      G.colliders.addBox(wx, wz, len / 2, t / 2 + 0.05, rot, gy - 1, gy + wallH);
+    };
+    seg(0, -PD / 2, PW, true);
+    seg(-PW / 2, 0, PD, false); seg(PW / 2, 0, PD, false);
+    const gate = 3.2, half = (PW - gate) / 2;
+    seg(-(gate / 2 + half / 2), PD / 2, half, true); seg(gate / 2 + half / 2, PD / 2, half, true);
+    for (const sx of [-1, 1]) {
+      const gx = x + sx * (gate / 2 + 0.3) * c + (PD / 2) * s, gz = z - sx * (gate / 2 + 0.3) * s + (PD / 2) * c, gy = getHeight(gx, gz);
+      k.box('laterite', gx, gy - 0.5, gz, 0.7, 2.4, 0.7, ry, 1.6);
+      k.pyramid('roofOld', gx, gy + 1.9, gz, 0.6, 0.5, 4, ry + Math.PI / 4);
+    }
+    // a well or a cattle shed in some compounds
+    if (r() < 0.45) {
+      const wx = x + (PW / 2 - 3) * c * (r() < 0.5 ? 1 : -1) + (PD / 2 - 4) * s * -0.2, wz = z - (PW / 2 - 3) * s + (PD / 2 - 4) * c * -0.2;
+      const gy = getHeight(wx, wz);
+      k.cyl('laterite', wx, gy - 0.3, wz, 0.9, 0.9, 1.1, 12, 1.6);
+      G.colliders.addCircle(wx, wz, 0.95, gy, gy + 0.8);
+    } else if (r() < 0.5) {
+      const bx = x - (PW / 2 - 3.5) * c - (PD / 2 - 4) * s, bz = z + (PW / 2 - 3.5) * s - (PD / 2 - 4) * c;
+      const gy = getHeight(bx, bz);
+      for (const [ox, oz] of [[-1.8, -1.4], [1.8, -1.4], [1.8, 1.4], [-1.8, 1.4]]) k.cyl('wood', bx + ox * c + oz * s, gy, bz - ox * s + oz * c, 0.08, 0.08, 2.2, 5);
+      k.roof('thatch', bx, gy + 2.2, bz, 4.2, 3.4, ry, { over: 0.4, pitch: 0.8, gable: 0.8, flare: 0 });
+      G.colliders.addBox(bx, bz, 2.1, 1.7, ry, gy, gy + 2.5);
+    }
+    this.counts.house++;
+    (this.compoundsAt ||= []).push([Math.round(x), Math.round(z), +ry.toFixed(2)]);
+    return true;
+  }
+
+  // Compounds every 40–70 m along a road, alternating sides, skipping some plots.
+  laneHouses(name, centre, s0, s1, roadHalf, o = {}) {
+    const r = this.rnd;
+    let placed = 0;
+    const max = o.max ?? 99;
+    this.walkRoad(name, centre, s0, s1, (x, z, tx, tz) => {
+      if (placed >= max) return 1e9;
+      for (const side of r() < 0.5 ? [-1, 1] : [1, -1]) {
+        if (r() > (o.fill ?? 0.6)) continue;
+        const set = roadHalf + 12 + r() * 5;
+        const hx = x - tz * set * side, hz = z + tx * set * side;
+        if (!this.siteOK(hx, hz, o.minH ?? 1.3, 0.2) || !this.clearOfRoads(hx, hz, set - 3)) continue;
+        if (Math.hypot(hx - centre.x, hz - centre.z) < (o.keepOut ?? 0)) continue;
+        const ry = Math.atan2(tz * side, -tx * side) + (r() - 0.5) * 0.12;
+        if (this.compound(hx, hz, ry, o)) { placed++; break; }
+      }
+      return 40 + r() * 30;
+    });
+    return placed;
+  }
+
+  // Fishing hamlet: clusters of huts on the shore, every door facing the water.
+  shoreHamlet(place, nHuts, nHouses = 0, R = place.r) {
+    const r = this.rnd;
+    const spots = [];
+    for (let i = 0; i < 1600 && spots.length < 60; i++) {
+      const a = r() * TAU, d = Math.sqrt(r()) * R;
+      const x = place.x + Math.cos(a) * d, z = place.z + Math.sin(a) * d;
+      const h = getHeight(x, z);
+      if (h < 1.1 || h > 4 || getSlope(x, z) > 0.18) continue;
+      // nearest water within 45 m
+      let best = null;
+      for (let b = 0; b < TAU; b += 0.26) for (const dist of [12, 22, 34, 45]) {
+        if (getHeight(x + Math.cos(b) * dist, z + Math.sin(b) * dist) < -0.4) { if (!best || dist < best.d) best = { d: dist, b }; break; }
+      }
+      if (!best || best.d < 12) continue;
+      spots.push({ x, z, face: best.b, dw: best.d });
+    }
+    // seed 2–4 clusters along the shore, then fill each cluster
+    spots.sort((p, q) => p.dw - q.dw);
+    const seeds = [];
+    for (const s of spots) if (seeds.length < 2 + Math.floor(nHuts / 6) && seeds.every((q) => Math.hypot(q.x - s.x, q.z - s.z) > 70)) seeds.push(s);
+    let huts = 0, houses = 0;
+    for (const seed of seeds) {
+      const members = spots.filter((s) => Math.hypot(s.x - seed.x, s.z - seed.z) < 55).sort(() => r() - 0.5);
+      for (const m of members) {
+        if (huts >= nHuts && houses >= nHouses) break;
+        if (!this.free(m.x, m.z, 6) || !this.clearOfRoads(m.x, m.z, 6)) continue;
+        const ry = Math.atan2(Math.cos(m.face), Math.sin(m.face)) + (r() - 0.5) * 0.35;
+        if (houses < nHouses && m.dw > 25) { this.house(m.x, m.z, ry, { roofMat: 'roofOld' }); houses++; this.counts.house++; }
+        else if (huts < nHuts) { this.hut(m.x, m.z, ry); huts++; this.counts.hut++; }
+      }
+    }
+    // fish-drying racks between the huts and the water
+    for (const seed of seeds) {
+      const ry = Math.atan2(Math.cos(seed.face), Math.sin(seed.face));
+      const fx = seed.x + Math.cos(seed.face) * seed.dw * 0.5, fz = seed.z + Math.sin(seed.face) * seed.dw * 0.5;
+      const gy = getHeight(fx, fz);
+      if (gy < 0.3) continue;
+      for (let i = -2; i <= 2; i++) this.kit.cyl('wood', fx + Math.cos(ry) * i * 1.6, gy, fz - Math.sin(ry) * i * 1.6, 0.05, 0.05, 1.3, 5);
+      this.kit.box('planks', fx, gy + 1.25, fz, 7, 0.06, 1.2, ry, 2);
+    }
+  }
+
+  // Farmhouses on the raised edges of the paddy, looking over the fields.
+  paddyFarms(n) {
+    const r = this.rnd, p = P.thenga_paddy;
+    let placed = 0;
+    for (let i = 0; i < 3000 && placed < n; i++) {
+      const a = r() * TAU, d = 200 + r() * 420;
+      const x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d;
+      if (!this.siteOK(x, z, 1.9, 0.15) || getBiome(x, z)[2] === 2) continue;
+      // must overlook a paddy within 40 m
+      let fx = 0, fz = 0, found = false;
+      for (let b = 0; b < TAU && !found; b += 0.4) { const qx = x + Math.cos(b) * 35, qz = z + Math.sin(b) * 35; if (getBiome(qx, qz)[2] === 2) { fx = qx; fz = qz; found = true; } }
+      if (!found || !this.clearOfRoads(x, z, 10) || !this.free(x, z, 18)) continue;
+      const ry = Math.atan2(fx - x, fz - z);
+      if (this.compound(x, z, ry, { roofMat: r() < 0.5 ? 'roofOld' : 'thatch' })) placed++;
+    }
+  }
+
+  // The town square: an open maidan with a banyan platform (aalthara) and a well.
+  townSquare() {
+    const k = this.kit, t = P.vaikara_town;
+    const [x, z] = this.findLand(t.x, t.z + 6, 1.5, 60);
+    const y = getHeight(x, z);
+    k.cyl('laterite', x, y - 1.2, z, 6.5, 6.2, 1.9, 24, 1.6);
+    k.cyl('sandstone', x, y + 0.65, z, 6.7, 6.7, 0.15, 24, 3);
+    // the banyan: a thick trunk and a wide canopy of leaf clusters (bark/leaf from the kit)
+    k.cyl('wood', x, y + 0.7, z, 1.3, 0.9, 6, 12, 2);
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * TAU, rr = i ? 5.5 : 0;
+      k.sphere('canopy', x + Math.cos(a) * rr, y + 8 + (i ? 0 : 2), z + Math.sin(a) * rr, i ? 4.2 : 5, TAU, Math.PI, 0.7, 12);
+      if (i % 2) k.cyl('wood', x + Math.cos(a) * 6.5, y + 0.7, z + Math.sin(a) * 6.5, 0.12, 0.12, 6.5, 5); // aerial roots
+    }
+    G.colliders.addCircle(x, z, 6.6, y - 2, y + 0.75);
+    G.colliders.addDeck(x, z, 4.6, 4.6, 0, y + 0.75);
+    // keep the square open: no houses or trees within 32 m
+    G.colliders.addReserve(x, z, 32);
+    // the well, a lamp post and a stone bench
+    const wx = x + 16, wz = z + 6, wy = getHeight(wx, wz);
+    k.cyl('laterite', wx, wy - 0.4, wz, 1.3, 1.3, 1.3, 14, 1.6);
+    for (const sx of [-1, 1]) k.box('wood', wx + sx * 1.2, wy + 0.9, wz, 0.15, 1.6, 0.15, 0);
+    k.box('wood', wx, wy + 2.45, wz, 2.6, 0.15, 0.15, 0);
+    G.colliders.addCircle(wx, wz, 1.4, wy, wy + 1);
+    this.squareAt = { x, z };
   }
 
   // ── landmarks
@@ -688,8 +877,8 @@ export class Settlements {
     const k = this.kit, r = makeRng(55);
     const p = P.old_bazaar;
     const cloths = ['cloth', 'redcloth', 'bluecloth'];
-    for (let i = 0; i < 26; i++) {
-      const x = p.x + (r() - 0.5) * 120, z = p.z + (r() - 0.5) * 100;
+    for (let i = 0; i < 16; i++) {
+      const x = p.x + (r() - 0.5) * 70, z = p.z + (r() - 0.5) * 60;
       const y = getHeight(x, z);
       if (y < 1.2 || !this.free(x, z, 2.6)) continue;
       const ry = this.faceRoad(x, z);
@@ -723,21 +912,38 @@ export class Settlements {
     await step(() => { this.court(); this.residency(); this.ghat(); this.market(); }, 0.25);
     await step(() => {
       const t = P.vaikara_town;
-      for (const r of ['Bazaar Street', 'Bridge Road', 'Puliyur Road', 'Estate Road', 'Temple Way', 'Church Lane', 'Ferry Lane']) this.street(r, 0, 1, t, 380);
+      this.townSquare();
+      // the bazaar core: terraces only on the busiest streets, close to the square
+      this.bazaarRow('Bazaar Street', t, 34, 210, 3.5);
+      this.bazaarRow('Bridge Road', t, 34, 115, 3.5);
+      this.bazaarRow('Puliyur Road', t, 30, 95, 3.5);
+      this.bazaarRow('Estate Road', t, 34, 85, 3.5);
     }, 0.4);
     await step(() => {
-      this.village(P.vaikara_town, 46, 6, { r: 560, house: {} });
-      this.village(P.puliyur, 18, 6, { nearRoad: 120 });
-      this.village(P.karimulam, 16, 10, { nearRoad: 140 });
+      const t = P.vaikara_town;
+      // residential compounds on the lanes around the core
+      this.laneHouses('Temple Way', t, 50, 330, 2.5, { fill: 0.55 });
+      this.laneHouses('Church Lane', t, 40, 330, 2.5, { fill: 0.7 });
+      this.laneHouses('Ferry Lane', t, 60, 330, 1.3, { fill: 0.6 });
+      this.laneHouses('Puliyur Road', t, 170, 520, 3.5, { fill: 0.5 });
+      this.laneHouses('Estate Road', t, 160, 520, 3.5, { fill: 0.45 });
+      // villages strung along their roads
+      this.laneHouses('Puliyur Road', P.puliyur, 0, 260, 3.5, { fill: 0.7, max: 7 });
+      this.laneHouses('Hill Road', P.puliyur, 0, 240, 2.5, { fill: 0.6, max: 4 });
+      this.laneHouses('North Coast Road', P.puliyur, 0, 260, 3.5, { fill: 0.5, max: 3 });
+      this.laneHouses('Karimulam Road', P.karimulam, 0, 300, 2.5, { fill: 0.7, max: 9 });
+      this.laneHouses('Hill Road', P.hill_trading_post, 0, 120, 2.5, { fill: 0.8, max: 3 });
+      this.laneHouses('Southern Road', P.southern_ferry, 40, 260, 3.5, { fill: 0.5, max: 3 });
+      this.laneHouses('Veliyathura Road', P.veliyathura, 60, 360, 2.5, { fill: 0.5, max: 4 });
+      this.laneHouses('Fort Road', P.kayalore, 40, 300, 2.5, { fill: 0.5, max: 3 });
+      this.paddyFarms(6);
     }, 0.55);
     await step(() => {
-      this.village(P.muthalappuzha, 6, 30, { minH: 1.0 });
-      this.village(P.veliyathura, 6, 14, { minH: 1.0 });
-      this.village(P.kayalore, 3, 18, { minH: 1.0 });
-      this.village(P.southern_ferry, 3, 7, { minH: 1.0 });
-      this.village(P.kalliyar_ferry, 2, 5, { r: 220, minH: 1.0 });
-      this.village(P.thenga_paddy, 9, 6, { r: 520, minH: 1.6 });
-      this.village(P.hill_trading_post, 4, 2, { r: 90 });
+      this.shoreHamlet(P.muthalappuzha, 16, 2);
+      this.shoreHamlet(P.veliyathura, 9, 1);
+      this.shoreHamlet(P.kayalore, 10, 1);
+      this.shoreHamlet(P.southern_ferry, 5);
+      this.shoreHamlet(P.kalliyar_ferry, 4, 0, 230);
       for (let i = 0; i < 3; i++) { const [x, z] = this.findLand(P.hill_trading_post.x + 30 - i * 26, P.hill_trading_post.z + 24, 3); this.godown(x, z, this.faceRoad(x, z), 14, 8); }
     }, 0.7);
     await step(() => {
@@ -766,6 +972,7 @@ export class Settlements {
     const M = materials();
     this.meshes = this.kit.build(this.scene, M);
     Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station });
+    console.info('[vaikara] buildings', JSON.stringify(this.counts));
     progress?.(1);
   }
 
