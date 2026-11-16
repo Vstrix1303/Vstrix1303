@@ -1,7 +1,7 @@
 // Post: scene pass → GTAO (contact shadows) → bloom → tone map (AgX) →
 // colour grade + vignette → FXAA.
 import * as THREE from 'three/webgpu';
-import { pass, mrt, output, normalView, directionToColor, colorToDirection, uniform, vec3, vec4, float, uv, mix, smoothstep, length, dot, clamp, renderOutput, Fn, pow } from 'three/tsl';
+import { sample, pass, mrt, output, normalView, directionToColor, colorToDirection, uniform, vec3, vec4, float, uv, mix, smoothstep, length, dot, clamp, renderOutput, Fn, pow } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
@@ -18,7 +18,8 @@ export class Post {
     if (G.Q.ao) {
       try {
         sp.setMRT(mrt({ output, normal: directionToColor(normalView) }));
-        const nrm = colorToDirection(sp.getTextureNode('normal'));
+        const nTex = sp.getTextureNode('normal');
+        const nrm = sample((u) => colorToDirection(nTex.sample(u)));
         const aoPass = ao(sp.getTextureNode('depth'), nrm, camera);
         aoPass.resolutionScale = 0.5;
         aoPass.radius.value = 1.2;
@@ -30,7 +31,7 @@ export class Post {
     }
     let hdr = col;
     if (G.Q.bloom) {
-      const b = bloom(col, 0.18, 0.55, 0.92);
+      const b = bloom(col, 0.12, 0.5, 1.1);
       this.bloomPass = b;
       hdr = col.add(b);
     }

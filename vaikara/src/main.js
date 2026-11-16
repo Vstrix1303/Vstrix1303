@@ -98,7 +98,7 @@ async function boot() {
 
   // start: on Vaikara Bridge road looking over the river, or ?at=place / ?cam=x,y,z,yaw,pitch
   const start = placeById[params.get('at')] || placeById.vaikara_town;
-  player.teleport(start.x + (params.get('at') ? 0 : -60), start.z + (params.get('at') ? 0 : 70));
+  if (params.get('at')) ui.travel(start.x, start.z); else player.teleport(start.x - 60, start.z + 70);
   if (params.get('hour')) sky.setHour(+params.get('hour'), true);
   if (params.has('pause')) G.timeScale = 0;
   if (params.get('cam')) {

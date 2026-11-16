@@ -45,8 +45,8 @@ export class Sky {
     this.sky.scale.setScalar(40000);
     this.sky.turbidity.value = 2.4;
     this.sky.rayleigh.value = 1.15;
-    this.sky.mieCoefficient.value = 0.004;
-    this.sky.mieDirectionalG.value = 0.82;
+    this.sky.mieCoefficient.value = 0.0025;
+    this.sky.mieDirectionalG.value = 0.76;
     this.sky.cloudCoverage.value = 0.38;
     this.sky.cloudDensity.value = 0.5;
     this.sky.cloudScale.value = 0.00022;

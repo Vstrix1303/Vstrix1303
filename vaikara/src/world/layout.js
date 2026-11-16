@@ -132,7 +132,7 @@ export const PLACES = [
   P('thenga_paddy', 'Thenga Paddy', 'Fertile fields and waterways', 700, 780, 500),
   P('kuttan_canal', 'Kuttan Canal', 'Life moves with the water', 1080, 760, 600),
   P('kalliyar_ferry', 'Kalliyar Ferry', 'The crossing', 822, 640, 160),
-  P('bridge', 'Vaikara Bridge', 'Connecting people, trade and opportunity', 655, 590, 200),
+  P('bridge', 'Vaikara Bridge', 'Connecting people, trade and opportunity', 657.3, 590, 200),
   P('river_ghat', 'River Ghat', 'Steps to the water', 592, 552, 110),
   P('old_bazaar', 'Old Bazaar', 'Spices, cloth and rumours', 612, 512, 150),
   P('vaikara_town', 'Vaikara Town', 'The heart of the region', 690, 486, 320),

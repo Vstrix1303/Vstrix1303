@@ -4,7 +4,7 @@ import * as THREE from 'three/webgpu';
 import { G } from '../state.js';
 import { Input } from './input.js';
 import { PLACES, toMap, toWorld, placeById } from '../world/layout.js';
-import { getHeight } from '../world/data.js';
+import { getHeight, W } from '../world/data.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
@@ -40,10 +40,23 @@ export class UI {
   travel(x, z) {
     // never drop the traveller into deep water: find nearby land
     let bx = x, bz = z;
-    if (getHeight(x, z) < 0.3) {
+    const deck = G.colliders.deckHeight(x, z, 1e4);
+    if (getHeight(x, z) < 0.3 && !(deck > -1e9)) {
       outer: for (let r = 10; r < 600; r += 10) for (let a = 0; a < 6.283; a += 0.25) {
         const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
         if (getHeight(px, pz) > 0.6) { bx = px; bz = pz; break outer; }
+      }
+    }
+    // keep out of the Vellar stream (its water sits above sea level)
+    const vel = W.meta.streams.vellar;
+    for (let k = 0; k < 3; k++) for (let i = 1; i < vel.length; i++) {
+      const [x0, z0, , hw] = vel[i];
+      const d = Math.hypot(bx - x0, bz - z0);
+      if (d < hw + 8) {
+        const [x1, z1] = vel[i - 1];
+        let nx = -(z0 - z1), nz = x0 - x1; const l = Math.hypot(nx, nz) || 1; nx /= l; nz /= l;
+        if ((bx - x0) * nx + (bz - z0) * nz < 0) { nx = -nx; nz = -nz; }
+        bx = x0 + nx * (hw + 14); bz = z0 + nz * (hw + 14);
       }
     }
     if (this.fly.enabled) { this.fly.pos.set(bx, getHeight(bx, bz) + 40, bz); }

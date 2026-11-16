@@ -177,12 +177,13 @@ export class Water {
     const uvF = uv().add(vec2(0, U.time.mul(speed).negate()));
     const nn = texture(nrm, uvF.mul(vec2(1, 0.6))).xyz.mul(2).sub(1);
     const streak = texture(noise, uvF.mul(vec2(3, 0.25))).r;
-    const white = clamp(st.sub(0.15).mul(1.4), 0, 1).mul(smoothstep(0.25, 0.65, streak).mul(0.6).add(0.5));
+    const white = clamp(st.sub(1.0), 0, 1).mul(smoothstep(0.25, 0.65, streak).mul(0.6).add(0.5)).add(clamp(st.sub(0.35), 0, 0.3).mul(smoothstep(0.5, 0.8, streak)));
     const edge = smoothstep(0.0, 0.18, uv().x).mul(smoothstep(1.0, 0.82, uv().x));
-    m.colorNode = mix(vec3(0.07, 0.13, 0.09), vec3(0.88, 0.92, 0.92), white);
+    m.colorNode = mix(vec3(0.03, 0.07, 0.05), vec3(0.88, 0.92, 0.92), white);
     m.normalNode = transformNormalToView(normalize(vec3(nn.x.mul(0.4), 1, nn.y.mul(0.4))));
-    m.roughnessNode = mix(float(0.06), float(0.5), white);
-    m.opacityNode = edge.mul(mix(float(0.85), float(0.95), white));
+    m.roughnessNode = mix(float(0.22), float(0.6), white);
+    m.envMapIntensity = 0.55;
+    m.opacityNode = edge.mul(mix(float(0.8), float(0.95), white));
     m.emissiveNode = vec3(0.05, 0.06, 0.06).mul(white).mul(float(1).sub(U.night.mul(0.8)));
     this.stream = new THREE.Mesh(g, m);
     this.stream.renderOrder = 3;
@@ -190,20 +191,19 @@ export class Water {
 
     // plunge-pool mist
     const base = pts[Math.min(pts.length - 1, fi + 3)];
-    const n = 220, mp = new Float32Array(n * 3), seed = new Float32Array(n);
+    const n = 140, mp = new Float32Array(n * 3), seed = new Float32Array(n);
     for (let i = 0; i < n; i++) { mp[i * 3] = base[0] + (Math.random() - 0.5) * 18; mp[i * 3 + 1] = base[2]; mp[i * 3 + 2] = base[1] + (Math.random() - 0.5) * 18; seed[i] = Math.random(); }
     const mg = new THREE.BufferGeometry();
     mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
     mg.setAttribute('seed', new THREE.BufferAttribute(seed, 1));
-    const mm = new THREE.PointsNodeMaterial({ transparent: true, depthWrite: false, sizeAttenuation: true });
+    const mm = new THREE.PointsNodeMaterial({ transparent: true, depthWrite: false, sizeAttenuation: false });
     const sd = attribute('seed');
     const life = fract(U.time.mul(0.18).add(sd));
     mm.positionNode = positionLocal.add(vec3(sin(sd.mul(40).add(U.time.mul(0.3))).mul(life).mul(8), life.mul(26), cos(sd.mul(31)).mul(life).mul(8)));
     mm.sizeNode = life.mul(14).add(4);
-    mm.colorNode = vec4(vec3(0.9, 0.93, 0.95), smoothstep(0.0, 0.15, life).mul(smoothstep(1.0, 0.4, life)).mul(0.18));
-    this.mist = new THREE.Points(mg, mm);
-    this.mist.frustumCulled = false;
-    this.scene.add(this.mist);
+    mm.colorNode = vec4(vec3(0.9, 0.93, 0.95), smoothstep(0.0, 0.15, life).mul(smoothstep(1.0, 0.4, life)).mul(0.07));
+    // (mist particles disabled: point sprites render inconsistently across backends)
+    void mg; void mm;
     this.fallsPos = new THREE.Vector3(base[0], base[2], base[1]);
   }
 

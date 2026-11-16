@@ -129,7 +129,7 @@ export class Vegetation {
         const rt = new THREE.RenderTarget(size, size * (h / (2 * ext) > 1 ? 1 : 1), { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, depthBuffer: true });
         rt.texture.colorSpace = THREE.LinearSRGBColorSpace;
         R.setRenderTarget(rt);
-        R.setClearColor(new THREE.Color(0.18, 0.24, 0.1), 0);
+        R.setClearColor(new THREE.Color(0.12, 0.16, 0.06), 0);
         R.clear();
         R.render(scn, cam);
         R.setRenderTarget(null);
@@ -152,7 +152,7 @@ export class Vegetation {
         geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
         geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
         geo.setIndex(I);
-        const fm = new THREE.MeshStandardNodeMaterial({ map: rt.texture, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, color: 0xa8b0a0 });
+        const fm = new THREE.MeshStandardNodeMaterial({ map: rt.texture, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, color: 0xb4ac8c });
         // collapse impostors inside the near radius and beyond the far radius
         const list = this.trees[sp].filter((t) => t.v === vi);
         const im = new THREE.InstancedMesh(geo, fm, Math.max(1, list.length));
