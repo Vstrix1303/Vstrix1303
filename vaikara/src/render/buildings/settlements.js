@@ -23,7 +23,7 @@ export class Settlements {
     this.jetties = []; // used by props for boats
     this.counts = { shop: 0, house: 0, hut: 0 };
     this.gardens = [];
-    this.shopFronts = []; this.shoreSpots = []; this.namedJetty = {}; this.ferries = [];
+    this.shopFronts = []; this.shoreSpots = []; this.openShopsAt = []; this.namedJetty = {}; this.ferries = [];
   }
 
   // ── helpers
@@ -58,9 +58,10 @@ export class Settlements {
     k.lbox('laterite', x, z, ry, 0, y - 2.5, 0.6, w + 1.2, 2.5 + ph, d + 2.6);
     const wallMat = o.wall || (r() < 0.75 ? 'plaster' : r() < 0.5 ? 'laterite' : 'yplaster');
     const wh = o.h || 3.0;
-    k.lbox(wallMat, x, z, ry, 0, y + ph, 0, w, wh, d);
+    if (o.open) this.houseInterior(x, z, ry, w, d, y + ph, wh, wallMat);
+    else k.lbox(wallMat, x, z, ry, 0, y + ph, 0, w, wh, d);
     // door and windows on the front
-    k.lbox('wood', x, z, ry, 0, y + ph, d / 2 + 0.02, 1.4, 2.35, 0.1);
+    if (!o.open) k.lbox('wood', x, z, ry, 0, y + ph, d / 2 + 0.02, 1.4, 2.35, 0.1);
     k.lbox('wood', x, z, ry, 0, y + ph + 2.35, d / 2 + 0.05, 1.8, 0.18, 0.16);
     for (const sx of [-1, 1]) {
       const wx = sx * w * 0.3;
@@ -79,7 +80,7 @@ export class Settlements {
       k.cyl('wood', x + ox * c + (d / 2 + 1.6) * s, y + ph, z - ox * s + (d / 2 + 1.6) * c, 0.11, 0.09, wh + 0.2, 7);
     }
     k.roof(o.roofMat || 'roof', x + Math.sin(ry) * 0.8, y + ph + wh + 0.1, z + Math.cos(ry) * 0.8, w + 0.6, d + 2.2, ry, { over: 1.1, pitch: 0.95 });
-    this.collide(x, z, w, d, ry, y);
+    if (!o.open) this.collide(x, z, w, d, ry, y);
     G.colliders.addDeck(x + Math.sin(ry) * 0.6, z + Math.cos(ry) * 0.6, (w + 1.2) / 2, (d + 2.6) / 2, ry, y + ph);
     if (ownWash) k.unwash();
     return y;
@@ -107,8 +108,11 @@ export class Settlements {
     const wall = o.wall || (r() < 0.6 ? 'plaster' : r() < 0.5 ? 'yplaster' : 'laterite');
     k.lbox('laterite', x, z, ry, 0, y - 2.5, 0.4, w + 0.2, 2.8, d + 0.8);
     // ground floor: back and sides closed, front open shop with dark interior and shutters
-    k.lbox(wall, x, z, ry, 0, y + 0.3, -0.5, w, 3.4, d - 1);
-    k.lbox('window', x, z, ry, 0, y + 0.3, d / 2 - 0.98, w - 1, 2.6, 0.05);
+    if (o.open) this.shopInterior(x, z, ry, w, d, y, wall);
+    else {
+      k.lbox(wall, x, z, ry, 0, y + 0.3, -0.5, w, 3.4, d - 1);
+      k.lbox('window', x, z, ry, 0, y + 0.3, d / 2 - 0.98, w - 1, 2.6, 0.05);
+    }
     for (const sx of [-1, 1]) k.lbox('wood', x, z, ry, sx * (w / 2 - 0.15), y + 0.3, d / 2 - 0.4, 0.3, 3.4, 0.3);
     // awning cloth
     const cloth = ['cloth', 'redcloth', 'bluecloth', 'cloth'][Math.floor(r() * 4)];
@@ -121,7 +125,7 @@ export class Settlements {
     }
     if (floors < 2) {
       if (o.roof !== false) k.roof(o.roofMat || 'roof', x + s * 0.4, y + 3.75, z + c * 0.4, w + 0.4, d + 0.8, ry, { over: 0.9, pitch: 0.8 });
-      this.collide(x, z, w, d, ry, y, 7);
+      if (!o.open) this.collide(x, z, w, d, ry, y, 7);
       return y;
     }
     // upper floor with wooden balcony
@@ -137,7 +141,8 @@ export class Settlements {
     }
     for (const sx of [-1, 1]) k.cyl('wood', x + sx * (w / 2 - 0.15) * c + (d / 2 + 1.0) * s, y + 3.88, z - sx * (w / 2 - 0.15) * s + (d / 2 + 1.0) * c, 0.08, 0.07, 2.9, 6);
     if (o.roof !== false) k.roof(o.roofMat || 'roof', x + s * 0.4, y + 6.75, z + c * 0.4, w + 0.4, d + 0.8, ry, { over: 0.9, pitch: 0.85 });
-    this.collide(x, z, w, d, ry, y, 10);
+    if (o.open) G.colliders.addBox(x, z, w / 2, d / 2, ry, y + 3.55, y + 10); // the upper storey only
+    else this.collide(x, z, w, d, ry, y, 10);
     return y;
   }
 
@@ -207,6 +212,80 @@ export class Settlements {
     }
     this.jetty(sx, sz, sx + Math.cos(best.a) * len, sz + Math.sin(best.a) * len);
     return [sx, sz, best.a];
+  }
+
+  // ── interiors ─────────────────────────────────────────────────────────────
+  wallBox(mat, x, z, ry, ox, y, oz, w, h, d) {
+    this.kit.lbox(mat, x, z, ry, ox, y, oz, w, h, d);
+    const c = Math.cos(ry), s = Math.sin(ry);
+    G.colliders.addBox(x + ox * c + oz * s, z - ox * s + oz * c, w / 2, d / 2, ry, y - 0.5, y + h);
+  }
+
+  // An open-fronted shop: floor, walls, ceiling, a counter, laden shelves and a lamp.
+  shopInterior(x, z, ry, w, d, y, wall) {
+    const k = this.kit, r = this.rnd, t = 0.3;
+    const back = -d / 2, front = d / 2 - 1;
+    const depth = front - back;
+    const fy = y + 0.3;
+    k.lbox('planks', x, z, ry, 0, fy - 0.02, -0.5, w - 0.1, 0.12, depth);
+    G.colliders.addDeck(x - Math.sin(ry) * 0.5, z - Math.cos(ry) * 0.5, w / 2 - 0.2, depth / 2, ry, fy + 0.1);
+    this.wallBox(wall, x, z, ry, 0, fy, back + t / 2, w, 3.3, t);
+    for (const sx of [-1, 1]) this.wallBox(wall, x, z, ry, sx * (w / 2 - t / 2), fy, -0.5, t, 3.3, depth);
+    k.lbox('planks', x, z, ry, 0, fy + 3.2, -0.5, w, 0.15, depth); // ceiling
+    // counter across part of the front, leaving a way in
+    const cw = w * 0.55, side = r() < 0.5 ? -1 : 1;
+    this.wallBox('planks', x, z, ry, side * (w / 2 - cw / 2 - t), fy, front - 1.6, cw, 0.95, 0.6);
+    // shelves on the back wall with jars and bundles
+    for (let i = 0; i < 3; i++) {
+      k.lbox('planks', x, z, ry, 0, fy + 0.9 + i * 0.75, back + t + 0.25, w - 1, 0.06, 0.5);
+      for (let j = 0; j < Math.floor(w / 0.9); j++) {
+        const ox = -w / 2 + 0.8 + j * 0.85 + (r() - 0.5) * 0.2;
+        const c = Math.cos(ry), sn = Math.sin(ry), oz = back + t + 0.25;
+        const px = x + ox * c + oz * sn, pz = z - ox * sn + oz * c;
+        if (r() < 0.6) k.cyl(['salt', 'redcloth', 'cloth', 'copper'][Math.floor(r() * 4)], px, fy + 0.96 + i * 0.75, pz, 0.14, 0.11, 0.3 + r() * 0.2, 8);
+      }
+    }
+    // gunny sacks of rice, pepper and copra on the floor
+    for (let i = 0; i < 4; i++) {
+      const ox = (r() - 0.5) * (w - 2), oz = back + 1.4 + r() * (depth - 3.5);
+      const c = Math.cos(ry), sn = Math.sin(ry);
+      k.sphere(['cloth', 'cloth', 'redcloth', 'salt'][i % 4], x + ox * c + oz * sn, fy + 0.02, z - ox * sn + oz * c, 0.42, Math.PI * 2, Math.PI / 2, 1.3, 10);
+    }
+    // a hanging lamp
+    k.box('lamp', x - Math.sin(ry) * 1.5, fy + 2.5, z - Math.cos(ry) * 1.5, 0.25, 0.35, 0.25, ry);
+    this.counts.open = (this.counts.open || 0) + 1;
+    this.openShopsAt.push({ x, z, ry, d });
+  }
+
+  // A house you can walk into: front door, verandah room and an inner room.
+  houseInterior(x, z, ry, w, d, fy, wh, wall) {
+    const k = this.kit, t = 0.28, door = 1.3;
+    const seg = (w - door) / 2;
+    for (const sx of [-1, 1]) this.wallBox(wall, x, z, ry, sx * (door / 2 + seg / 2), fy, d / 2 - t / 2, seg, wh, t);
+    k.lbox(wall, x, z, ry, 0, fy + 2.35, d / 2 - t / 2, door, wh - 2.35, t);
+    this.wallBox(wall, x, z, ry, 0, fy, -d / 2 + t / 2, w, wh, t);
+    for (const sx of [-1, 1]) this.wallBox(wall, x, z, ry, sx * (w / 2 - t / 2), fy, 0, t, wh, d);
+    // partition with a doorway into the inner room
+    const pz = -d * 0.1;
+    this.wallBox(wall, x, z, ry, -(door / 2 + (w / 2 - door / 2) / 2) - 0.6, fy, pz, w / 2 - door / 2 - 1.2 + 0.0001 + 1.2, wh, t * 0.8);
+    this.wallBox(wall, x, z, ry, (door / 2 + (w / 2 - door / 2) / 2) - 0.6, fy, pz, w / 2 - door / 2, wh, t * 0.8);
+    k.lbox('planks', x, z, ry, 0, fy - 0.02, 0, w - 0.1, 0.06, d - 0.1); // floor boards
+    k.lbox('planks', x, z, ry, 0, fy + wh - 0.08, 0, w, 0.1, d); // wooden ceiling
+    // furniture: a cot, a chest, a lamp on a stand, a woven mat
+    const c = Math.cos(ry), s = Math.sin(ry), at = (ox, oz) => [x + ox * c + oz * s, z - ox * s + oz * c];
+    const [bx, bz] = at(-w / 4, -d / 2 + 1.2);
+    k.box('planks', bx, fy + 0.45, bz, 2.0, 0.12, 0.95, ry);
+    for (const [ox, oz] of [[-0.9, -0.4], [0.9, -0.4], [0.9, 0.4], [-0.9, 0.4]]) k.box('wood', bx + ox * c + oz * s, fy, bz - ox * s + oz * c, 0.08, 0.45, 0.08, ry);
+    G.colliders.addBox(bx, bz, 1.0, 0.5, ry, fy, fy + 0.6);
+    const [cx2, cz2] = at(w / 4, -d / 2 + 0.75);
+    k.box('wood', cx2, fy, cz2, 1.1, 0.6, 0.6, ry);
+    G.colliders.addBox(cx2, cz2, 0.55, 0.3, ry, fy, fy + 0.6);
+    const [lx, lz] = at(w / 2 - 0.7, d / 2 - 1.1);
+    k.cyl('gold', lx, fy, lz, 0.18, 0.05, 1.2, 8);
+    k.box('lamp', lx, fy + 1.2, lz, 0.18, 0.12, 0.18, ry);
+    const [mx, mz] = at(0, d / 4);
+    k.box('thatch', mx, fy + 0.01, mz, 1.6, 0.02, 1.0, ry);
+    this.counts.open = (this.counts.open || 0) + 1;
   }
 
   // ── planned layout ───────────────────────────────────────────────────────
@@ -282,7 +361,10 @@ export class Settlements {
         if (!ok) { flush(); return 4; }
         if (run.y == null) { run.y = this.footY(hx, hz, w * run.target, run.d, run.ry).y; this.kit.wash(r); run.tints = this.kit.tints; }
         this.kit.tints = run.tints;
-        this.shophouse(hx, hz, run.ry, w, { d: run.d, floors: run.floors, wall: run.wall, y: run.y, roof: false });
+        const sq = this.squareAt, nearSq = sq && Math.hypot(hx - sq.x, hz - sq.z) < 170;
+        const open = nearSq && (this.openShops || 0) < 12 && r() < 0.6;
+        if (open) this.openShops = (this.openShops || 0) + 1;
+        this.shophouse(hx, hz, run.ry, w, { d: run.d, floors: run.floors, wall: run.wall, y: run.y, roof: false, open });
         run.units.push({ x: hx, z: hz, w });
         this.shopFronts.push({ x: hx + Math.sin(run.ry) * (run.d / 2 + 1.4), z: hz + Math.cos(run.ry) * (run.d / 2 + 1.4), ry: run.ry });
         if (run.units.length >= run.target) { flush(); return w / 2 + 6 + r() * 6; } // lane between terraces
@@ -302,7 +384,9 @@ export class Settlements {
     const hx = x - s * 2, hz = z - c * 2;
     if (!this.free(hx, hz, Math.max(w, d) / 2 + 2)) return false;
     k.wash(r);
-    this.house(hx, hz, ry, { w, d, roofMat: o.roofMat || (r() < 0.55 ? 'roof' : 'roofOld'), wall: o.wall });
+    const tw = P.vaikara_town, open = (this.openHouses || 0) < 8 && Math.hypot(x - tw.x, z - tw.z) < 700;
+    if (open) this.openHouses = (this.openHouses || 0) + 1;
+    this.house(hx, hz, ry, { w, d, roofMat: o.roofMat || (r() < 0.55 ? 'roof' : 'roofOld'), wall: o.wall, open });
     // low laterite compound wall with a gate gap on the lane side
     const wallH = 1.15, t = 0.45;
     const seg = (ox, oz, len, along) => {
@@ -1025,7 +1109,7 @@ export class Settlements {
     }, 0.9);
     const M = materials();
     this.meshes = this.kit.build(this.scene, M);
-    Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station, gardens: this.gardens, shopFronts: this.shopFronts, shoreSpots: this.shoreSpots, namedJetty: this.namedJetty, ferries: this.ferries });
+    Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station, gardens: this.gardens, shopFronts: this.shopFronts, shoreSpots: this.shoreSpots, openShopsAt: this.openShopsAt, namedJetty: this.namedJetty, ferries: this.ferries });
     console.info('[vaikara] buildings', JSON.stringify(this.counts));
     progress?.(1);
   }

@@ -11,7 +11,7 @@ import { PLACES, placeById as P } from '../world/layout.js';
 import { makeRng } from '../world/noise.js';
 
 const TAU = Math.PI * 2;
-const MAX = 26, RADIUS = 160;
+const MAX = 20, RADIUS = 160, FULL = 70, SHADOW = 35;
 // clothing washes: white mundu, saffron, indigo, earth, khaki (officials), red
 const ROLES = [
   { name: 'villager', body: 0xf2ece0, w: 4 }, { name: 'trader', body: 0xd89a3a, w: 2 },
@@ -57,6 +57,7 @@ export class Villagers {
       root.traverse((o) => {
         if (o.isMesh) { o.material = sets[role].get(o.material) || o.material; o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; }
       });
+      const meshes = []; root.traverse((o) => { if (o.isMesh) meshes.push(o); });
       root.scale.setScalar(0.92 + this.rnd() * 0.14);
       root.visible = false;
       this.scene.add(root);
@@ -64,8 +65,16 @@ export class Villagers {
       const idle = mixer.clipAction(this.clips.idle), walk = mixer.clipAction(this.clips.walk);
       idle.play(); walk.play();
       idle.time = this.rnd() * 3; walk.time = this.rnd() * 3;
-      this.pool.push({ root, mixer, idle, walk, role: ROLES[role].name, active: false, coll: { x: 0, z: 0, r: 0.35, y: -999 } });
+      this.pool.push({ root, mixer, idle, walk, meshes, idx: i, roleIdx: role, role: ROLES[role].name, active: false, coll: { x: 0, z: 0, r: 0.35, y: -999 } });
     }
+    // distant villagers are cheap tinted capsules (one instanced draw)
+    const cap = new THREE.CapsuleGeometry(0.24, 1.15, 3, 8); cap.translate(0, 0.82, 0);
+    this.proxy = new THREE.InstancedMesh(cap, new THREE.MeshStandardNodeMaterial({ roughness: 0.9 }), MAX);
+    const zero = new THREE.Matrix4().makeScale(0, 0, 0), col = new THREE.Color();
+    for (let i = 0; i < MAX; i++) { this.proxy.setMatrixAt(i, zero); this.proxy.setColorAt(i, col.set(ROLES[this.pool[i].roleIdx].body)); }
+    this.proxy.frustumCulled = false; this.proxy.castShadow = false;
+    this.scene.add(this.proxy);
+    this._zero = zero; this._m = new THREE.Matrix4();
     const ud = this.scene.userData;
     this.fronts = ud.shopFronts || [];
     this.shore = ud.shoreSpots || [];
@@ -122,7 +131,7 @@ export class Villagers {
       if (!pts) return false;
       Object.assign(n, { mode: 'walk', pts, i: 0, x: pts[0][0], z: pts[0][1], yaw: 0, speed: 1.15 + r() * 0.45 });
     }
-    n.active = true; n.root.visible = true; n.fade = 0;
+    n.active = true; n.fade = 0;
     if (!G.colliders.dyn.includes(n.coll)) G.colliders.dyn.push(n.coll);
     return true;
   }
@@ -140,6 +149,7 @@ export class Villagers {
 
   retire(n) {
     n.active = false; n.root.visible = false; n.coll.y = -999;
+    if (this.proxy) { this.proxy.setMatrixAt(n.idx, this._zero); this.proxy.instanceMatrix.needsUpdate = true; }
   }
 
   update(dt, focus, camera) {
@@ -190,12 +200,19 @@ export class Villagers {
       const y = Math.max(getHeight(n.x, n.z), G.colliders.deckHeight(n.x, n.z, getHeight(n.x, n.z) + 9) || -1e9);
       n.root.position.set(n.x, y, n.z);
       n.root.rotation.y = n.yaw;
+      // level of detail: full skinned body near, capsule far
+      const full = dist < FULL;
+      n.root.visible = full;
+      const sh = dist < SHADOW;
+      if (n.shadow !== sh) { n.shadow = sh; for (const m of n.meshes) m.castShadow = sh; }
+      this.proxy.setMatrixAt(n.idx, full ? this._zero : this._m.makeTranslation(n.x, y, n.z));
+      this.proxy.instanceMatrix.needsUpdate = true;
       n.coll.x = n.x; n.coll.z = n.z; n.coll.y = y;
       // blend idle ↔ walk; animate only when reasonably close
       n.blend = THREE.MathUtils.damp(n.blend || 0, moving, 6, dt);
       n.walk.setEffectiveWeight(n.blend); n.idle.setEffectiveWeight(1 - n.blend);
       n.walk.timeScale = (n.speed || 1.2) / 1.25;
-      if (dist < 90 || (n.lastAnim = (n.lastAnim || 0) + dt) > 0.1) { n.mixer.update(dist < 90 ? dt : n.lastAnim); n.lastAnim = 0; }
+      if (full) n.mixer.update(dt);
     }
     void camera; void P;
   }

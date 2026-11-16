@@ -13,6 +13,7 @@ export class Post {
     this.sat = uniform(1.1);
     this.warm = uniform(0.0);
     this.vig = uniform(0.32);
+    this.exposure = uniform(1); // per-frame exposure lives here: changing renderer.toneMappingExposure rebuilds pipelines
     const sp = pass(scene, camera);
     let col = sp.getTextureNode('output');
     if (G.Q.ao) {
@@ -35,6 +36,7 @@ export class Post {
       this.bloomPass = b;
       hdr = col.add(b);
     }
+    hdr = hdr.mul(vec4(vec3(this.exposure), 1));
     const ldr = renderOutput(hdr);
     const sat = this.sat, warm = this.warm, vig = this.vig;
     const graded = Fn(() => {

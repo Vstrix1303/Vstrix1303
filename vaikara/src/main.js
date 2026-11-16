@@ -1,7 +1,7 @@
 // VAIKARA — Malabar Coast, circa 1905. Entry point.
 import * as THREE from 'three/webgpu';
 import { G, U, QUALITY_PRESETS } from './state.js';
-import { loadWorld, getHeight } from './world/data.js';
+import { loadWorld, getHeight, waterLevelAt, W as WD } from './world/data.js';
 import { placeById } from './world/layout.js';
 import { Terrain, terrainMaterial } from './render/terrain.js';
 import { Sky } from './render/sky.js';
@@ -19,6 +19,7 @@ import { Villagers } from './game/npcs.js';
 import { Traffic } from './render/traffic.js';
 import { Weather } from './render/weather.js';
 import { Audio } from './game/audio.js';
+import { Interact } from './game/interact.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -115,6 +116,11 @@ async function boot() {
     fly.enable(true); fly.pos.set(x, y, z); fly.yaw = yaw || 0; fly.pitch = pitch || 0;
   }
 
+  if (params.has('board')) { // test hook: start in the nearest canoe
+    let bt = null, bd = 1e9;
+    for (const x of scene.userData.boats || []) { const d = Math.hypot(x.position.x - player.pos.x, x.position.z - player.pos.z); if (d < bd) { bd = d; bt = x; } }
+    if (bt) { player.board(bt); player.camYaw = player.boatYaw + 2.6; player.camPitch = 0.25; player.camDist = 9; }
+  }
   G.focus.copy(fly.enabled ? fly.pos : player.pos);
   villagers.prefill(G.focus); traffic.prefill(G.focus);
   status('Compiling shaders…', 0.94); await tick();
@@ -128,15 +134,33 @@ async function boot() {
   try { await renderer.compileAsync(scene, camera); } catch (e) { console.warn(e); }
   status(`Ready · ${G.backend}`, 1);
 
-  const enter = () => {
+  const interact = new Interact(scene, player);
+  // save / continue
+  const SAVE = 'vaikara.save';
+  const readSave = () => { try { return JSON.parse(localStorage.getItem(SAVE)); } catch { return null; } };
+  const writeSave = () => {
+    if (!ui.started || fly.enabled) return;
+    try { localStorage.setItem(SAVE, JSON.stringify({ x: player.pos.x, z: player.pos.z, hour: G.hour, weather: weather.state, t: Date.now() })); } catch { /* storage blocked */ }
+  };
+  setInterval(writeSave, 10000);
+  addEventListener('beforeunload', writeSave);
+  const saved = !params.has('shot') && !params.get('at') && !params.get('cam') && readSave();
+  const enter = (resume) => {
+    if (resume && saved) { ui.travel(saved.x, saved.z); sky.setHour(saved.hour, true); if (saved.weather) weather.set(saved.weather, true); villagers.prefill(player.pos); traffic.prefill(player.pos); }
     $('title').classList.add('fade');
     setTimeout(() => $('title').classList.add('hidden'), 1300);
     canvas.focus();
     if (!params.has('shot')) canvas.requestPointerLock?.();
     ui.started = true;
   };
-  if (params.has('shot')) enter();
-  else { $('start').classList.add('on'); $('start').onclick = enter; $('start').focus(); }
+  if (params.has('shot')) enter(false);
+  else {
+    $('start').classList.add('on'); $('start').onclick = () => enter(false);
+    if (saved) {
+      $('continue').classList.remove('hidden'); $('continue').onclick = () => enter(true); $('continue').focus();
+      $('start').textContent = 'New journey'; $('start').classList.add('alt');
+    } else $('start').focus();
+  }
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
@@ -146,12 +170,13 @@ async function boot() {
   const clock = new THREE.Timer();
   const _dir = new THREE.Vector3(); let glareS = 0;
   let frames = 0, fpsT = 0, fps = 0;
-  window.__vaikara = { G, weather, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
+  window.__vaikara = { Input, data: { getHeight, waterLevelAt, W: WD }, G, weather, interact, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
   renderer.setAnimationLoop(() => {
     clock.update(); const dt = Math.min(0.05, clock.getDelta());
     G.dt = dt; G.time += dt; U.time.value = G.time;
     ui.update(dt);
-    if (fly.enabled) fly.update(dt); else player.update(dt);
+    if (fly.enabled) fly.update(dt); else { player.update(dt); interact.update(); }
+    const st = $('stam'); st.classList.toggle('on', player.stamina < 99 && !fly.enabled); st.classList.toggle('tired', player.tired); st.firstElementChild.style.width = `${player.stamina}%`;
     G.focus.copy(fly.enabled ? fly.pos : player.pos);
     U.camPos.value.copy(camera.position);
     weather.update(dt, camera.position);
@@ -165,7 +190,8 @@ async function boot() {
     sky.sky.showSunDisc.value = 0.25 + 0.75 * THREE.MathUtils.smoothstep(sd.y, 0.06, 0.3);
     const hr = G.hour;
     post.warm.value = 1.4 * (THREE.MathUtils.smoothstep(hr, 5.8, 6.6) * (1 - THREE.MathUtils.smoothstep(hr, 7.6, 8.8)) + THREE.MathUtils.smoothstep(hr, 15.8, 17) * (1 - THREE.MathUtils.smoothstep(hr, 18.6, 19.3)));
-    renderer.toneMappingExposure = sky.exposure * (1 - 0.5 * glareS) * (params.get('exp') ? +params.get('exp') : 1);
+    post.exposure.value = sky.exposure * (1 - 0.5 * glareS) * (params.get('exp') ? +params.get('exp') : 1);
+    if (params.has('nopost')) renderer.toneMappingExposure = post.exposure.value;
     terrain.update(camera.position);
     water.update(camera.position);
     veg.update(camera.position, dt);

@@ -24,6 +24,8 @@ WebGPU needs a recent Chrome/Edge (or Safari 26+). Other browsers use the WebGL2
 | --- | --- |
 | `W A S D` | Walk (camera-relative) · `Shift` to run |
 | `Space` | Jump · swim up |
+| `E` | Board a moored vallam canoe / step ashore (`W A S D` to paddle, `Shift` to race) |
+| `R` | Change the weather (clear → cloudy → rain → storm) |
 | Mouse / wheel | Look / zoom (click the game to capture the mouse, `Esc` to release) |
 | `M` | Map: click anywhere to travel there |
 | `T` | Travel list: all 31 named places |
@@ -32,8 +34,10 @@ WebGPU needs a recent Chrome/Edge (or Safari 26+). Other browsers use the WebGL2
 | `G` | Cycle graphics preset (Low / Medium / High / Ultra) |
 | `H` | Help · `U` hide HUD |
 
-URL options for testing: `?at=vellar_falls` (start at a place), `?hour=18.2`, `?q=ultra`, `?webgl` (force WebGL2),
-`?cam=x,y,z,yaw,pitch` (start in fly-cam).
+Running and fast swimming use stamina (the bar at the bottom). The game autosaves every 10 s; the title screen offers **Continue**.
+
+URL options for testing: `?at=vellar_falls` (start at a place), `?hour=18.2`, `?weather=storm`, `?q=ultra`, `?webgl` (force WebGL2),
+`?cam=x,y,z,yaw,pitch` (start in fly-cam), `?board` (start in the nearest canoe).
 
 ## What's on the map
 
@@ -54,7 +58,18 @@ Every place on the parchment map is in the world, in the same arrangement:
   mist, the **Elephant Forest** (with a herd) and the **Old Teak Reserve**.
 
 About 290,000 trees are placed from the map's biomes: coconut palms, jungle broadleaf, teak, mangroves and
-banana. Near the camera you also get grass, rice, tea bushes and ferns.
+banana; every house compound has its own garden. Near the camera you also get grass, rice, tea bushes and ferns.
+
+**Life**: villagers walk the road edges, browse the bazaar and stand on the shore (busiest in the morning and
+evening, fewer at night and in the rain); bullock carts plod the main roads; ferries cross at Kalliyar and the
+southern channel on a timetable; canoes thread the mangroves; rice boats cruise the lagoon.
+
+**Monsoon**: the weather drifts between clear, cloudy, rain and storm: an overcast sky, rain streaks, wet
+glossy ground with puddles, ripples on the water, a heavier swell, lightning and thunder (sound is generated in
+the browser: rain, wind, surf, thunder).
+
+**Places to enter**: about 12 bazaar shops around the square (counters, shelves, sacks, a lamp) and 8 town
+houses (two rooms, a cot, a chest, a lamp).
 
 ## How it's built
 
@@ -69,7 +84,10 @@ banana. Near the camera you also get grass, rice, tea bushes and ferns.
 | Flora | `src/render/trees.js`, `vegetation.js` | Procedural species with wind sway; full meshes near the camera, impostors (rendered from the real trees at load) far away, handed over per instance on the GPU |
 | Buildings | `src/render/buildings/` | A kit of primitives (Kerala hip-and-gable roofs, arcades, domes, towers, stairs) merged into a few static meshes; every landmark has its own builder. Settlements are planned, not scattered: bazaar terraces only near the square, walled compounds every 40–70 m along lanes, fishing huts clustered on the shore facing the water, farmhouses on the paddy edge (~185 buildings in all) |
 | Props | `src/render/props.js` | Boats, sailing ships, fishing nets, rocks, cannons, train, logs, elephants, birds |
-| Player | `src/game/player.js` | Placeholder Xbot mannequin (three.js examples) with idle/walk/run blending, collisions, decks (bridge, jetties, ghat), wading and swimming |
+| Player | `src/game/player.js`, `interact.js` | Placeholder Xbot mannequin (three.js examples) with idle/walk/run blending, collisions, decks (bridge, jetties, ghat), wading and swimming (sea and the Vellar stream), stamina, canoe paddling |
+| Villagers | `src/game/npcs.js` | Pooled Xbot clones tinted by role; full skinned bodies near, instanced capsules far; routes from the road network |
+| Traffic | `src/render/traffic.js` | Bullock carts, timetabled ferries, mangrove canoes |
+| Weather | `src/render/weather.js`, `src/game/audio.js` | State machine driving shared uniforms (rain, storm, cloud, wind); GPU rain; overcast blended into the sky and environment light; WebAudio ambience |
 
 ### Changing the map
 

@@ -47,6 +47,12 @@ body.nohud #hud{opacity:0}
 #help kbd{display:inline-block;min-width:22px;text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:11px;border:1px solid var(--line);padding:0 4px;margin-right:6px;color:var(--gold)}
 #help.min .full{display:none}
 #stats{position:absolute;left:22px;top:20px;font:11px/1.5 ui-monospace,Menlo,monospace;opacity:.7;text-shadow:0 1px 3px #000;white-space:pre}
+#stam{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:180px;height:4px;background:rgba(239,226,196,.15);opacity:0;transition:opacity .5s}
+#stam.on{opacity:1}
+#stam i{display:block;height:100%;width:100%;background:var(--gold);transition:width .15s}
+#stam.tired i{background:#c0563a}
+#continue{margin-top:34px;padding:12px 30px;font:inherit;font-size:16px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink);background:var(--gold);border:0;cursor:pointer}
+#start.alt{background:transparent;color:var(--cream);border:1px solid var(--line);margin-top:12px;font-size:13px}
 #prompt{position:absolute;left:50%;bottom:16vh;transform:translateX(-50%);font-size:14px;letter-spacing:.08em;background:var(--panel);border:1px solid var(--line);padding:6px 14px;opacity:0;transition:opacity .3s}
 #prompt.on{opacity:1}
 /* full-screen panels */
@@ -75,6 +81,7 @@ body.fly #crosshair{opacity:1}
   <div id="clock"><span id="clockTime">07:12</span><small id="clockHint">[ ] change hour</small></div>
   <div id="stats"></div>
   <div id="prompt"></div>
+  <div id="stam"><i></i></div>
   <div id="crosshair"></div>
   <div id="help" class="min">
     <div><kbd>H</kbd>controls</div>
@@ -87,6 +94,7 @@ body.fly #crosshair{opacity:1}
       <div><kbd>F</kbd>free-fly camera</div>
       <div><kbd>[ ]</kbd>time of day · <kbd>P</kbd> pause time</div>
       <div><kbd>R</kbd>change the weather</div>
+      <div><kbd>E</kbd>board / leave a canoe</div>
       <div><kbd>G</kbd>graphics preset</div>
       <div><kbd>U</kbd>hide HUD · <kbd>Esc</kbd> release mouse</div>
     </div>
@@ -103,6 +111,7 @@ body.fly #crosshair{opacity:1}
   <div id="bar"><i></i></div>
   <div id="status">Preparing…</div>
   <div id="qual"></div>
+  <button id="continue" class="hidden">Continue</button>
   <button id="start">Enter</button>
   <div id="err"></div>
 </div>

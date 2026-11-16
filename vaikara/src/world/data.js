@@ -119,3 +119,38 @@ export function nearestRoad(x, z) {
   }
   return best;
 }
+
+// Water surface height at (x, z): the Vellar stream's own level where its
+// channel runs (it flows above sea level), otherwise the sea (0).
+let streamHash = null;
+const SH = 40;
+function buildStreamHash() {
+  streamHash = new Map();
+  const v = W.meta.streams.vellar;
+  for (let i = 1; i < v.length; i++) {
+    const a = v[i - 1], b = v[i], r = Math.max(a[3], b[3]) + 4;
+    const x0 = Math.floor((Math.min(a[0], b[0]) - r) / SH), x1 = Math.floor((Math.max(a[0], b[0]) + r) / SH);
+    const z0 = Math.floor((Math.min(a[1], b[1]) - r) / SH), z1 = Math.floor((Math.max(a[1], b[1]) + r) / SH);
+    for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) {
+      const k = gx * 10007 + gz;
+      if (!streamHash.has(k)) streamHash.set(k, []);
+      streamHash.get(k).push([a, b]);
+    }
+  }
+}
+export function waterLevelAt(x, z) {
+  if (!streamHash) buildStreamHash();
+  const list = streamHash.get(Math.floor(x / SH) * 10007 + Math.floor(z / SH));
+  if (list) {
+    let best = null, bd = Infinity;
+    for (const [a, b] of list) {
+      const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz;
+      let t = l2 ? ((x - a[0]) * dx + (z - a[1]) * dz) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const d = Math.hypot(x - (a[0] + dx * t), z - (a[1] + dz * t));
+      const hw = a[3] + (b[3] - a[3]) * t;
+      if (d < hw * 0.85 && d < bd) { bd = d; best = a[2] + (b[2] - a[2]) * t + 0.08; }
+    }
+    if (best !== null) return best;
+  }
+  return 0;
+}

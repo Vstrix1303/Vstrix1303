@@ -95,8 +95,6 @@ export class Vegetation {
           c.alphaTest = mm.alphaTest; c.side = mm.side; c.map = mm.map; c.envMapIntensity = mm.envMapIntensity;
           return c;
         }), nearCap[sp]);
-        m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        g.attributes.iOrigin.setUsage(THREE.DynamicDrawUsage);
         hideAll(m);
         m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
         this.scene.add(m);
@@ -202,7 +200,6 @@ export class Vegetation {
     const fernGeo = await loadFern();
     const mk = (geo, mat, cap, shadow = false) => {
       const m = new THREE.InstancedMesh(geo, mat, cap);
-      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       hideAll(m);
       m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = true;
       this.scene.add(m);

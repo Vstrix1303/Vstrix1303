@@ -6,7 +6,7 @@ import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { G } from '../state.js';
 import { Input } from './input.js';
-import { getHeight, getSlope } from '../world/data.js';
+import { getHeight, getSlope, waterLevelAt } from '../world/data.js';
 import { WORLD_W, WORLD_H } from '../world/layout.js';
 
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
@@ -22,6 +22,8 @@ export class Player {
     this.vy = 0; this.yaw = 0; this.grounded = true; this.swimming = false; this.wading = 0;
     this.camYaw = 0; this.camPitch = 0.18; this.camDist = 5.2; this.camCur = new THREE.Vector3();
     this.speed = 0;
+    this.stamina = 100; this.tired = false;
+    this.mode = 'foot'; this.boat = null; this.boatSpeed = 0;
   }
 
   async load() {
@@ -48,7 +50,81 @@ export class Player {
     }
   }
 
+  // ── boats
+  board(boat) {
+    this.mode = 'boat'; this.boat = boat; this.boatSpeed = 0;
+    boat.userData.boarded = true;
+    this.boatYaw = boat.userData.heading ?? (boat.rotation.y + Math.PI / 2);
+    this.camDist = Math.max(this.camDist, 8);
+  }
+  disembark() {
+    const b = this.boat;
+    // nearest dry spot around the boat
+    let best = null;
+    for (let r = 2; r <= 9 && !best; r += 1) for (let a = 0; a < Math.PI * 2; a += 0.25) {
+      const x = b.position.x + Math.cos(a) * r, z = b.position.z + Math.sin(a) * r;
+      const h = Math.max(getHeight(x, z), G.colliders.deckHeight(x, z, 3));
+      if (h > 0.3 && !G.colliders.blocked(x, z, 0.4)) { best = [x, z]; break; }
+    }
+    if (!best) return false;
+    b.userData.boarded = false; b.userData.heading = this.boatYaw;
+    this.mode = 'foot'; this.boat = null;
+    this.root.rotation.set(0, this.yaw, 0);
+    this.teleport(best[0], best[1]);
+    return true;
+  }
+  canDisembark() {
+    const b = this.boat;
+    for (let a = 0; a < Math.PI * 2; a += 0.4) { const x = b.position.x + Math.cos(a) * 6, z = b.position.z + Math.sin(a) * 6; if (Math.max(getHeight(x, z), G.colliders.deckHeight(x, z, 3)) > 0.3) return true; }
+    return false;
+  }
+  updateBoat(dt) {
+    const b = this.boat;
+    let thrust = 0, turn = 0;
+    if (Input.down('KeyW')) thrust += 1; if (Input.down('KeyS')) thrust -= 0.5;
+    if (Input.down('KeyA')) turn += 1; if (Input.down('KeyD')) turn -= 1;
+    const fast = (Input.down('ShiftLeft') || Input.down('ShiftRight')) && !this.tired;
+    const max = fast ? 6.5 : 3.8;
+    this.boatSpeed = damp(this.boatSpeed, thrust * max, thrust ? 0.9 : 0.5, dt);
+    this.stamina = THREE.MathUtils.clamp(this.stamina - (fast && thrust ? 9 : -12) * dt, 0, 100);
+    if (this.stamina <= 0) this.tired = true; else if (this.stamina > 30) this.tired = false;
+    this.boatYaw += turn * dt * (0.35 + Math.min(1, Math.abs(this.boatSpeed) / 3) * 0.6) * Math.sign(this.boatSpeed || 1);
+    const fx = Math.sin(this.boatYaw), fz = Math.cos(this.boatYaw);
+    const nx = b.position.x + fx * this.boatSpeed * dt, nz = b.position.z + fz * this.boatSpeed * dt;
+    // keep to water deep enough for the hull: bump and stop at the bank
+    const bow = getHeight(nx + fx * 3 * Math.sign(this.boatSpeed), nz + fz * 3 * Math.sign(this.boatSpeed));
+    if (bow < -0.35) { b.position.x = nx; b.position.z = nz; } else this.boatSpeed *= -0.2;
+    const t = G.time;
+    b.position.y = Math.sin(t * 1.3) * 0.06;
+    b.rotation.set(0, this.boatYaw - Math.PI / 2, Math.sin(t * 0.9) * 0.03 + turn * this.boatSpeed * 0.01);
+    // the traveller sits in the middle, facing forward
+    this.pos.set(b.position.x, b.position.y + 0.25, b.position.z);
+    this.yaw = this.boatYaw; this.swimming = false; this.speed = 0;
+    this.root.position.copy(this.pos);
+    this.root.rotation.set(0, this.yaw, 0);
+    this.root.scale.set(1, 0.72, 1); // crouched (placeholder for a seated pose)
+    if (this.mixer) { this.actions.idle?.setEffectiveWeight(1); this.actions.walk?.setEffectiveWeight(0); this.actions.run?.setEffectiveWeight(0); this.mixer.update(dt); }
+    this.followCamera(dt, 1.4);
+  }
+
+  followCamera(dt, h = 1.55) {
+    const tgt = new THREE.Vector3(this.pos.x, this.pos.y + h, this.pos.z);
+    const off = new THREE.Vector3(Math.sin(this.camYaw) * Math.cos(this.camPitch), Math.sin(this.camPitch), Math.cos(this.camYaw) * Math.cos(this.camPitch)).multiplyScalar(this.camDist);
+    const want = tgt.clone().add(off);
+    for (let t = 0.2; t <= 1.0; t += 0.2) {
+      const p = tgt.clone().lerp(want, t);
+      const g = Math.max(getHeight(p.x, p.z), -0.5) + 0.35;
+      if (p.y < g) want.y += g - p.y;
+    }
+    if (this.camCur.lengthSq() === 0) this.camCur.copy(want);
+    this.camCur.lerp(want, 1 - Math.exp(-14 * dt));
+    this.camera.position.copy(this.camCur);
+    this.camera.lookAt(tgt);
+  }
+
   teleport(x, z) {
+    if (this.mode === 'boat') { this.boat.userData.boarded = false; this.boat.userData.heading = this.boatYaw; this.mode = 'foot'; this.boat = null; }
+    this.root.scale.set(1, 1, 1);
     this.pos.set(x, Math.max(getHeight(x, z), G.colliders?.deckHeight(x, z, 1e4) ?? -1e9, -1.2), z);
     this.vy = 0; this.vel.set(0, 0, 0);
     this.camCur.set(0, 0, 0);
@@ -65,13 +141,15 @@ export class Player {
     this.camYaw -= Input.dx * 0.0024;
     this.camPitch = THREE.MathUtils.clamp(this.camPitch + Input.dy * 0.0024, -0.5, 1.2);
     if (Input.wheel) this.camDist = THREE.MathUtils.clamp(this.camDist * (Input.wheel > 0 ? 1.15 : 0.87), 2.2, 26);
+    if (this.mode === 'boat') { this.updateBoat(dt); return; }
 
     // input → desired velocity (camera-relative)
     let ix = 0, iz = 0;
     if (Input.down('KeyW')) iz -= 1; if (Input.down('KeyS')) iz += 1;
     if (Input.down('KeyA')) ix -= 1; if (Input.down('KeyD')) ix += 1;
     const len = Math.hypot(ix, iz);
-    const run = Input.down('ShiftLeft') || Input.down('ShiftRight');
+    const wantRun = Input.down('ShiftLeft') || Input.down('ShiftRight');
+    const run = wantRun && !this.tired;
     let target = 0;
     const dir = new THREE.Vector3();
     if (len > 0) {
@@ -83,6 +161,10 @@ export class Player {
       this.yaw = angDamp(this.yaw, Math.atan2(dir.x, dir.z), 10, dt);
     }
     this.speed = damp(this.speed, target, len > 0 ? 6 : 9, dt);
+    // stamina: running and fast swimming tire you; rest to recover
+    const exert = run && len > 0 ? (this.swimming ? 18 : 11) : this.swimming ? 2 : -16;
+    this.stamina = THREE.MathUtils.clamp(this.stamina - exert * dt, 0, 100);
+    if (this.stamina <= 0) this.tired = true; else if (this.stamina > 30) this.tired = false;
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
     const nx = this.pos.x + fx * this.speed * dt, nz = this.pos.z + fz * this.speed * dt;
 
@@ -98,9 +180,10 @@ export class Player {
 
     // vertical: ground, decks, water
     const ground = this.groundAt(this.pos.x, this.pos.z, this.pos.y);
-    const waterDepth = -ground;           // sea-level water everywhere below 0
+    const surface = waterLevelAt(this.pos.x, this.pos.z); // sea level, or the Vellar stream's own level
+    const waterDepth = surface - ground;
     this.wading = THREE.MathUtils.clamp((waterDepth - 0.2) / 1.0, 0, 1);
-    const swimY = -1.25;
+    const swimY = surface - 1.25;
     this.swimming = waterDepth > 1.35 && this.pos.y <= swimY + 0.3;
     if (this.swimming) {
       this.vy = 0;

@@ -80,8 +80,10 @@ export class Props {
       }
     }
     for (const s of shorePts) {
-      const b = (rnd() < 0.75 ? vallam : kettu).clone();
+      const isCanoe = rnd() < 0.75;
+      const b = (isCanoe ? vallam : kettu).clone();
       b.position.set(s.x, 0, s.z); b.rotation.y = rnd() * TAU;
+      if (isCanoe) { b.userData.boardable = 'vallam'; (this.scene.userData.boats ||= []).push(b); }
       this.scene.add(b); this.bobbers.push({ o: b, ph: rnd() * TAU, base: 0 });
     }
     void jetties;
@@ -325,6 +327,7 @@ export class Props {
   update(dt) {
     const t = G.time;
     for (const b of this.bobbers) {
+      if (b.o.userData.boarded) continue;
       b.o.position.y = b.base + Math.sin(t * 1.3 + b.ph) * 0.06;
       b.o.rotation.z = Math.sin(t * 0.9 + b.ph) * (b.roll || 0.025);
     }
