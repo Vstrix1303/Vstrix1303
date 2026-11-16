@@ -100,8 +100,8 @@ export function house(b, x, z, ry, o = {}) {
   b.box('paint', w - 0.26, 0.03, d - 0.26, 0, y0, 0, { col: mud ? [0.5, 0.36, 0.24] : [0.42, 0.18, 0.13] });
   b.platform(0, 0, pw / 2, pd / 2, y0);
   const dx = o.doorX || 0;
-  const F = [{ at: hw + dx, w: 1.15, kind: 'door' }];
-  if (w >= 6.4) for (const s of [-1, 1]) if (Math.abs(s * w * 0.32 - dx) > 1.3) F.push({ at: hw + s * w * 0.32, w: 0.9, kind: 'window' });
+  const F = o.shopfront ? [{ at: hw + dx, w: Math.min(3.6, w * 0.58), kind: 'door', h: 2.25, leaf: false }] : [{ at: hw + dx, w: 1.15, kind: 'door' }];
+  if (w >= 6.4 && !o.shopfront) for (const s of [-1, 1]) if (Math.abs(s * w * 0.32 - dx) > 1.3) F.push({ at: hw + s * w * 0.32, w: 0.9, kind: 'window' });
   const wo = { col: wcol, dado };
   wall(b, wm, -hw, hd, hw, hd, y0, wallH, F, { ...wo, out: 1 });
   wall(b, wm, -hw, -hd, hw, -hd, y0, wallH, [{ at: hw, w: 0.9, kind: 'window' }], { ...wo, out: -1 });
@@ -135,8 +135,9 @@ export function house(b, x, z, ry, o = {}) {
   } else for (let i = 0; i < 2; i++) b.box('stone', 1.8, 0.26, 0.5, dx, 0.24 - i * 0.24, hd + ov - 0.02 + i * 0.5);
   if (o.awning) awning(b, 0, hd + ov - 0.35, w * 0.92, y0 + wallH - 0.6, 2.3, hsh, dx);
   if (tiled && (o.mural ?? hsh % 3 === 0)) for (const s of [-1, 1]) b.panel('mural', 1.0, 1.3, s * (hw + 0.15), y0 + 0.78, s * hd * 0.62, s * Math.PI / 2);
-  // ---- inside
+  // ---- inside (a shop is furnished by the bazaar instead)
   const fy = y0 + 0.03;
+  if (!o.shopfront) {
   P.mat(b, -hw + 1.25, fy, -hd + 0.8);
   if (hsh % 2) P.mat(b, -hw + 1.25, fy, -hd + 1.9);
   P.hearth(b, hw - 0.8, fy, -hd + 0.8);
@@ -148,6 +149,7 @@ export function house(b, x, z, ry, o = {}) {
   if (o.fisher) {
     for (let i = 0; i < 5; i++) b.box('paint', 0.06, 0.3, 0.12, -hw + 0.2, y0 + 1.5, -1 + i * 0.3, { col: [0.6, 0.6, 0.56] });
     P.rope(b, -hw + 0.5, fy, hd - 0.6);
+  }
   }
   // ---- outside
   P.pot(b, -hw + 0.4, y0, hd + ov - 0.9, 0.85); if (hsh % 2) P.pot(b, hw - 0.4, y0, hd + ov - 0.9, 1.0);

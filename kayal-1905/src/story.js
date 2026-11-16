@@ -10,6 +10,7 @@ import { groundAt } from './physics.js';
 import { NPC } from './npc.js';
 import { TEX } from './textures.js';
 import { MISSIONS } from './missions.js';
+import { Director } from './director.js';
 
 export const CANCEL = Symbol('cancel');
 const SAVE_KEY = 'kayal1905.save.v2';
@@ -276,13 +277,19 @@ export class Story {
       chk();
       S.busy = true; p.locked = true; ui.letterbox(true); ui.prompt(null);
       let other = o.other || lines.find((l) => l[0] !== 'M')?.[0];
-      const faces = new Set();
+      const faces = new Set(), dir = new Director(p);
+      // the two face each other before the first cut
+      const turn = () => { if (!other) return; const me = p.worldPos(); if (p.mode === 'foot') { p.yaw = Math.atan2(other.pos.x - me.x, other.pos.z - me.z); p.root.rotation.y = p.yaw; } other.talkT = Math.max(other.talkT || 0, 6); };
+      turn();
       for (const [who, text, ex] of lines) {
-        const me = p.worldPos(), h = who === 'M' ? p.h : who.h;
+        const h = who === 'M' ? p.h : who.h;
+        if (who !== 'M' && who !== other) { other = who; turn(); dir.side = 0; }
         if (h) { faces.add(h); h.setExpression(ex || moodOf(text)); h.talking = true; }
+        const me = p.worldPos().clone(); me.scale = 1;
+        if (other) { const op = other.pos.clone(); op.scale = other.h?.S || 1; p.setCine(dir.shot(me, op, who === 'M' ? 'a' : 'b')); }
         try {
-          if (who === 'M') { if (other) focus(me, other.pos); const po = p.poseOverride; if (!po && p.mode === 'foot') p.poseOverride = 'talk'; try { await ui.say('Madhavan', text); } finally { p.poseOverride = po; } }
-          else { other = who; who.talkT = 6; focus(who.pos, me); await ui.say(who.name, text); }
+          if (who === 'M') { const po = p.poseOverride; if (!po && p.mode === 'foot') p.poseOverride = 'talk'; try { await ui.say('Madhavan', text); } finally { p.poseOverride = po; } }
+          else { who.talkT = 6; await ui.say(who.name, text); }
         } finally { if (h) h.talking = false; }
         chk();
       }

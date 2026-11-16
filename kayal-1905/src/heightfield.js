@@ -174,6 +174,10 @@ export function initRoads() {
     estate: [[320, -335], [345, -270], [362, -205], [370, -160]],
     towpath: [[-30, 160], [30, 168], [62, 180], [120, 176], [170, 168]],
     hamlet: [[-650, 176], [-640, 152], [LOC.hamletJetty.x - 4, 150]],
+    // the village's lanes, leaving the bazaar between its shops
+    laneE: [[4.4, 2.6], [4.5, -20], [2.5, -42], [16, -52]],
+    laneS: [[6.4, 2.3], [8, 20], [9, 40], [-6, 52], [-33, 54]],
+    laneW: [[-64, 16.5], [-62, -12], [-58, -34], [-50, -43]],
   };
   for (const k in raw) ROADS[k] = smoothPath(raw[k], 5);
 }

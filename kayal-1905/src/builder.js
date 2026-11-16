@@ -147,8 +147,8 @@ export class Builder {
   // hand-painted signboard i from the atlas, facing local +Z
   sign(i, w, h, x, y, z, ry = 0) {
     const geo = new THREE.PlaneGeometry(w, h);
-    const uv = geo.attributes.uv, u0 = (i % 2) * 0.5, v1 = 1 - Math.floor(i / 2) * 0.25;
-    for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) * 0.5, v1 - 0.25 + uv.getY(k) * 0.25);
+    const uv = geo.attributes.uv, u0 = (i % 2) * 0.5, v1 = 1 - Math.floor(i / 2) * 0.125;
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) * 0.5, v1 - 0.125 + uv.getY(k) * 0.125);
     const m = TRS(x, y, z, 0, ry, 0);
     this.geo('sign', geo, m);
     this.geo('wood', boxGeo(w + 0.14, h + 0.14, 0.05, 2), m.clone().multiply(TRS(0, 0, -0.035)), [0.5, 0.42, 0.36]);

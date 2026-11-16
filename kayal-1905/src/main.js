@@ -184,6 +184,7 @@ async function boot() {
     time: (h) => env.setTime(h),
     rain: (v) => env.setRain(v, true),
     spots: SPOTS,
+    h: getHeight,
   };
 
   ui.hideLoading();

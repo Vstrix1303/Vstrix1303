@@ -7,6 +7,8 @@ import { LOC, getHeight, canalZ, ROADS } from './heightfield.js';
 import { pointInBox } from './physics.js';
 import { makeRng, TAU } from './util.js';
 import { house, kettu, spiceHouse, nasraniHouse, wall, P, olakkuda, barrel, toolbox, castNet, poles, compound, creeper } from './houses.js';
+import { buildVillage } from './village.js';
+import { roadDist } from './heightfield.js';
 
 export const SPOTS = {};   // named world positions used by the story
 const BRASS = [0.95, 0.72, 0.28];
@@ -117,15 +119,17 @@ function well(b, x, z) {
   b.circle(0, 0, 1.1);
 }
 
-function cart(b, x, z, ry) {
-  // a bullock cart: spoked wheels, a slatted bed, a pole and yoke, a hooped cover of woven matting
-  b.place(x, z, ry);
-  const WOOD = [0.62, 0.5, 0.4];
+const CART_WOOD = [0.62, 0.5, 0.4];
+function cartWheel(b, cx, cy) {
+  b.geo('wood', new THREE.TorusGeometry(0.72, 0.05, 6, 22), new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(cx, cy, 0), CART_WOOD);
+  b.cyl('wood', 0.1, 0.1, 0.24, cx, cy - 0.12, 0, { seg: 10, rz: Math.PI / 2, col: CART_WOOD });
+  for (let i = 0; i < 6; i++) b.box('wood', 0.035, 1.38, 0.05, cx, cy - 0.69, 0, { rx: i * Math.PI / 6, col: CART_WOOD });
+}
+function cartBody(b, wheels = true) {
+  const WOOD = CART_WOOD;
   b.box('plank', 1.36, 0.08, 2.5, 0, 0.92, 0, { tile: 1 });
   for (const sx of [-1, 1]) {
-    b.geo('wood', new THREE.TorusGeometry(0.72, 0.05, 6, 22), new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(sx * 0.9, 0.77, 0), WOOD);
-    b.cyl('wood', 0.1, 0.1, 0.24, sx * 0.9, 0.77 - 0.12, 0, { seg: 10, rz: Math.PI / 2, col: WOOD });
-    for (let i = 0; i < 6; i++) b.box('wood', 0.035, 1.38, 0.05, sx * 0.9, 0.77 - 0.69, 0, { rx: i * Math.PI / 6, col: WOOD });
+    if (wheels) cartWheel(b, sx * 0.9, 0.77);
     b.box('plank', 0.05, 0.36, 2.5, sx * 0.68, 1.0, 0, { tile: 1 });
     for (let i = 0; i < 5; i++) b.box('wood', 0.045, 0.5, 0.045, sx * 0.68, 0.96, -1.1 + i * 0.55, { col: WOOD });
     b.box('wood', 0.07, 0.07, 4.3, sx * 0.3, 0.84, 0.9, { rx: -0.07, col: WOOD });
@@ -136,7 +140,20 @@ function cart(b, x, z, ry) {
   const hoop = new THREE.CylinderGeometry(0.72, 0.72, 2.2, 14, 1, true, 0, Math.PI);
   b.geo('thatch', hoop, new THREE.Matrix4().makeRotationY(Math.PI / 2).multiply(new THREE.Matrix4().makeRotationZ(Math.PI / 2)).setPosition(0, 1.02, -0.1), [1.05, 0.95, 0.7]);
   for (const sz of [-1.2, 1.0]) b.geo('wood', new THREE.TorusGeometry(0.73, 0.02, 4, 12, Math.PI), new THREE.Matrix4().setPosition(0, 1.02, sz), WOOD);
+}
+function cart(b, x, z, ry) {
+  // a bullock cart: spoked wheels, a slatted bed, a pole and yoke, a hooped cover of woven matting
+  b.place(x, z, ry);
+  cartBody(b);
   b.collider(0, 0, 1.05, 1.5);
+}
+// A cart that travels: its body and its two wheels as separate pieces so the wheels can turn.
+export function makeCart(mats) {
+  const piece = (fn) => { const b = new Builder(); b.collider = b.circle = b.platform = () => b; b.place(0, 0, 0, 0); fn(b); const g = new THREE.Group(); b.finish(g, mats); return g; };
+  const root = new THREE.Group();
+  root.add(piece((b) => cartBody(b, false)));
+  const wheels = [-1, 1].map((sx) => { const w = piece((b) => cartWheel(b, 0, 0)); w.position.set(sx * 0.9, 0.77, 0); root.add(w); return w; });
+  return { root, wheels };
 }
 
 function haystack(b, x, z, s = 1) {
@@ -163,7 +180,7 @@ export function buildStructures(scene) {
   // ================= village houses =================
   const H = [
     [-152, 17, 0, { w: 7 }], [-116, 9, 0.05, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], 
-    [-12, -12, 0.2, { w: 8, lamp: 1 }], [34, -22, 0.1, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], [86, -36, 0.5, { w: 8 }],
+    [34, -22, 0.1, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], [86, -36, 0.5, { w: 8 }],
     [-162, 52, Math.PI, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }], [-128, 46, Math.PI, { w: 8 }], [-90, 40, Math.PI + 0.1, { w: 7, lamp: 1 }],
     [-64, 34, Math.PI + 0.1, { roof: 'thatch', wall: 'laterite', w: 5.5, d: 4.5 }], [-6, 24, Math.PI + 0.15, { w: 7 }],
     [140, -42, Math.PI + 0.6, { roof: 'thatch', wall: 'laterite', w: 6, d: 5 }],
@@ -190,12 +207,17 @@ export function buildStructures(scene) {
     barrel(b, 2.6, 0, -2.4); barrel(b, 3.3, 0, -1.9, 0.85); olakkuda(b, -2.2, 0, -3.0, 0.45); P.kindi(b, 0.4, 0.53, -1.6, 1.1);
   }
   well(b, -30, -8);
-  cart(b, -60, 16, 0.4); cart(b, 62, -2, 1.9);
+  cart(b, -62, 22.5, 0.4); cart(b, 62, -2, 1.9);
   haystack(b, -140, 60, 1); haystack(b, 93, 12, 0.9); haystack(b, -100, 54, 0.8);
-  pots(b, -72, 13, 5, rng); pots(b, -4, -2, 4, rng);
+  pots(b, -72, 13, 5, rng);
   lampPost(b, -42, 4, 1); lampPost(b, -120, 30, 0); lampPost(b, 30, 4, 0);
+  // the bazaar, the market, the school, the square and the lanes
+  const foot = buildVillage(b, rng, SPOTS, lampPost);
+  bigTrees.push([SPOTS.aalthara.x, SPOTS.aalthara.z, 2, 1.25]);     // the banyan the square is built around
+  const clearOf = (x, z) => roadDist(x, z) > 3.4 && foot.every(([fx, fz, r]) => Math.hypot(x - fx, z - fz) > r + 1);
   // street life: things set down by people who will be back for them
-  for (const [x, z, k] of [[-134, 26, 0], [-104, 16, 1], [-66, 9, 2], [-47, 18, 3], [-20, 12, 4], [8, -4, 0], [44, -12, 1], [78, -20, 2], [-37, 44, 3], [-33, 100, 4], [-146, 40, 2], [-58, 28, 1]]) {
+  for (const [x, z, k] of [[-134, 26, 0], [-104, 16, 1], [-66, 9, 2], [-47, 18, 3], [-20, 12, 4], [8, -4, 0], [44, -12, 1], [78, -20, 2], [-37, 44, 3], [-33, 100, 4], [-146, 40, 2], [-58, 28, 1], [-36, 6.5, 1], [-14, 13.2, 2], [12, -6.8, 4]]) {
+    if (!clearOf(x, z)) continue;
     b.place(x, z, rng() * TAU);
     if (k === 0) { barrel(b, 0, 0, 0); barrel(b, 0.75, 0, 0.3, 0.9); P.rope(b, -0.7, 0, 0.5); }
     else if (k === 1) { P.koodu(b, 0, 0, 0); P.basket(b, 0.9, 0, 0.2, 1.1, [0.85, 0.8, 0.55]); P.basket(b, 0.5, 0, -0.8, 0.9, [0.3, 0.42, 0.2]); b.circle(0, 0, 0.4); }

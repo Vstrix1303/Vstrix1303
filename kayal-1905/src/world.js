@@ -1,9 +1,10 @@
 // Assembles the whole world and its ambient life.
 import * as THREE from 'three';
 import { G, QUALITY } from './state.js';
-import { initHeights, initRoads, getHeight, LOC, canalZ } from './heightfield.js';
+import { initHeights, initRoads, getHeight, LOC, canalZ, ROADS } from './heightfield.js';
 import { buildTextures, TEX } from './textures.js';
-import { buildStructures, SPOTS } from './structures.js';
+import { buildStructures, SPOTS, makeCart } from './structures.js';
+import { Human } from './human.js';
 import { buildTerrain, buildMapImage } from './terrain.js';
 import { Env } from './env.js';
 import { Water } from './water.js';
@@ -48,6 +49,65 @@ class Wanderer {
     }
     this.o.update(dt);
     this.sync();
+  }
+}
+
+// A bullock cart on its rounds along a road: two oxen under the yoke, a driver on the bed, wheels
+// that turn with the ground. It keeps to the left, waits at each end, and stops for people in its way.
+class BullockCart {
+  constructor(scene, mats, path, o = {}) {
+    const c = makeCart(mats);
+    this.g = c.root; this.wheels = c.wheels;
+    this.oxen = [-0.55, 0.55].map((x, i) => { const q = new Quadruped('cow', { hump: true, color: i ? 0xcdc3b0 : 0xe4ddcf }); q.root.position.set(x, 0, 2.42); this.g.add(q.root); return q; });
+    this.h = new Human(o.driver || CAST.villagerM[0]);
+    this.h.root.position.set(0.12, 0.13, 1.0); this.h.state = 'bench';
+    this.g.add(this.h.root);
+    this.pts = path; this.len = [0];
+    for (let i = 1; i < path.length; i++) this.len.push(this.len[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+    this.total = this.len[this.len.length - 1];
+    this.s = (o.at ?? 0.5) * this.total; this.dir = o.dir || 1; this.speed = 0; this.wait = 0; this.max = o.speed || 1.15;
+    this.pos = new THREE.Vector3(); this.yaw = 0;
+    this.g.traverse((ob) => ob.layers.set(1));
+    scene.add(this.g);
+    this.place(0);
+  }
+  sample(s) {
+    const L = this.len; let i = 1;
+    while (i < L.length - 1 && L[i] < s) i++;
+    const a = this.pts[i - 1], b = this.pts[i], k = (s - L[i - 1]) / Math.max(1e-6, L[i] - L[i - 1]);
+    const dx = (b[0] - a[0]) * this.dir, dz = (b[1] - a[1]) * this.dir, l = Math.hypot(dx, dz) || 1;
+    return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, fx: dx / l, fz: dz / l };
+  }
+  place(dt) {
+    const p = this.sample(this.s), keep = 1.55;     // keep to the left of the road
+    const x = p.x - p.fz * -keep, z = p.z + p.fx * -keep;
+    const yaw = Math.atan2(p.fx, p.fz);
+    this.yaw = dt ? angleDamp(this.yaw, yaw, 1.6, dt) : yaw;
+    this.pos.set(x, dt ? damp(this.pos.y, getHeight(x, z), 6, dt) : getHeight(x, z), z);
+    this.g.position.copy(this.pos); this.g.rotation.y = this.yaw;
+  }
+  update(dt, pp) {
+    const d = Math.hypot(pp.x - this.pos.x, pp.z - this.pos.z);
+    this.g.visible = d < 200;
+    if (!this.g.visible) return;
+    // anyone standing in the road ahead?
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const ahead = (q) => { const dx = q.x - this.pos.x, dz = q.z - this.pos.z, f = dx * fx + dz * fz, side = Math.abs(dx * fz - dz * fx); return f > 0.5 && f < 5.5 && side < 1.6; };
+    let block = ahead(pp);
+    if (!block) for (const n of G.npcs) if (n.active && n.root.visible && Math.abs(n.pos.x - this.pos.x) < 6 && Math.abs(n.pos.z - this.pos.z) < 6 && ahead(n.pos)) { block = true; break; }
+    let target = this.max;
+    if (this.wait > 0) { this.wait -= dt; target = 0; }
+    if (block) target = 0;
+    this.speed = damp(this.speed, target, block ? 4 : 1.2, dt);
+    const ds = this.speed * dt;
+    this.s += ds * this.dir;
+    if (this.s >= this.total || this.s <= 0) { this.s = THREE.MathUtils.clamp(this.s, 0, this.total); this.dir *= -1; this.wait = 8 + Math.random() * 10; this.speed = 0; }
+    this.place(dt);
+    for (const w of this.wheels) w.rotation.x += ds / 0.74;
+    if (d < 90) {
+      for (const q of this.oxen) { q.speed = this.speed; q.update(dt); }
+      this.h.speed = 0; this.h.lod = d > 42 ? 1 : 0; this.h.update(dt);
+    }
   }
 }
 
@@ -102,6 +162,14 @@ const BARKS = {
     'Mind your purse near the godown. And mind the peons more.',
   ],
   priest: ['The temple tank is full to the top step. A good omen.', 'Light a lamp at dusk, Madhava. Your family has kept that flame for two hundred years.'],
+  bazaar: [
+    'Everything costs more since the Company men came. Even the salt.',
+    'Did you hear? Kunjan\'s boy passed the matriculation. First in the taluk to do it.',
+    'Two annas for that? My grandmother bought a cow for less.',
+    'The anchal runner says the roads to Quilon are flooded past Kayamkulam.',
+  ],
+  market: ['Karimeen, chemmeen, kakka — the kayal\'s best, an hour out of the water!', 'Plantain, yam, drumstick, ash gourd! Fresh from Kuttanad!', 'Coconuts, ten for an anna. Feel the weight of that one.', 'Pay what it is worth, not what the Company says it is worth.'],
+  square: ['In my day the Diwan walked to the temple like any man. Now they ride in carriages with English horses.', 'The banyan was old when my grandfather was young. It has seen three Rajas and two floods.', 'Mark my words: the Company will want the paddy next, after the pepper.'],
   hill: ['The Peishkar hears petitions at first light and not a minute after.', 'Tea in the hills, pepper in the foothills, rice in the low country. Travancore feeds half the world\'s kitchens.'],
 };
 
@@ -214,8 +282,70 @@ export async function buildWorld(scene, progress) {
     const seat = (hx, hz, ry, lx, lz) => { const c = Math.cos(ry), sn = Math.sin(ry); const x = hx + lx * c + lz * sn, z = hz - lx * sn + lz * c; return [x, z, ry, { y: getHeight(hx, hz) + 0.5 - 0.85, pose: 'bench', lines: BARKS.village }]; };
     amb('Old man', VM[2], ...seat(-152, 17, 0, 2.7, 4.3));
     amb('Villager', VF[2], ...seat(-128, 46, Math.PI, -2.9, 4.3));
-    amb('Villager', VM[4], ...seat(-12, -12, 0.2, 3.0, 4.3));
     amb('Trader', VM[3], ...seat(-380, -399, 0, -2.2, 3.9));
+  }
+  // ---- the bazaar: a keeper behind every counter, someone buying at most of them
+  {
+    const keepers = [VM[3], VM[1], VM[4], { ...VM[2], headgear: 'turban', gearColor: 0xeee4c8 }, { ...VM[3], headgear: 'turban', gearColor: 0xe9d9a8 }, VM[0], VF[1], VM[5], VF[2]];
+    const buyers = [VF[0], VM[2], VF[3], VM[4], VF[1], VM[6], VF[2], VM[0], VF[0]];
+    const say = {
+      provisions: ['Rice, salt, jaggery, coconut oil. Weigh it yourself if you do not trust my scale.', 'Kerosene is dear this month. The Company ships it, the Company sets the price.'],
+      cloth: ['Mundu from Balaramapuram, double-weave. Kasavu border for a wedding, plain for a working man.', 'Bombay mill cloth is cheap, but it falls apart in one monsoon. Ours will bury you.'],
+      vessels: ['Bell-metal from Mannar. Ring it — hear that? That is honest metal.', 'An uruli for the payasam, a kindi for the guest. Every house needs both.'],
+      vaidyasala: ['Kurumthotti for the joints, ksheerabala for the nerves. The rains bring the aches out.', 'Sit straight, Madhava. Bombay has put a crook in your back.'],
+      anchal: ['The anchal runner leaves at noon for Quilon. Letters go by his bell, not by the Company\'s post.', 'Two letters for the Company bungalow this week. Thick ones. Sealed.'],
+      pottery: ['Fired yesterday. Tap it — no cracks. The clay comes from the canal bank.', 'A pot for water, a pot for rice, a pot for the toddy. A house is pots.'],
+    };
+    (SPOTS.shops || []).forEach((sh, i) => {
+      const ky = sh.keeper.y + 0.95 - 0.85;
+      amb(['Shopkeeper', 'Cloth merchant', 'Brazier', 'Vaidyan', 'Anchal clerk', 'Grocer', 'Potter'][['provisions', 'cloth', 'vessels', 'vaidyasala', 'anchal', 'provisions2', 'pottery'].indexOf(sh.kind)] || 'Shopkeeper',
+        keepers[i % keepers.length], sh.keeper.x, sh.keeper.z, sh.ry, { y: ky, pose: 'bench', facePlayer: true, lines: say[sh.kind] || BARKS.village });
+      if (i % 3 !== 2) amb(i % 2 ? 'Customer' : 'Villager', buyers[i % buyers.length], sh.customer.x, sh.customer.z, sh.ry + Math.PI + (i % 2 ? 0.25 : -0.2), { pose: 'talk', lines: BARKS.bazaar });
+    });
+  }
+  // ---- the market: women and men behind the stalls, buyers in front
+  if (SPOTS.marketStalls) {
+    const ry = SPOTS.marketRy;
+    SPOTS.marketStalls.forEach((p, i) => amb(i % 2 ? 'Vegetable-seller' : 'Fish-seller', i % 2 ? VM[i % 6] : VF[i % 4], p.x, p.z, ry, { y: p.y + 0.4, pose: i === 3 ? 'work' : 'talk', facePlayer: true, lines: BARKS.market }));
+    SPOTS.marketBuyers.forEach((p, i) => amb('Buyer', i % 2 ? VM[(i + 2) % 6] : VF[(i + 1) % 4], p.x, p.z, ry + Math.PI + (i - 1) * 0.3, { y: p.y + 0.4, pose: 'talk', lines: BARKS.bazaar }));
+  }
+  // ---- the school: the asan on his stool, children on the benches with their slates
+  if (SPOTS.asan) {
+    const ry = SPOTS.schoolRy;
+    amb('Asan', { ...CAST.villagerM[2], shirt: 0xeee6d4 }, SPOTS.asan.x, SPOTS.asan.z, ry, { y: SPOTS.asan.y + 0.76 - 0.85, pose: 'bench', facePlayer: true, lines: ['Fifty-one letters, and every one of them a door. These children will open more doors than their fathers.', 'Ezhuthachan wrote the Ramayanam in our own tongue so that a fisherman\'s son could read it. Remember that.'] });
+    SPOTS.pupils.forEach((p, i) => {
+      const k = { ...(i % 2 ? CAST.childF : CAST.child), skin: SKIN[i % SKIN.length], scale: 0.54 + (i % 3) * 0.04 };
+      amb('Pupil', k, p.x, p.z, ry + Math.PI, { y: p.y + 0.7 - 0.85 * k.scale, pose: 'bench', lines: ['Ka, kha, ga, gha, nga!', 'Asan says if I learn my letters I can be a clerk at Trivandrum.', 'Shh! He is watching.'] });
+    });
+  }
+  // ---- the square under the banyan: two old men settling the affairs of the kingdom
+  if (SPOTS.squareTalk) {
+    const [a, c] = SPOTS.squareTalk;
+    amb('Old man', { ...VM[2], headgear: 'turban', gearColor: 0xf0e8d6 }, a.x, a.z, Math.atan2(c.x - a.x, c.z - a.z), { pose: 'talk', lines: BARKS.square });
+    amb('Old man', VM[6], c.x, c.z, Math.atan2(a.x - c.x, a.z - c.z), { pose: 'talk', cane: true, lines: BARKS.square });
+  }
+  // ---- people going about their business along the lanes
+  for (const [k, n] of [['laneE', 1], ['laneS', 2], ['laneW', 1]]) {
+    const R = ROADS[k]; if (!R) continue;
+    for (let j = 0; j < n; j++) {
+      const off = j ? 0.7 : -0.7, step = Math.max(1, Math.floor(R.length / 6));
+      const pts = R.filter((_, q) => q % step === 0 || q === R.length - 1).map(([x, z]) => new THREE.Vector3(x + off, 0, z));
+      const route = [...pts, ...pts.slice(1, -1).reverse()];
+      const st = route[Math.floor(route.length * (j ? 0.6 : 0.2))];
+      amb('Villager', (j + n) % 2 ? VF[(j + 1) % 4] : VM[(j + 3) % 6], st.x, st.z, 0, { route, umbrella: true, headLoad: (j + n) % 2 === 1, lines: BARKS.village });
+    }
+  }
+  amb('Villager', VM[3], -20, 6, 1, { umbrella: true, route: [new THREE.Vector3(-46, 0, 14), new THREE.Vector3(-20, 0, 7.4), new THREE.Vector3(14, 0, -1.6), new THREE.Vector3(40, 0, -8), new THREE.Vector3(14, 0, -1.6), new THREE.Vector3(-20, 0, 7.4)], lines: BARKS.bazaar });
+  amb('Villager', VF[1], 10, 3, 1, { umbrella: true, headLoad: true, route: [new THREE.Vector3(36, 0, -4.4), new THREE.Vector3(10, 0, 2.6), new THREE.Vector3(-24, 0, 12), new THREE.Vector3(-58, 0, 19), new THREE.Vector3(-24, 0, 12), new THREE.Vector3(10, 0, 2.6)], speed: 1.2, lines: BARKS.bazaar });
+  // ---- bullock carts on the main road
+  {
+    const M = ROADS.main;
+    const seg = (x0, x1) => M.filter(([x]) => x >= x0 && x <= x1);
+    W.carts = [
+      new BullockCart(scene, st.mats, seg(-150, 70), { at: 0.35, dir: 1, driver: { ...VM[1], headgear: 'thorthu', gearColor: 0xe8e0cc } }),
+      new BullockCart(scene, st.mats, seg(-60, 160), { at: 0.7, dir: -1, driver: VM[5], speed: 1.05 }),
+    ];
+    W.animals.push(...W.carts);
   }
   amb('Priest', CAST.priest, SPOTS.templeGate.x, SPOTS.templeGate.z + 2, Math.PI / 2, { facePlayer: true, lines: BARKS.priest });
   for (let i = 0; i < 6; i++) {

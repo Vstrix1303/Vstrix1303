@@ -231,6 +231,31 @@ The remaining block-built models were rebuilt as smooth, shaped surfaces.
   effects trimmed; **F3** shows the frame rate.
 - The browser version keeps the drawn figures.
 
+## Version 10 — a working village, and dialogue shot like film
+
+- **Thekkumkara's bazaar**: the main road through the village is now a street of shophouses with open
+  fronts, counters and Malayalam signboards. There's a provisions store, a cloth shop (Balaramapuram mundu and
+  kasavu), a bell-metal vessel shop, the vaidyasala (an Ayurvedic dispensary), the anchal office (Travancore's
+  own postal service) and a potter. Every shop has a keeper behind the counter, and most have a customer haggling in front.
+- **The market** (*chantha*): a tiled pavilion with vegetable, banana, coconut and fish stalls, sellers
+  calling out and buyers picking through baskets.
+- **The village school** (*pallikkoodam*): an open thatched hall where the asan sits on his stool facing
+  rows of children on benches with their slates.
+- **The square**: a banyan on its stone *aalthara* platform with a lamp, old men arguing politics beside
+  it, and a small roadside shrine.
+- **New lanes** east, south and west of the bazaar, each lined with houses, fences and washing lines, with
+  people walking them under umbrellas or carrying head-loads. The old street props now stay clear of the new buildings.
+- **Bullock carts** travel the main road: a yoked pair of oxen, a driver on the bed, wheels that turn.
+  They keep to the left, wait at each end and stop for anyone standing in the road.
+- **Dialogue camera, rebuilt like film**. Conversations no longer jump between the player's eyes and a
+  far camera:
+  - **The 180° rule**: one side of the line between the two speakers is chosen and kept, so screen direction never flips.
+  - **Shot order**: each scene opens on a **two-shot** with a long lens and both people in frame. Lines then cut to
+    **over-the-shoulder** shots that keep the listener's shoulder in the foreground, and the two-shot returns
+    every few lines.
+  - **Cuts and movement**: hard cuts, with a slow creep-in on each shot.
+  - **Clean framing**: the camera stays out of walls, and tightens up indoors.
+
 ## A note on the setting
 
 Travancore in 1905 was a princely state under a British Resident; its district officers were the Dewan
