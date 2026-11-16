@@ -141,6 +141,15 @@ async function boot() {
   $('btnRestart').onclick = () => { setPaused(false); ui.fade(1, 0.6).then(() => (story.mode === 'mission' ? story.startMission(story.mi, story.cp) : story.enterFree({ fresh: true }))); };
   $('btnMute').onclick = () => { audio.enabled = !audio.enabled; if (audio.master) audio.master.gain.value = audio.enabled ? 0.8 : 0; $('btnMute').textContent = audio.enabled ? 'Sound: On' : 'Sound: Off'; };
   $('btnTitle').onclick = () => location.reload();
+  // running as the desktop application: offer fullscreen and a way out
+  const D = window.kayalDesktop;
+  if (D) {
+    document.querySelectorAll('.desk').forEach((el) => { el.style.display = ''; });
+    const fb = $('btnFull'), showFull = (on) => { fb.textContent = 'Fullscreen: ' + (on ? 'On' : 'Off'); };
+    D.isFullscreen().then(showFull); D.onFullscreen(showFull);
+    fb.onclick = () => D.toggleFullscreen();
+    $('btnQuit').onclick = $('btnQuit2').onclick = () => D.quit();
+  }
   document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === canvas;
     if (!locked && wasLocked && G.started && !G.paused && !G.mapOpen) setPaused(true);

@@ -208,6 +208,32 @@ This is a browser game built by one author in two passes. It aims for the *feel*
 open-world game with stylised procedural art — roughly early-2000s character fidelity under modern
 lighting. It is not the product of a few hundred artists and several years.
 
+## Desktop app
+
+KAYAL also runs as an installable desktop application (Windows, macOS, Linux) — its own window,
+fullscreen by default (**F11** or **Alt+Enter** to toggle), *Quit to desktop* in the menus, the fast GPU
+preferred on laptops, and saves kept on the computer.
+
+**Getting it.** Every push builds the app on GitHub: open the repository's **Actions** tab → the latest
+*KAYAL desktop app* run → **Artifacts** at the bottom, and download the one for your system.
+
+| System | File | How to start |
+|---|---|---|
+| Windows | `Kayal-1905-…-win-x64.exe` (installer) or `…-win-x64.zip` (portable) | Run the installer, or unzip and run `Kayal 1905.exe` |
+| macOS | `Kayal-1905-…-mac-universal.dmg` | Drag *Kayal 1905* to Applications |
+| Linux | `Kayal-1905-…-x86_64.AppImage` | `chmod +x` it and run |
+
+The app is not code-signed (that needs paid developer certificates), so the first launch shows a warning:
+
+- **Windows** — SmartScreen: *More info* → *Run anyway*.
+- **macOS** — right-click the app → *Open* → *Open*. If macOS says the app "is damaged", run
+  `xattr -cr "/Applications/Kayal 1905.app"` in Terminal once, then open it again.
+
+Saves made in a browser do not carry over to the desktop app (each keeps its own).
+
+**From source** (needs Node.js): `cd kayal-1905/desktop && npm install && npm start` runs it;
+`npm run dist` packages it for the current system into `desktop/dist/`.
+
 ## Build from source
 
 The game is written as plain ES modules in `src/` on top of [three.js](https://threejs.org).

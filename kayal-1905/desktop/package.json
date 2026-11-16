@@ -1,0 +1,101 @@
+{
+  "name": "kayal-1905",
+  "productName": "Kayal 1905",
+  "version": "7.0.0",
+  "description": "KAYAL - Travancore, 1905. A single-player open-world adventure set in the backwaters of Kerala.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "game": "node copy-game.cjs",
+    "start": "npm run game && electron .",
+    "dist": "npm run game && electron-builder",
+    "dist:win": "npm run game && electron-builder --win",
+    "dist:mac": "npm run game && electron-builder --mac",
+    "dist:linux": "npm run game && electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.kayal1905.game",
+    "productName": "Kayal 1905",
+    "copyright": "Kayal 1905",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "game/**/*",
+      "build/icon.png"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Kayal 1905"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.adventure-games",
+      "identity": null
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Game"
+    },
+    "artifactName": "Kayal-1905-${version}-${os}-${arch}.${ext}"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vstrix1303/Vstrix1303.git"
+  }
+}
