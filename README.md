@@ -22,6 +22,12 @@ A single-player open-world adventure set in the backwaters of Kerala in the mons
 
 **[Open the game folder](kayal-1905/)** · download `kayal-1905/index.html` and open it in a desktop browser to play.
 
+<h3 align="left">🌴 VAIKARA — Malabar Coast, 1905</h3>
+
+An open-world map built in three.js (WebGPU): an 8 × 5.3 km slice of a fictional Malabar coast, built from a hand-drawn map. It has a stone-bridged estuary, the Kuttan backwater lagoon, a colonial town with church, mosque and gopuram temple, fishing villages, two lighthouses, an abandoned fort, a tea estate in the highlands and Vellar Falls, plus 290,000 trees and a full day/night cycle.
+
+**[Open the project](vaikara/)** · `cd vaikara && npm install && npm run dev`
+
 <h3 align="left">Connect with me:</h3>
 <p align="left">
 <a href="https://linkedin.com/in/varun-vattekat-a9829b162" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/linked-in-alt.svg" alt="varun-vattekat-a9829b162" height="30" width="40" /></a>

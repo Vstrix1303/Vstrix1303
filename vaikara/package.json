@@ -1,0 +1,22 @@
+{
+  "name": "vaikara",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VAIKARA - Malabar Coast, circa 1905. An open-world map built in three.js (WebGPU).",
+  "type": "module",
+  "scripts": {
+    "fetch-assets": "node scripts/fetch-assets.mjs",
+    "bake": "node scripts/bake.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "pngjs": "^7.0.0",
+    "sharp": "^0.35.5",
+    "vite": "^8.3.8"
+  }
+}

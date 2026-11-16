@@ -1,0 +1,784 @@
+// Every settlement and landmark on the Vaikara map, generated from the
+// layout: Vaikara Town and its bazaar, the ghat and the stone bridge, the
+// church, mosque and gopuram temple, the District Court and the Residency,
+// fishing villages, two lighthouses, the abandoned fort, the tea estate,
+// ferries, salt pans and the railway to Karimulam.
+import * as THREE from 'three/webgpu';
+import { vec3, float, sin, cos, uniform, smoothstep, positionLocal, uv, vec4, mix } from 'three/tsl';
+import { G, U } from '../../state.js';
+import { Kit, materials } from './kit.js';
+import { getHeight, getSlope, nearestRoad, getBiome, W } from '../../world/data.js';
+import { placeById as P, toWorld, PLACES } from '../../world/layout.js';
+import { makeRng } from '../../world/noise.js';
+
+const TAU = Math.PI * 2;
+
+export class Settlements {
+  constructor(scene) {
+    this.scene = scene;
+    this.kit = new Kit();
+    this.rnd = makeRng(1905);
+    this.beams = [];
+    this.lamps = [];
+    this.jetties = []; // used by props for boats
+  }
+
+  // ── helpers
+  footY(x, z, w, d, ry) {
+    const c = Math.cos(ry), s = Math.sin(ry);
+    let mx = -Infinity, mn = Infinity;
+    for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, 0]]) {
+      const ox = a * w / 2, oz = b * d / 2;
+      const h = getHeight(x + ox * c + oz * s, z - ox * s + oz * c);
+      mx = Math.max(mx, h); mn = Math.min(mn, h);
+    }
+    return { y: mx, drop: mx - mn };
+  }
+  free(x, z, r) { return !G.colliders.blocked(x, z, r); }
+  faceRoad(x, z) { const r = nearestRoad(x, z); return r.seg ? Math.atan2(r.px - x, r.pz - z) : this.rnd() * TAU; }
+  findLand(x, z, minH = 1, maxR = 400) {
+    for (let r = 0; r <= maxR; r += 6) for (let a = 0; a < TAU; a += Math.max(0.2, 6 / Math.max(r, 1))) {
+      const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
+      if (getHeight(px, pz) > minH && getSlope(px, pz) < 0.2) return [px, pz];
+    }
+    return [x, z];
+  }
+  collide(x, z, w, d, ry, y, h = 8) { G.colliders.addBox(x, z, w / 2, d / 2, ry, y - 2, y + h); }
+
+  // ── building types (local +z = front)
+  house(x, z, ry, o = {}) {
+    const k = this.kit, r = this.rnd;
+    const w = o.w || 7 + r() * 3.5, d = o.d || 5.5 + r() * 2;
+    const { y } = this.footY(x, z, w + 2, d + 3, ry);
+    const ph = 0.6;
+    k.lbox('laterite', x, z, ry, 0, y - 2.5, 0.6, w + 1.2, 2.5 + ph, d + 2.6);
+    const wallMat = o.wall || (r() < 0.75 ? 'plaster' : r() < 0.5 ? 'laterite' : 'yplaster');
+    const wh = o.h || 3.0;
+    k.lbox(wallMat, x, z, ry, 0, y + ph, 0, w, wh, d);
+    // door and windows on the front
+    k.lbox('wood', x, z, ry, 0, y + ph, d / 2 + 0.02, 1.1, 2.1, 0.1);
+    for (const sx of [-1, 1]) {
+      k.lbox('window', x, z, ry, sx * w * 0.3, y + ph + 1, d / 2 + 0.03, 0.9, 1.1, 0.06);
+      k.lbox('wood', x, z, ry, sx * w * 0.3, y + ph + 0.95, d / 2 + 0.06, 1.1, 0.1, 0.12);
+    }
+    // veranda posts
+    const n = Math.max(2, Math.round(w / 2.2));
+    for (let i = 0; i <= n; i++) {
+      const ox = -w / 2 + (w / n) * i, c = Math.cos(ry), s = Math.sin(ry);
+      k.cyl('wood', x + ox * c + (d / 2 + 1.6) * s, y + ph, z - ox * s + (d / 2 + 1.6) * c, 0.11, 0.09, wh + 0.2, 7);
+    }
+    k.roof(o.roofMat || 'roof', x + Math.sin(ry) * 0.8, y + ph + wh + 0.1, z + Math.cos(ry) * 0.8, w + 0.6, d + 2.2, ry, { over: 1.1, pitch: 0.95 });
+    this.collide(x, z, w, d, ry, y);
+    G.colliders.addDeck(x + Math.sin(ry) * 0.6, z + Math.cos(ry) * 0.6, (w + 1.2) / 2, (d + 2.6) / 2, ry, y + ph);
+    return y;
+  }
+
+  hut(x, z, ry, o = {}) {
+    const k = this.kit, r = this.rnd;
+    const w = 4 + r() * 1.6, d = 3.4 + r() * 0.8;
+    const { y } = this.footY(x, z, w, d, ry);
+    k.lbox('mud', x, z, ry, 0, y - 1.5, 0, w + 0.4, 1.8, d + 0.4);
+    k.lbox('mud', x, z, ry, 0, y + 0.3, 0, w, 2.0, d);
+    k.lbox('wood', x, z, ry, 0, y + 0.3, d / 2 + 0.02, 0.9, 1.7, 0.08);
+    k.roof(o.roofMat || 'thatch', x, y + 2.3, z, w, d, ry, { over: 0.8, pitch: 1.05, gable: 0.8, flare: 0.1 });
+    this.collide(x, z, w, d, ry, y, 4);
+    return y;
+  }
+
+  shophouse(x, z, ry, w) {
+    const k = this.kit, r = this.rnd;
+    const d = 9 + r() * 3;
+    const { y } = this.footY(x, z, w, d, ry);
+    const wall = r() < 0.6 ? 'plaster' : r() < 0.5 ? 'yplaster' : 'laterite';
+    k.lbox('laterite', x, z, ry, 0, y - 2.5, 0.4, w + 0.2, 2.8, d + 0.8);
+    // ground floor: back and sides closed, front open shop with dark interior and shutters
+    k.lbox(wall, x, z, ry, 0, y + 0.3, -0.5, w, 3.4, d - 1);
+    k.lbox('window', x, z, ry, 0, y + 0.3, d / 2 - 0.98, w - 1, 2.6, 0.05);
+    for (const sx of [-1, 1]) k.lbox('wood', x, z, ry, sx * (w / 2 - 0.15), y + 0.3, d / 2 - 0.4, 0.3, 3.4, 0.3);
+    // awning cloth
+    const cloth = ['cloth', 'redcloth', 'bluecloth', 'cloth'][Math.floor(r() * 4)];
+    const c = Math.cos(ry), s = Math.sin(ry);
+    {
+      const g = new THREE.PlaneGeometry(w - 0.2, 2.2);
+      g.rotateX(-Math.PI / 2 + 0.35);
+      this.kit.push(cloth, g, x + (d / 2 + 0.6) * s, y + 3.0, z + (d / 2 + 0.6) * c, ry);
+      for (const sx of [-1, 1]) k.cyl('wood', x + sx * (w / 2 - 0.3) * c + (d / 2 + 1.6) * s, y + 0.3, z - sx * (w / 2 - 0.3) * s + (d / 2 + 1.6) * c, 0.06, 0.05, 2.5, 5);
+    }
+    // upper floor with wooden balcony
+    k.lbox(wall, x, z, ry, 0, y + 3.7, -0.3, w, 3.0, d - 0.6);
+    k.lbox('planks', x, z, ry, 0, y + 3.7, d / 2 + 0.3, w, 0.18, 1.6);
+    k.lbox('wood', x, z, ry, 0, y + 3.88, d / 2 + 1.05, w, 0.9, 0.08);
+    const nw = Math.max(1, Math.round(w / 2.6));
+    for (let i = 0; i < nw; i++) {
+      const ox = -w / 2 + (w / nw) * (i + 0.5);
+      k.lbox('window', x, z, ry, ox, y + 4.3, d / 2 - 0.88, 1.0, 1.7, 0.05);
+      k.lbox('wood', x, z, ry, ox - 0.62, y + 4.3, d / 2 - 0.84, 0.14, 1.8, 0.08);
+      k.lbox('wood', x, z, ry, ox + 0.62, y + 4.3, d / 2 - 0.84, 0.14, 1.8, 0.08);
+    }
+    for (const sx of [-1, 1]) k.cyl('wood', x + sx * (w / 2 - 0.15) * c + (d / 2 + 1.0) * s, y + 3.88, z - sx * (w / 2 - 0.15) * s + (d / 2 + 1.0) * c, 0.08, 0.07, 2.9, 6);
+    k.roof('roof', x + s * 0.4, y + 6.75, z + c * 0.4, w + 0.4, d + 0.8, ry, { over: 0.9, pitch: 0.85 });
+    this.collide(x, z, w, d, ry, y, 10);
+    return y;
+  }
+
+  godown(x, z, ry, w = 18, d = 9) {
+    const k = this.kit;
+    const { y } = this.footY(x, z, w, d, ry);
+    k.lbox('laterite', x, z, ry, 0, y - 2, 0, w + 0.6, 2.4, d + 0.6);
+    k.lbox('laterite', x, z, ry, 0, y + 0.4, 0, w, 4.2, d);
+    for (let i = -1; i <= 1; i++) k.lbox('wood', x, z, ry, i * w * 0.3, y + 0.4, d / 2 + 0.02, 2.2, 3, 0.1);
+    k.roof('roof', x, y + 4.6, z, w, d, ry, { over: 0.8, pitch: 0.7 });
+    this.collide(x, z, w, d, ry, y);
+  }
+
+  colonial(x, z, ry, w, d, floors, o = {}) {
+    const k = this.kit;
+    const { y } = this.footY(x, z, w, d, ry);
+    const fh = o.fh || 4.6, mat = o.mat || 'whitewash';
+    k.lbox('sandstone', x, z, ry, 0, y - 2.5, 0, w + 2, 3.4, d + 2);
+    for (let f = 0; f < floors; f++) {
+      const fy = y + 0.9 + f * fh;
+      // arcaded verandas front and back, closed core behind
+      k.arcade(mat, x, z, ry, 0, fy, d / 2, w, fh, 0.6, Math.round(w / 3.6), 2.2, fh * 0.7);
+      k.arcade(mat, x, z, ry, 0, fy, -d / 2, w, fh, 0.6, Math.round(w / 3.6), 2.2, fh * 0.7);
+      for (const sx of [-1, 1]) k.lbox(mat, x, z, ry, sx * (w / 2 - 0.3), fy, 0, 0.6, fh, d);
+      k.lbox(mat, x, z, ry, 0, fy, 0, w - 1.2, fh, d - 6);
+      const nw = Math.round(w / 3.6);
+      for (let i = 0; i < nw; i++) {
+        const ox = -w / 2 + (w / nw) * (i + 0.5);
+        k.lbox('window', x, z, ry, ox, fy + 0.8, (d - 6) / 2 + 0.02, 1.1, 2.4, 0.05);
+        k.lbox('window', x, z, ry, ox, fy + 0.8, -(d - 6) / 2 - 0.02, 1.1, 2.4, 0.05);
+      }
+      k.lbox('sandstone', x, z, ry, 0, fy + fh - 0.25, 0, w + 0.3, 0.35, d + 0.3);
+    }
+    const top = y + 0.9 + floors * fh;
+    k.roof('roof', x, top + 0.05, z, w + 0.4, d + 0.4, ry, { over: 1.2, pitch: 0.55, gable: 0.85, flare: 0.1 });
+    // front steps
+    k.stairs('sandstone', x, z, ry, 0, y + 0.9, d / 2 + 1.0, 6, 0.3, 0.4, 3);
+    this.collide(x, z, w, d, ry, y, floors * fh + 4);
+    return { y, top };
+  }
+
+  jetty(x0, z0, x1, z1, w = 3) {
+    const k = this.kit;
+    const len = Math.hypot(x1 - x0, z1 - z0), ry = Math.atan2(-(z1 - z0), x1 - x0);
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, y = 1.0;
+    k.lbox('planks', cx, cz, ry, 0, y, 0, len, 0.2, w, 2);
+    for (let t = 0; t <= len; t += 3) for (const sz of [-1, 1]) {
+      const c = Math.cos(ry), s = Math.sin(ry), ox = -len / 2 + t;
+      k.cyl('wood', cx + ox * c + sz * (w / 2) * s, -3, cz - ox * s + sz * (w / 2) * c, 0.12, 0.11, y + 3.6, 6);
+    }
+    G.colliders.addDeck(cx, cz, len / 2, w / 2, ry, y + 0.2);
+    this.jetties.push({ x: x1, z: z1, ry, len });
+  }
+
+  // jetty from the shore out over the water, starting from (x,z) heading towards deeper water
+  jettyOut(x, z, len = 22) {
+    let best = null;
+    for (let a = 0; a < TAU; a += 0.15) {
+      const tx = x + Math.cos(a) * len, tz = z + Math.sin(a) * len;
+      const h = getHeight(tx, tz);
+      if (!best || h < best.h) best = { h, a };
+    }
+    let sx = x, sz = z;
+    for (let t = 0; t < 120; t += 2) { // walk to the water's edge first
+      const px = x + Math.cos(best.a) * t, pz = z + Math.sin(best.a) * t;
+      if (getHeight(px, pz) < 0.6) { sx = px - Math.cos(best.a) * 4; sz = pz - Math.sin(best.a) * 4; break; }
+    }
+    this.jetty(sx, sz, sx + Math.cos(best.a) * len, sz + Math.sin(best.a) * len);
+    return [sx, sz, best.a];
+  }
+
+  village(place, nHouses, nHuts, opts = {}) {
+    const r = this.rnd;
+    const R = opts.r || place.r;
+    let tries = 0, placed = 0;
+    const total = nHouses + nHuts;
+    while (placed < total && tries++ < total * 40) {
+      const a = r() * TAU, d = Math.sqrt(r()) * R;
+      const x = place.x + Math.cos(a) * d, z = place.z + Math.sin(a) * d;
+      const h = getHeight(x, z);
+      if (h < (opts.minH ?? 1.2) || getSlope(x, z) > 0.22) continue;
+      const rd = nearestRoad(x, z);
+      if (rd.d < 7) continue;
+      if (opts.nearRoad && rd.d > opts.nearRoad) continue;
+      const isHut = placed >= nHouses;
+      if (!this.free(x, z, isHut ? 4.5 : 7)) continue;
+      const ry = opts.faceSea ? Math.atan2(-1, 0) + (r() - 0.5) * 0.6 : this.faceRoad(x, z) + (r() - 0.5) * 0.3;
+      if (isHut) this.hut(x, z, ry); else this.house(x, z, ry, opts.house);
+      placed++;
+    }
+  }
+
+  // shophouses lining roads inside the town
+  street(roadName, from, to, centre, R) {
+    const road = W.meta.roads.find((r) => r.name === roadName);
+    if (!road) return;
+    const line = road.line;
+    let acc = 0, next = 4;
+    for (let i = 1; i < line.length; i++) {
+      const [ax, az] = line[i - 1], [bx, bz] = line[i];
+      const seg = Math.hypot(bx - ax, bz - az);
+      while (next <= acc + seg) {
+        const t = (next - acc) / seg;
+        const x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+        const tx = (bx - ax) / seg, tz = (bz - az) / seg;
+        if (Math.hypot(x - centre.x, z - centre.z) < R) {
+          for (const side of [-1, 1]) {
+            const w = 6 + this.rnd() * 3;
+            const off = 5.5 + 5.5;
+            const hx = x - tz * off * side, hz = z + tx * off * side;
+            if (getHeight(hx, hz) < 1 || getSlope(hx, hz) > 0.25) continue;
+            if (!this.free(hx, hz, 4)) continue;
+            const ry = Math.atan2(x - hx, z - hz);
+            this.shophouse(hx, hz, ry, w);
+          }
+        }
+        next += 9.5 + this.rnd() * 2;
+      }
+      acc += seg;
+    }
+    void from; void to;
+  }
+
+  // ── landmarks
+  lighthouse(x, z, h = 26, banded = false) {
+    const k = this.kit;
+    const y = getHeight(x, z);
+    k.cyl('sandstone', x, y - 2, z, 4.6, 4.4, 3.2, 16);
+    const bands = 6;
+    for (let i = 0; i < bands; i++) {
+      const t0 = i / bands, t1 = (i + 1) / bands;
+      const mat = banded ? (i % 2 ? 'whitewash' : 'red') : 'laterite';
+      k.cyl(mat, x, y + 1.2 + t0 * h, z, 3.2 - t0 * 1.1, 3.2 - t1 * 1.1, h / bands, 18, banded ? 3 : 1.6, true);
+    }
+    const top = y + 1.2 + h;
+    k.cyl('iron', x, top, z, 2.9, 2.9, 0.35, 18);
+    k.cyl('iron', x, top + 0.35, z, 2.85, 2.85, 1.0, 18, 2, true); // railing ring
+    k.cyl('lamp', x, top + 0.35, z, 1.4, 1.4, 2.2, 14);
+    k.sphere('copper', x, top + 2.55, z, 1.65, TAU, Math.PI / 2, 0.8);
+    k.cyl('gold', x, top + 3.8, z, 0.1, 0.04, 1, 6);
+    // keeper's cottage
+    this.house(x + 12, z + 6, Math.PI * 0.3, { w: 7, d: 5, wall: 'whitewash' });
+    G.colliders.addCircle(x, z, 3.3, y - 2, top + 4);
+    // rotating beam (visible at night)
+    const beam = new THREE.Group();
+    const bm = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    const vv = uv().y;
+    bm.colorNode = vec4(vec3(1.0, 0.86, 0.55), vv.mul(vv).mul(vv).mul(0.22).mul(U.night));
+    bm.fog = false;
+    for (const s of [1, -1]) {
+      const g = new THREE.ConeGeometry(18, 420, 24, 1, true);
+      g.translate(0, -210, 0); g.rotateZ(s * Math.PI / 2);
+      const m = new THREE.Mesh(g, bm);
+      m.frustumCulled = false;
+      beam.add(m);
+    }
+    beam.position.set(x, top + 1.4, z);
+    this.scene.add(beam);
+    this.beams.push(beam);
+    const light = new THREE.PointLight(0xffd8a0, 0, 160, 1.6);
+    light.position.set(x, top + 1.4, z);
+    this.scene.add(light);
+    this.lamps.push(light);
+  }
+
+  bridge() {
+    const k = this.kit;
+    const [ax, az] = toWorld(664, 560), [bx, bz] = toWorld(650, 623);
+    const L = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / L, dz = (bz - az) / L;
+    const ry = Math.atan2(-dz, dx);
+    const cx = (ax + bx) / 2, cz = (az + bz) / 2;
+    const deckY = 7.2, W2 = 9;
+    const n = Math.round(L / 24);
+    k.arcade('sandstone', cx, cz, ry, 0, -8, 0, L, deckY + 8, W2, n, (L / n) * 0.74, 12, 0, 3);
+    k.lbox('sandstone', cx, cz, ry, 0, deckY, 0, L + 0.2, 0.4, W2 + 0.6, 3);
+    for (const s of [-1, 1]) k.lbox('sandstone', cx, cz, ry, 0, deckY + 0.4, s * (W2 / 2), L, 1.0, 0.5, 3);
+    // cutwaters on each pier
+    for (let i = 1; i < n; i++) {
+      const ox = -L / 2 + (L / n) * i;
+      for (const s of [-1, 1]) {
+        const c = Math.cos(ry), sn = Math.sin(ry);
+        const px = cx + ox * c + s * (W2 / 2 + 1.2) * sn, pz = cz - ox * sn + s * (W2 / 2 + 1.2) * c;
+        k.cyl('sandstone', px, -8, pz, 1.6, 1.2, 10, 8, 3);
+        k.pyramid('sandstone', px, 2, pz, 1.3, 2, 8);
+      }
+    }
+    // lamps on the parapet
+    for (let i = 0; i <= n; i += 2) {
+      const ox = -L / 2 + (L / n) * i, c = Math.cos(ry), sn = Math.sin(ry);
+      for (const s of [-1, 1]) {
+        const px = cx + ox * c + s * (W2 / 2) * sn, pz = cz - ox * sn + s * (W2 / 2) * c;
+        k.cyl('iron', px, deckY + 1.4, pz, 0.08, 0.06, 3, 6);
+        k.box('lamp', px, deckY + 4.3, pz, 0.35, 0.5, 0.35);
+      }
+    }
+    // ramps down to the banks
+    const ends = [[ax, az, -1], [bx, bz, 1]];
+    for (const [ex, ez, sgn] of ends) {
+      const rl = 34;
+      const gy = Math.max(getHeight(ex + dx * sgn * rl, ez + dz * sgn * rl), 0.8);
+      const mx = ex + dx * sgn * rl / 2, mz = ez + dz * sgn * rl / 2;
+      const ang = Math.atan2(deckY - gy, rl);
+      const g = new THREE.BoxGeometry(rl + 1, 0.6, W2 + 0.6);
+      this.kit.push('sandstone', g, mx, (deckY + gy) / 2, mz, ry, 0, -sgn * ang);
+      const gw = new THREE.BoxGeometry(rl + 1, deckY - gy + 2, W2 + 0.6);
+      this.kit.push('sandstone', gw, mx, (deckY + gy) / 2 - (deckY - gy) / 2 - 0.5, mz, ry, 0, 0, 1, 1, 1);
+      for (let t = 0; t < rl; t += 2) {
+        const f = t / rl, px = ex + dx * sgn * t, pz = ez + dz * sgn * t;
+        G.colliders.addDeck(px, pz, 1.2, W2 / 2 - 0.3, ry, deckY + (gy - deckY) * f + 0.3);
+      }
+    }
+    for (let t = 0; t <= L; t += 2) G.colliders.addDeck(ax + dx * t, az + dz * t, 1.2, W2 / 2 - 0.3, ry, deckY + 0.4);
+    for (const s of [-1, 1]) for (let t = 0; t <= L; t += 4) G.colliders.addBox(ax + dx * t + s * dz * (W2 / 2), az + dz * t - s * dx * (W2 / 2), 2.1, 0.3, ry, deckY, deckY + 1.6);
+    this.bridgeInfo = { ax, az, bx, bz, deckY };
+  }
+
+  ghat() {
+    const k = this.kit;
+    // steps from the bazaar down into the river (north bank)
+    const [gx, gz] = this.findLand(P.river_ghat.x, P.river_ghat.z - 40, 1.2);
+    // find the water direction
+    let best = 0, bh = 99;
+    for (let a = 0; a < TAU; a += 0.1) { const h = getHeight(gx + Math.cos(a) * 30, gz + Math.sin(a) * 30); if (h < bh) { bh = h; best = a; } }
+    const ry = Math.atan2(Math.cos(best), Math.sin(best)) - Math.PI / 2;
+    const fx = Math.cos(best), fz = Math.sin(best);
+    const top = getHeight(gx, gz);
+    for (let i = 0; i < 14; i++) {
+      const x = gx + fx * i * 1.1, z = gz + fz * i * 1.1, y = top - i * 0.42;
+      k.box('sandstone', x, y - 3, z, 26, 3, 1.4, Math.atan2(fx, fz) + Math.PI / 2, 2.5);
+      G.colliders.addDeck(x, z, 13, 0.7, Math.atan2(fx, fz) + Math.PI / 2, y);
+    }
+    // small riverside shrine and a mandapam
+    const sx = gx - fx * 10 + fz * 16, sz = gz - fz * 10 - fx * 16;
+    const sy = getHeight(sx, sz);
+    k.box('sandstone', sx, sy - 1, sz, 4, 1.6, 4);
+    k.box('whitewash', sx, sy + 0.6, sz, 3, 2.6, 3);
+    k.pyramid('copper', sx, sy + 3.2, sz, 2.6, 2.4, 4);
+    for (const [ox, oz] of [[-3, -3], [3, -3], [3, 3], [-3, 3]]) k.cyl('sandstone', sx - fz * 12 + ox, sy, sz + fx * 12 + oz, 0.25, 0.25, 3, 8);
+    k.roof('roof', sx - fz * 12, sy + 3, sz + fx * 12, 8, 8, ry, { over: 0.8, pitch: 0.8 });
+    this.jettyOut(gx + fz * 22, gz - fx * 22, 26);
+    void ry;
+  }
+
+  church() {
+    const k = this.kit;
+    const p = P.st_thomas;
+    const ry = this.faceRoad(p.x, p.z);
+    const { y } = this.footY(p.x, p.z, 18, 44, ry);
+    const c = Math.cos(ry), s = Math.sin(ry);
+    const at = (ox, oz) => [p.x + ox * c + oz * s, p.z - ox * s + oz * c];
+    k.lbox('sandstone', p.x, p.z, ry, 0, y - 2.5, 0, 20, 3.3, 46);
+    // nave
+    k.lbox('whitewash', p.x, p.z, ry, 0, y + 0.8, -4, 14, 10, 36);
+    { const [nx, nz] = at(0, -4); k.roof('roof', nx, y + 10.8, nz, 14, 36, ry, { over: 0.8, pitch: 0.9, gable: 0.95 }); }
+    // baroque facade with two bell towers
+    const fz = 14;
+    k.lbox('whitewash', p.x, p.z, ry, 0, y + 0.8, fz, 16, 14, 1.6);
+    k.lbox('whitewash', p.x, p.z, ry, 0, y + 14.8, fz, 10, 3, 1.4);
+    k.lbox('whitewash', p.x, p.z, ry, 0, y + 17.8, fz, 5, 2.4, 1.2);
+    k.lbox('sandstone', p.x, p.z, ry, 0, y + 14.6, fz + 0.2, 16.6, 0.4, 1.9);
+    k.lbox('window', p.x, p.z, ry, 0, y + 0.8, fz + 0.82, 2.6, 4.6, 0.08);
+    k.lbox('window', p.x, p.z, ry, 0, y + 9, fz + 0.82, 1.6, 2.6, 0.08);
+    for (const sx of [-1, 1]) {
+      const [tx, tz] = at(sx * 9, fz - 1);
+      k.box('whitewash', tx, y + 0.8, tz, 5, 21, 5, ry);
+      k.box('window', ...at(sx * 9, fz + 1.53).slice(0, 1), y + 15, at(sx * 9, fz + 1.53)[1], 1.2, 2.4, 0.06, ry);
+      k.box('sandstone', tx, y + 21.8, tz, 5.6, 0.5, 5.6, ry);
+      k.pyramid('roof', tx, y + 22.3, tz, 3.4, 5, 4, ry + Math.PI / 4);
+      k.cyl('gold', tx, y + 27.3, tz, 0.08, 0.08, 1.4, 6);
+    }
+    // cross on top
+    const [cxp, czp] = at(0, fz);
+    k.box('gold', cxp, y + 20.2, czp, 0.25, 2.4, 0.25, ry);
+    k.box('gold', cxp, y + 21.3, czp, 1.4, 0.25, 0.25, ry);
+    k.stairs('sandstone', p.x, p.z, ry, 0, y + 0.8, fz + 1.4, 8, 0.27, 0.45, 3);
+    this.collide(p.x + (-4) * s, p.z + (-4) * c, 15, 37, ry, y, 12);
+    this.collide(...at(0, fz), 20, 3, ry, y, 20);
+    this.fixRoofY = true;
+    this.churchY = y;
+  }
+
+  mosque() {
+    const k = this.kit;
+    const p = P.juma_mosque;
+    const ry = this.faceRoad(p.x, p.z);
+    const { y } = this.footY(p.x, p.z, 24, 24, ry);
+    const c = Math.cos(ry), s = Math.sin(ry);
+    const at = (ox, oz) => [p.x + ox * c + oz * s, p.z - ox * s + oz * c];
+    k.lbox('sandstone', p.x, p.z, ry, 0, y - 2.5, 0, 28, 3.2, 28);
+    k.lbox('whitewash', p.x, p.z, ry, 0, y + 0.7, -2, 20, 8, 18);
+    k.arcade('whitewash', p.x, p.z, ry, 0, y + 0.7, 7.5, 20, 6, 1.0, 5, 2.4, 4.6);
+    k.lbox('roof', p.x, p.z, ry, 0, y + 6.7, 5.2, 20.6, 0.25, 5.4);
+    // drum + dome
+    const [dx, dz] = at(0, -2);
+    k.cyl('whitewash', dx, y + 8.7, dz, 5.2, 5.2, 2.4, 24);
+    k.sphere('whitewash', dx, y + 11.1, dz, 5.2, TAU, Math.PI / 2, 1.15, 28);
+    k.cyl('gold', dx, y + 16.9, dz, 0.18, 0.05, 2.2, 6);
+    k.sphere('gold', dx, y + 17.2, dz, 0.4, TAU, Math.PI, 1, 8);
+    for (const sx of [-1, 1]) {
+      const [mx, mz] = at(sx * 11.5, 8);
+      k.cyl('whitewash', mx, y + 0.7, mz, 1.4, 1.1, 20, 12);
+      k.cyl('sandstone', mx, y + 14, mz, 1.6, 1.6, 0.5, 12);
+      k.cyl('whitewash', mx, y + 20.7, mz, 1.0, 1.0, 2, 12);
+      k.sphere('whitewash', mx, y + 22.7, mz, 1.0, TAU, Math.PI / 2, 1.4, 12);
+      k.cyl('gold', mx, y + 24, mz, 0.06, 0.03, 1.2, 5);
+      G.colliders.addCircle(mx, mz, 1.5, y, y + 24);
+    }
+    this.collide(...at(0, 0), 21, 21, ry, y, 12);
+  }
+
+  temple() {
+    const k = this.kit;
+    const p = P.ponnambalam;
+    const ry = this.faceRoad(p.x, p.z);
+    const { y } = this.footY(p.x, p.z, 70, 70, ry);
+    const c = Math.cos(ry), s = Math.sin(ry);
+    const at = (ox, oz) => [p.x + ox * c + oz * s, p.z - ox * s + oz * c];
+    // compound wall
+    const S = 64;
+    for (const [ox, oz, w, d] of [[0, -S / 2, S, 1.2], [-S / 2, 0, 1.2, S], [S / 2, 0, 1.2, S], [-S / 4 - 4, S / 2, S / 2 - 8, 1.2], [S / 4 + 4, S / 2, S / 2 - 8, 1.2]]) {
+      k.lbox('laterite', p.x, p.z, ry, ox, y - 1.5, oz, w, 4.6, d);
+      k.lbox('roof', p.x, p.z, ry, ox, y + 3.1, oz, w + 0.6, 0.3, d + 0.9);
+      const [qx, qz] = at(ox, oz);
+      this.collide(qx, qz, w, d, ry, y, 4);
+    }
+    // gopuram over the gate
+    const [gx, gz] = at(0, S / 2);
+    k.box('sandstone', gx, y - 1.5, gz, 14, 8, 9, ry);
+    k.box('window', ...at(0, S / 2 + 4.52).slice(0, 1), y, at(0, S / 2 + 4.52)[1], 3.4, 5.4, 0.06, ry);
+    let ty = y + 6.5, tw = 13, td = 8.2;
+    for (let t = 0; t < 6; t++) {
+      k.box('yplaster', gx, ty, gz, tw, 2.5, td, ry);
+      k.box('sandstone', gx, ty + 2.5, gz, tw + 0.6, 0.35, td + 0.6, ry);
+      for (let i = -2; i <= 2; i++) {
+        const [nx, nz] = [gx + i * (tw / 5) * c + (td / 2 + 0.05) * s, gz - i * (tw / 5) * s + (td / 2 + 0.05) * c];
+        k.box(t % 2 ? 'red' : 'window', nx, ty + 0.5, nz, 0.7, 1.4, 0.12, ry);
+      }
+      ty += 2.85; tw *= 0.84; td *= 0.82;
+    }
+    // barrel-vault crown with kalasams
+    {
+      const g = new THREE.CylinderGeometry(td / 2, td / 2, tw, 14, 1, false, 0, Math.PI);
+      g.rotateZ(Math.PI / 2);
+      this.kit.push('yplaster', g, gx, ty, gz, ry + Math.PI / 2, 0, 0);
+      for (let i = -2; i <= 2; i++) {
+        const kx = gx + i * (tw / 5) * c, kz = gz - i * (tw / 5) * s;
+        k.cyl('gold', kx, ty + td / 2 - 0.2, kz, 0.35, 0.12, 1.8, 8);
+      }
+    }
+    G.colliders.addBox(gx + 4.5 * c, gz - 4.5 * s, 2, 4.5, ry, y, y + 20);
+    G.colliders.addBox(gx - 4.5 * c, gz + 4.5 * s, 2, 4.5, ry, y, y + 20);
+    // sreekovil: circular shrine with conical copper roof (Kerala style)
+    const [sx, sz] = at(0, -6);
+    k.cyl('sandstone', sx, y - 1, sz, 7.4, 7.4, 2.2, 28);
+    k.cyl('laterite', sx, y + 1.2, sz, 6.2, 6.2, 3.8, 28, 1.6);
+    k.cyl('copper', sx, y + 4.8, sz, 8.4, 0.5, 7.5, 28, 2, true);
+    k.cyl('gold', sx, y + 12.2, sz, 0.45, 0.1, 1.8, 8);
+    G.colliders.addCircle(sx, sz, 7.4, y, y + 12);
+    // namaskara mandapam
+    const [nx, nz] = at(0, 12);
+    for (const [ox, oz] of [[-3.5, -3.5], [3.5, -3.5], [3.5, 3.5], [-3.5, 3.5]]) k.cyl('sandstone', nx + ox, y, nz + oz, 0.3, 0.3, 3.2, 8);
+    k.box('sandstone', nx, y - 1, nz, 9, 1.4, 9, ry);
+    k.roof('copper', nx, y + 3.2, nz, 9, 9, ry, { over: 0.6, pitch: 1.0, gable: 0.6 });
+    // deepastambham: the tall brass lamp pillar
+    const [lx, lz] = at(0, 24);
+    k.cyl('gold', lx, y, lz, 0.6, 0.3, 11, 10);
+    for (let i = 0; i < 9; i++) k.cyl('gold', lx, y + 2 + i * 1.0, lz, 1.0 - i * 0.07, 1.0 - i * 0.07, 0.12, 10);
+    G.colliders.addCircle(lx, lz, 0.8, y, y + 11);
+    // the temple tank outside the gate
+    const [tx, tz] = at(-46, 30);
+    const th = getHeight(tx, tz);
+    for (let i = 0; i < 6; i++) {
+      const w = 26 - i * 3;
+      for (const [ox, oz, ww, dd] of [[0, -w / 2, w, 1.5], [0, w / 2, w, 1.5], [-w / 2, 0, 1.5, w], [w / 2, 0, 1.5, w]]) k.lbox('laterite', tx, tz, ry, ox, th - 0.6 - i * 0.6, oz, ww, 0.6, dd);
+    }
+    const pond = new THREE.Mesh(new THREE.PlaneGeometry(10, 10).rotateX(-Math.PI / 2), new THREE.MeshPhysicalNodeMaterial({ color: 0x16301c, roughness: 0.05, metalness: 0, ior: 1.33 }));
+    pond.position.set(tx, th - 3.4, tz); pond.rotation.y = ry;
+    this.scene.add(pond);
+    G.colliders.addBox(tx, tz, 13, 13, ry, th - 4, th + 0.2);
+  }
+
+  court() {
+    const p = P.district_court;
+    const ry = this.faceRoad(p.x, p.z);
+    const { y, top } = this.colonial(p.x, p.z, ry, 42, 16, 2, { mat: 'whitewash', fh: 4.8 });
+    const c = Math.cos(ry), s = Math.sin(ry);
+    // central pediment and flag
+    this.kit.lbox('whitewash', p.x, p.z, ry, 0, top - 1, 8.4, 10, 2, 1);
+    this.kit.cyl('iron', p.x + 9.5 * s, y + 0.9, p.z + 9.5 * c + 0, 0.09, 0.06, 16, 6);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.8, 8, 1), materials().redcloth);
+    flag.geometry.translate(1.5, 0, 0);
+    flag.position.set(p.x + 9.5 * s, y + 15.8, p.z + 9.5 * c);
+    this.scene.add(flag);
+    this.flag = flag;
+    // carriage drive with hitching posts
+    for (let i = -3; i <= 3; i++) this.kit.cyl('iron', p.x + i * 4 * c + 14 * s, getHeight(p.x + 14 * s, p.z + 14 * c), p.z - i * 4 * s + 14 * c, 0.08, 0.08, 1.1, 6);
+  }
+
+  residency() {
+    const k = this.kit;
+    const p = P.residency;
+    const ry = this.faceRoad(p.x, p.z);
+    const { y, top } = this.colonial(p.x, p.z, ry, 32, 20, 2, { mat: 'yplaster', fh: 5 });
+    const c = Math.cos(ry), s = Math.sin(ry);
+    // portico with columns
+    for (const ox of [-5, -1.7, 1.7, 5]) k.cyl('whitewash', p.x + ox * c + 14 * s, y + 0.9, p.z - ox * s + 14 * c, 0.5, 0.42, 9.5, 14);
+    k.lbox('whitewash', p.x, p.z, ry, 0, y + 10.4, 13, 12.5, 1, 7);
+    {
+      const sh = new THREE.Shape(); sh.moveTo(-6.5, 0); sh.lineTo(6.5, 0); sh.lineTo(0, 2.6); sh.lineTo(-6.5, 0);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 7, bevelEnabled: false });
+      k.push('whitewash', g, p.x + 9.5 * s, y + 11.4, p.z + 9.5 * c, ry);
+    }
+    // garden wall and gate piers
+    const R = 70;
+    for (const [ox, oz, w, d] of [[0, -R / 2, R, 0.8], [-R / 2, 0, 0.8, R], [R / 2, 0, 0.8, R], [-R / 4 - 4, R / 2, R / 2 - 8, 0.8], [R / 4 + 4, R / 2, R / 2 - 8, 0.8]]) {
+      const qx = p.x + ox * c + oz * s, qz = p.z - ox * s + oz * c;
+      const gy = getHeight(qx, qz);
+      k.box('whitewash', qx, gy - 1, qz, w, 3.2, d, ry);
+      this.collide(qx, qz, w, d, ry, gy, 3);
+    }
+    for (const sx of [-1, 1]) {
+      const qx = p.x + sx * 4.5 * c + (R / 2) * s, qz = p.z - sx * 4.5 * s + (R / 2) * c, gy = getHeight(qx, qz);
+      k.box('sandstone', qx, gy - 0.5, qz, 1.4, 4.2, 1.4, ry);
+      k.sphere('sandstone', qx, gy + 3.7, qz, 0.6, TAU, Math.PI, 1, 10);
+    }
+    void top;
+  }
+
+  fort() {
+    const k = this.kit;
+    const p = P.fort;
+    const ry = 0.25;
+    const c = Math.cos(ry), s = Math.sin(ry);
+    const Wd = 130, Dp = 100;
+    const corners = [[-Wd / 2, -Dp / 2], [Wd / 2, -Dp / 2], [Wd / 2, Dp / 2], [-Wd / 2, Dp / 2]];
+    const at = (ox, oz) => [p.x + ox * c + oz * s, p.z - ox * s + oz * c];
+    const r = makeRng(77);
+    for (let i = 0; i < 4; i++) {
+      const [ax, az] = corners[i], [bx, bz] = corners[(i + 1) % 4];
+      const len = Math.hypot(bx - ax, bz - az), segs = Math.round(len / 8);
+      for (let j = 0; j < segs; j++) {
+        if (r() < 0.12) continue;                 // breaches
+        if (i === 2 && Math.abs(j - segs / 2) < 1) continue; // gate gap
+        const t = (j + 0.5) / segs;
+        const ox = ax + (bx - ax) * t, oz = az + (bz - az) * t;
+        const [wx, wz] = at(ox, oz);
+        const gy = getHeight(wx, wz);
+        const h = 7 + r() * 2 - (r() < 0.2 ? 3 + r() * 3 : 0);
+        const along = Math.atan2(-(bz - az), bx - ax) + ry;
+        k.box('fortstone', wx, gy - 2, wz, 8.2, h + 2, 3.2, along, 2.6);
+        // crenellations
+        if (h > 6) for (let m = -1; m <= 1; m += 2) k.box('fortstone', wx + Math.cos(along) * m * 2, gy + h, wz - Math.sin(along) * m * 2, 1.6, 1.0, 3.2, along);
+        G.colliders.addBox(wx, wz, 4.1, 1.6, along, gy - 2, gy + h);
+      }
+      // round bastion at each corner
+      const [qx, qz] = at(ax, az);
+      const gy = getHeight(qx, qz);
+      k.cyl('fortstone', qx, gy - 2, qz, 9, 8, 11.5, 20, 2.6);
+      k.cyl('fortstone', qx, gy + 9.5, qz, 8.3, 8.3, 1.2, 20, 2.6, true);
+      G.colliders.addCircle(qx, qz, 9, gy - 2, gy + 9.5);
+      G.colliders.addDeck(qx, qz, 6, 6, 0, gy + 9.5);
+      this.cannons = this.cannons || [];
+      this.cannons.push([qx, gy + 9.5, qz, Math.atan2(qx - p.x, qz - p.z)]);
+    }
+    // gatehouse
+    const [gx, gz] = at(0, Dp / 2);
+    const gy = getHeight(gx, gz);
+    k.arcade('fortstone', gx, gz, ry, 0, gy - 1, 0, 16, 11, 6, 1, 5, 7);
+    // ruined barracks inside
+    for (let i = 0; i < 3; i++) {
+      const [bx, bz] = at(-30 + i * 30, -20);
+      const by = getHeight(bx, bz);
+      k.box('fortstone', bx, by - 1, bz, 20, 3 + r() * 2, 0.9, ry);
+      k.box('fortstone', bx + 9.5 * c, by - 1, bz - 9.5 * s, 0.9, 2 + r() * 2, 8, ry);
+      k.box('fortstone', bx - 9.5 * c, by - 1, bz + 9.5 * s, 0.9, 4, 8, ry);
+    }
+  }
+
+  teaEstate() {
+    const p = P.kanmala;
+    // bungalow on the crest, factory below, workers' lines
+    const [bx, bz] = this.findLand(p.x - 40, p.z - 60, 20);
+    this.colonial(bx, bz, this.faceRoad(bx, bz), 22, 14, 1, { mat: 'whitewash', fh: 4.4 });
+    const [fx, fz] = this.findLand(p.x + 80, p.z + 50, 5);
+    const ry = this.faceRoad(fx, fz);
+    const { y } = this.footY(fx, fz, 46, 16, ry);
+    const k = this.kit;
+    k.lbox('laterite', fx, fz, ry, 0, y - 2, 0, 47, 2.4, 17);
+    for (let f = 0; f < 3; f++) {
+      k.lbox(f ? 'planks' : 'laterite', fx, fz, ry, 0, y + 0.4 + f * 3.6, 0, 46, 3.6, 16);
+      for (let i = 0; i < 14; i++) for (const sd of [-1, 1]) k.lbox('window', fx, fz, ry, -21 + i * 3.25, y + 1.4 + f * 3.6, sd * 8.03, 1.2, 1.6, 0.05);
+    }
+    k.roof('roof', fx, y + 11.2, fz, 46, 16, ry, { over: 1, pitch: 0.5, gable: 0.9 });
+    k.lbox('laterite', fx, fz, ry, 18, y + 11, 0, 2.4, 9, 2.4);
+    this.collide(fx, fz, 46, 16, ry, y, 14);
+    for (let i = 0; i < 3; i++) {
+      const [lx, lz] = this.findLand(p.x + 130 + i * 6, p.z - 20 + i * 26, 5);
+      const lry = this.faceRoad(lx, lz);
+      const ly = this.footY(lx, lz, 32, 6, lry).y;
+      k.lbox('laterite', lx, lz, lry, 0, ly - 2, 0, 32, 4.6, 6);
+      for (let j = 0; j < 8; j++) k.lbox('wood', lx, lz, lry, -14 + j * 4, ly, 3.02, 0.9, 1.9, 0.08);
+      k.roof('roof', lx, ly + 2.6, lz, 32, 6, lry, { over: 0.9, pitch: 0.6 });
+      this.collide(lx, lz, 32, 6, lry, ly, 4);
+    }
+  }
+
+  railway() {
+    const k = this.kit;
+    const line = W.meta.rail;
+    for (let i = 1; i < line.length; i++) {
+      const [ax, az] = line[i - 1], [bx, bz] = line[i];
+      const L = Math.hypot(bx - ax, bz - az);
+      if (L < 0.1) continue;
+      const ry = Math.atan2(-(bz - az), bx - ax);
+      for (let t = 0; t < L; t += 0.9) {
+        const x = ax + (bx - ax) * t / L, z = az + (bz - az) * t / L;
+        k.box('wood', x, getHeight(x, z) + 0.05, z, 0.25, 0.16, 2.5, ry, 1);
+      }
+      for (const sd of [-0.72, 0.72]) {
+        const mx = (ax + bx) / 2 - Math.sin(ry) * sd, mz = (az + bz) / 2 - Math.cos(ry) * sd;
+        k.box('iron', mx, getHeight(mx, mz) + 0.2, mz, L + 0.05, 0.14, 0.09, ry, 1);
+      }
+    }
+    // Karimulam station
+    const [sx, sz] = line[0];
+    const [nx, nz] = line[3];
+    const ry = Math.atan2(-(nz - sz), nx - sx);
+    const ox = -Math.sin(ry) * 7, oz = -Math.cos(ry) * 7;
+    const px = (sx + nx) / 2 + ox, pz = (sz + nz) / 2 + oz;
+    const py = getHeight(px, pz);
+    k.box('sandstone', px, py - 1, pz, 60, 2, 5, ry);
+    G.colliders.addDeck(px, pz, 30, 2.5, ry, py + 1);
+    const hx = px - Math.sin(ry) * 7, hz = pz - Math.cos(ry) * 7;
+    k.box('yplaster', hx, py, hz, 18, 4.2, 7, ry);
+    k.roof('roof', hx, py + 4.2, hz, 18, 7, ry, { over: 1.6, pitch: 0.55 });
+    for (let i = -4; i <= 4; i++) k.cyl('iron', px + Math.cos(ry) * i * 6 + Math.sin(ry) * 1.2, py + 1, pz - Math.sin(ry) * i * 6 + Math.cos(ry) * 1.2, 0.08, 0.08, 3.4, 6);
+    {
+      const g = new THREE.BoxGeometry(54, 0.15, 4.6);
+      k.push('roof', g, px, py + 4.5, pz, ry, 0.08);
+    }
+    this.collide(hx, hz, 18, 7, ry, py, 6);
+    this.station = { x: (sx + nx) / 2, z: (sz + nz) / 2, ry };
+  }
+
+  saltPans() {
+    const k = this.kit, r = makeRng(31);
+    const p = P.salt_pans;
+    for (let i = 0; i < 60; i++) {
+      const x = p.x + (r() - 0.5) * 520, z = p.z + (r() - 0.5) * 420;
+      const b = getBiome(x, z);
+      if (b[2] !== 3) continue;
+      const y = getHeight(x, z);
+      if (y < 0.1) continue;
+      const s = 0.8 + r() * 1.2;
+      k.pyramid('salt', x, y - 0.1, z, 1.2 * s, 1.1 * s, 9, r());
+    }
+    for (let i = 0; i < 4; i++) {
+      const [x, z] = this.findLand(p.x - 200 + i * 120, p.z - 150, 0.8);
+      const y = getHeight(x, z);
+      const ry = r() * 3;
+      k.box('planks', x, y, z, 10, 2.4, 5, ry);
+      k.roof('thatch', x, y + 2.4, z, 10, 5, ry, { over: 0.6, pitch: 0.7 });
+      this.collide(x, z, 10, 5, ry, y, 4);
+    }
+  }
+
+  market() {
+    const k = this.kit, r = makeRng(55);
+    const p = P.old_bazaar;
+    const cloths = ['cloth', 'redcloth', 'bluecloth'];
+    for (let i = 0; i < 26; i++) {
+      const x = p.x + (r() - 0.5) * 120, z = p.z + (r() - 0.5) * 100;
+      const y = getHeight(x, z);
+      if (y < 1.2 || !this.free(x, z, 2.6)) continue;
+      const ry = this.faceRoad(x, z);
+      const c = Math.cos(ry), s = Math.sin(ry);
+      for (const [ox, oz] of [[-1.4, -1], [1.4, -1], [1.4, 1], [-1.4, 1]]) k.cyl('wood', x + ox * c + oz * s, y, z - ox * s + oz * c, 0.06, 0.06, 2.3, 5);
+      const g = new THREE.PlaneGeometry(3.4, 2.6); g.rotateX(-Math.PI / 2 + 0.12);
+      k.push(cloths[i % 3], g, x, y + 2.35, z, ry);
+      k.box('planks', x, y + 0.7, z, 2.6, 0.12, 1.6, ry);
+      for (let b = 0; b < 4; b++) k.sphere(['salt', 'redcloth', 'gold', 'cloth'][b], x + (b - 1.5) * 0.6 * c, y + 0.82, z - (b - 1.5) * 0.6 * s, 0.26, TAU, Math.PI / 2, 0.6, 8);
+      G.colliders.addBox(x, z, 1.5, 1.1, ry, y, y + 2.5);
+    }
+  }
+
+  shrine(p, big = false) {
+    const k = this.kit;
+    const [x, z] = this.findLand(p.x, p.z, 1.5, 120);
+    const y = getHeight(x, z);
+    const ry = this.faceRoad(x, z);
+    k.box('laterite', x, y - 1, z, 7, 1.8, 7, ry);
+    k.box('whitewash', x, y + 0.8, z, 4, 3, 4, ry);
+    k.roof('copper', x, y + 3.8, z, 4.5, 4.5, ry, { over: 0.9, pitch: 1.1, gable: 0.6 });
+    if (big) k.roof('copper', x, y + 6.0, z, 2.6, 2.6, ry, { over: 0.4, pitch: 1.1, gable: 0.6 });
+    k.cyl('sandstone', x + 6, y, z + 2, 0.3, 0.2, 2.4, 8);
+    this.collide(x, z, 7, 7, ry, y, 6);
+  }
+
+  async build(progress) {
+    const step = async (f, t) => { f(); progress?.(t); await new Promise((r) => setTimeout(r, 0)); };
+    await step(() => this.bridge(), 0.05);
+    await step(() => { this.church(); this.mosque(); this.temple(); }, 0.15);
+    await step(() => { this.court(); this.residency(); this.ghat(); this.market(); }, 0.25);
+    await step(() => {
+      const t = P.vaikara_town;
+      for (const r of ['Bazaar Street', 'Bridge Road', 'Puliyur Road', 'Estate Road', 'Temple Way', 'Church Lane', 'Ferry Lane']) this.street(r, 0, 1, t, 380);
+    }, 0.4);
+    await step(() => {
+      this.village(P.vaikara_town, 46, 6, { r: 560, house: {} });
+      this.village(P.puliyur, 18, 6, { nearRoad: 120 });
+      this.village(P.karimulam, 16, 10, { nearRoad: 140 });
+    }, 0.55);
+    await step(() => {
+      this.village(P.muthalappuzha, 6, 30, { minH: 1.0 });
+      this.village(P.veliyathura, 6, 14, { minH: 1.0 });
+      this.village(P.kayalore, 3, 18, { minH: 1.0 });
+      this.village(P.southern_ferry, 3, 7, { minH: 1.0 });
+      this.village(P.kalliyar_ferry, 2, 5, { r: 220, minH: 1.0 });
+      this.village(P.thenga_paddy, 9, 6, { r: 520, minH: 1.6 });
+      this.village(P.hill_trading_post, 4, 2, { r: 90 });
+      for (let i = 0; i < 3; i++) { const [x, z] = this.findLand(P.hill_trading_post.x + 30 - i * 26, P.hill_trading_post.z + 24, 3); this.godown(x, z, this.faceRoad(x, z), 14, 8); }
+    }, 0.7);
+    await step(() => {
+      this.lighthouse(...this.findLand(P.lighthouse_point.x - 10, P.lighthouse_point.z, 2.5, 120), 28, true);
+      this.lighthouse(...this.findLand(P.veliyathura.x - 20, P.veliyathura.z, 2.0, 120), 24, false);
+      this.fort();
+      this.teaEstate();
+    }, 0.8);
+    await step(() => {
+      this.railway(); this.saltPans();
+      this.shrine(P.monsoon_shrine, true);
+      this.shrine({ x: P.karimulam.x + 60, z: P.karimulam.z - 40 });
+      this.shrine({ x: P.puliyur.x - 50, z: P.puliyur.z + 30 });
+      // godowns at the ghat and harbours
+      for (const [px, pz] of [[P.river_ghat.x - 60, P.river_ghat.z - 30], [P.veliyathura.x + 70, P.veliyathura.z + 20], [P.southern_ferry.x + 30, P.southern_ferry.z - 40]]) {
+        const [x, z] = this.findLand(px, pz, 1.2, 160); this.godown(x, z, this.faceRoad(x, z));
+      }
+      // jetties
+      for (const pl of [P.muthalappuzha, P.veliyathura, P.kayalore, P.southern_ferry, P.kalliyar_ferry, P.karimulam]) {
+        const [x, z] = this.findLand(pl.x, pl.z, 1.0, 200);
+        this.jettyOut(x, z, 24);
+      }
+      // Kalliyar: a landing on the south bank too
+      { const [x, z] = this.findLand(P.kalliyar_ferry.x - 20, P.kalliyar_ferry.z + 160, 1.0, 200); this.jettyOut(x, z, 20); }
+    }, 0.9);
+    const M = materials();
+    this.meshes = this.kit.build(this.scene, M);
+    Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station });
+    progress?.(1);
+  }
+
+  update(dt) {
+    for (const b of this.beams) b.rotation.y += dt * 0.9;
+    const n = U.night.value;
+    for (const l of this.lamps) l.intensity = n * 900;
+    if (this.flag) {
+      const p = this.flag.geometry.attributes.position;
+      const t = G.time;
+      for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setZ(i, Math.sin(t * 4 + x * 1.8) * 0.12 * x); }
+      p.needsUpdate = true;
+    }
+  }
+}
+void PLACES; void float; void sin; void cos; void uniform; void positionLocal; void mix;
