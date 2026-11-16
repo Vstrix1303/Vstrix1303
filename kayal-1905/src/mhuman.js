@@ -167,7 +167,7 @@ float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); 
 float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
 // returns albedo; writes roughness / metalness
 vec3 clothe(out float rough, out float metal) {
-  vec3 p = vRest, n = normalize(vRestN);
+  vec3 p = vRest, n = normalize(vRestN + vec3(0.0, 1e-6, 0.0));
   float part = vPart;
   bool arm = (part > 5.5 && part < 9.5) || (part > 10.5 && part < 14.5);
   bool hand = part == 8.0 || part == 9.0 || part == 13.0 || part == 14.0;

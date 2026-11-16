@@ -10,10 +10,10 @@ const { pathToFileURL } = require('url');
 protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 const GAME = path.join(__dirname, 'game');
 
-// prefer the discrete GPU on laptops; don't let a blocklisted driver fall back to software
+// prefer the discrete GPU on laptops. Chromium's GPU blocklist is respected, exactly as in Chrome or
+// Edge: overriding it (ignore-gpu-blocklist, enable-gpu-rasterization) switched on driver features
+// Chromium knows to be broken on some Radeon integrated GPUs, and every canvas came out blank white.
 app.commandLine.appendSwitch('force_high_performance_gpu');
-app.commandLine.appendSwitch('ignore-gpu-blocklist');
-app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }

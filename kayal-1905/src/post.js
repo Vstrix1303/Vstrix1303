@@ -9,6 +9,14 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { N8AOPass } from 'n8ao';
 import { G, QUALITY } from './state.js';
 
+// Holds every pixel of the drawn frame to a sane range before bloom can spread it: NaN -> 0,
+// infinity and runaway brightness -> 32. min/max (not isnan) because Direct3D's compiler may drop
+// isnan, while its min/max are defined to return the non-NaN operand.
+const SanitizeShader = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); gl_FragColor = vec4(min(max(c.rgb, vec3(0.0)), vec3(32.0)), 1.0); }',
+};
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -34,7 +42,7 @@ const GradeShader = {
     vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
     float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main(){
-      vec3 c = texture2D(tDiffuse, vUv).rgb;
+      vec3 c = min(max(texture2D(tDiffuse, vUv).rgb, vec3(0.0)), vec3(64.0));
       if (uGod > 0.003) {
         vec2 d = (uSun - vUv);
         float jitter = hash(vUv * 731.0 + uTime) ;
@@ -85,6 +93,7 @@ export class Post {
       Object.assign(this.ao.configuration, { aoRadius: 2.4, distanceFalloff: 0.7, intensity: 2.6, aoSamples: G.quality === 'ultra' ? 16 : 12, denoiseSamples: 8, denoiseRadius: 10, halfRes: G.quality !== 'ultra', gammaCorrection: false });
       this.composer.addPass(this.ao);
     } else this.composer.addPass(new RenderPass(scene, camera));
+    this.composer.addPass(new ShaderPass(SanitizeShader));
     if (q.bloom) {
       this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.36, 0.95, 0.9);
       this.composer.addPass(this.bloom);
@@ -94,7 +103,19 @@ export class Post {
     // the AO path renders without MSAA, so smooth the edges after grading
     if (q.ao) { this.smaa = new SMAAPass(size.x, size.y); this.composer.addPass(this.smaa); }
     this.u = this.grade.uniforms;
+    this.renderer = renderer; this.scene = scene; this.camera = camera;
+  }
+  // without screen effects: the scene straight to the screen, tone-mapped by three.js itself
+  setSafe(on) {
+    this.safe = on;
+    const r = this.renderer;
+    r.toneMapping = on ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+    r.toneMappingExposure = on ? 1.05 : 1;
+    this.scene.traverse((o) => { const m = o.material; if (m) (Array.isArray(m) ? m : [m]).forEach((x) => (x.needsUpdate = true)); });
   }
   setSize(w, h) { this.composer.setSize(w, h); this.u.uAspect.value = w / h; }
-  render(dt) { this.composer.render(dt); }
+  render(dt) {
+    if (this.safe) { this.renderer.setRenderTarget(null); this.renderer.render(this.scene, this.camera); }
+    else this.composer.render(dt);
+  }
 }

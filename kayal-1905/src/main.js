@@ -32,6 +32,7 @@ function pickQuality(gl) {
   try {
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
     const r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : '';
+    G.gpuName = r;
     if (/SwiftShader|llvmpipe|Software/i.test(r)) return 'low';
     // graphics built into the processor (Radeon Vega / 'Radeon Graphics', Intel UHD / Iris): share system memory
     if (/Vega|Radeon\(TM\) Graphics|Radeon Graphics|Intel|UHD|Iris/i.test(r) && !/RX|Arc/i.test(r)) { G.integrated = true; return 'medium'; }
@@ -53,7 +54,7 @@ async function boot() {
   G.quality = pickQuality(renderer.getContext());
   if (G.integrated) {
     // integrated GPU: keep the look, drop what costs most — multisampling, reflection resolution, grass density
-    for (const k of ['medium', 'high', 'ultra']) QUALITY[k] = { ...QUALITY[k], msaa: 0, reflection: Math.min(QUALITY[k].reflection, 256), grass: Math.round(QUALITY[k].grass * 0.55), shadow: Math.min(QUALITY[k].shadow, 2048) };
+    for (const k of ['medium', 'high', 'ultra']) QUALITY[k] = { ...QUALITY[k], ao: false, msaa: 0, reflection: Math.min(QUALITY[k].reflection, 256), grass: Math.round(QUALITY[k].grass * 0.55), shadow: Math.min(QUALITY[k].shadow, 2048) };
   }
   const q = QUALITY[G.quality];
   // how far people are drawn, how far they cast shadows, how often the shadow map is redrawn
@@ -88,7 +89,31 @@ async function boot() {
   setupWheel(EQUIP);
   setupBlobs(scene);
   ui.attach(scene);
-  const post = new Post(renderer, scene, camera);
+  const post = G.post = new Post(renderer, scene, camera);
+  // screen effects can be switched off (pause menu), and switch themselves off if the frame comes out white
+  const safeBtn = $('btnFx');
+  const setSafe = (on, why) => {
+    post.setSafe(on); G.safeRender = on; store.set('kayal1905.safe', on ? '1' : '0');
+    if (safeBtn) safeBtn.textContent = 'Screen effects: ' + (on ? 'Off' : 'On');
+    if (why) ui.toast(why, 7);
+  };
+  if (store.get('kayal1905.safe') === '1' || params.has('safe')) setSafe(true);
+  if (safeBtn) safeBtn.onclick = () => setSafe(!G.safeRender);
+  const gl = renderer.getContext(), px = new Uint8Array(4);
+  let whiteN = 0, whiteT = 0;
+  const watchWhite = (dt) => {
+    whiteT -= dt; if (whiteT > 0 || !G.started || G.paused) return;
+    whiteT = 1.5;
+    if (parseFloat(getComputedStyle($('fade')).opacity) > 0.3) { whiteN = 0; return; }
+    let white = 0;
+    for (const [fx, fy] of [[0.5, 0.5], [0.2, 0.6], [0.8, 0.4], [0.5, 0.85]]) {
+      gl.readPixels(Math.floor(gl.drawingBufferWidth * fx), Math.floor(gl.drawingBufferHeight * fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      if (px[0] > 248 && px[1] > 248 && px[2] > 248) white++;
+    }
+    whiteN = white === 4 ? whiteN + 1 : 0;
+    G.whiteFrames = whiteN;
+    if (whiteN >= 3 && !G.safeRender) { whiteN = 0; setSafe(true, 'The screen came out blank on this graphics driver, so the screen effects (bloom, colour grading) were switched off. Turn them back on from the pause menu if you like.'); }
+  };
   const story = G.story = new Story();
   story.attach(scene);
   const mapUI = G.mapUI = new MapUI();
@@ -321,6 +346,7 @@ async function boot() {
     water.renderReflection(renderer, camera);
     renderer.shadowMap.needsUpdate = frameN % (G.shadowEvery || 1) === 0 || frameN < 3;
     post.render(dt);
+    watchWhite(rawDt);
     input.endFrame();
 
     // adaptive resolution keeps slow machines playable
@@ -329,7 +355,7 @@ async function boot() {
       if (fpsT > 2.5) {
         const fps = fpsN / fpsT; fpsT = 0; fpsN = 0;
         const old = prScale;
-        if (fpsEl) fpsEl.textContent = `${Math.round(fps)} fps · ${G.quality}${G.integrated ? ' (integrated GPU)' : ''} · ${Math.round(prScale * 100)}% resolution${stage ? ' · effects trimmed ' + stage : ''}`;
+        if (fpsEl) fpsEl.textContent = `${Math.round(fps)} fps · ${G.quality}${G.integrated ? ' (integrated GPU)' : ''} · ${Math.round(prScale * 100)}% resolution${stage ? ' · effects trimmed ' + stage : ''}${G.safeRender ? ' · screen effects off' : ''} · ${(G.gpuName || 'unknown GPU').replace(/^ANGLE \(|\)$/g, '').slice(0, 70)}`;
         // aim for at least 40 frames a second: first lower the resolution, then trim the costliest effects
         if (fps < 41) {
           if (prScale > 0.6) prScale = Math.max(0.6, prScale * 0.88);
