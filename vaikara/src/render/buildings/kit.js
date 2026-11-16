@@ -14,7 +14,7 @@ export function materials() {
   if (MATS) return MATS;
   const std = (name, o = {}) => {
     const s = pbr(name);
-    return new THREE.MeshStandardNodeMaterial({ map: s.map, normalMap: s.normalMap, roughnessMap: s.arm, aoMap: s.arm, roughness: 1, metalness: 0, color: o.color ?? 0xffffff, side: o.side ?? THREE.FrontSide });
+    return new THREE.MeshStandardNodeMaterial({ map: s.map, normalMap: s.normalMap, roughnessMap: s.arm, aoMap: s.arm, roughness: 1, metalness: 0, color: o.color ?? 0xffffff, side: o.side ?? THREE.FrontSide, vertexColors: true });
   };
   const win = new THREE.MeshStandardNodeMaterial({ color: 0x0c0907, roughness: 0.92 });
   // windows glow warm after dusk (only some of them: hash of position)
@@ -52,14 +52,39 @@ export function materials() {
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
 
+// Per-building colour washes (multipliers on the texture), so merged meshes
+// still vary house to house.
+export const PALETTE = {
+  roof: [[1.12, 0.94, 0.84], [1, 1, 1], [0.86, 0.8, 0.76], [0.78, 0.76, 0.7], [0.9, 0.92, 0.8], [1.05, 0.88, 0.8]],
+  wall: [[1, 1, 1], [1, 1, 1], [1.04, 0.9, 0.66], [0.84, 0.93, 1.03], [1.04, 0.88, 0.84], [1.02, 0.97, 0.86], [0.92, 0.98, 0.9]],
+  laterite: [[1, 1, 1], [1.06, 0.92, 0.86], [0.9, 0.86, 0.84]],
+};
+const WALLS = ['plaster', 'whitewash', 'yplaster', 'mud'], ROOFS = ['roof', 'roofOld', 'thatch'];
+
 export class Kit {
-  constructor() { this.parts = new Map(); }
+  constructor() { this.parts = new Map(); this.tints = null; }
+  // choose a random wash for the next building (rnd: () => [0,1))
+  wash(rnd) {
+    const pick = (a) => a[Math.floor(rnd() * a.length)];
+    this.tints = { roof: pick(PALETTE.roof), wall: pick(PALETTE.wall), laterite: pick(PALETTE.laterite) };
+  }
+  unwash() { this.tints = null; }
+  tintFor(mat) {
+    if (!this.tints || typeof mat !== 'string') return null;
+    if (WALLS.includes(mat)) return this.tints.wall;
+    if (ROOFS.includes(mat)) return this.tints.roof;
+    if (mat === 'laterite') return this.tints.laterite;
+    return null;
+  }
   push(mat, geo, x, y, z, ry = 0, rx = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
     _e.set(rx, ry, rz); _q.setFromEuler(_e); _v.set(x, y, z); _s.set(sx, sy, sz);
     geo.applyMatrix4(_m.compose(_v, _q, _s));
     if (geo.index) geo = geo.toNonIndexed();
     for (const k of Object.keys(geo.attributes)) if (!['position', 'normal', 'uv'].includes(k)) geo.deleteAttribute(k);
     if (!geo.attributes.uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
+    const t = this.tintFor(mat) || [1, 1, 1], n = geo.attributes.position.count, col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = t[0]; col[i * 3 + 1] = t[1]; col[i * 3 + 2] = t[2]; }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     if (!this.parts.has(mat)) this.parts.set(mat, []);
     this.parts.get(mat).push(geo);
   }

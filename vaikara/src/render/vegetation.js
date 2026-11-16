@@ -21,7 +21,7 @@ export class Vegetation {
   constructor(scene, renderer) {
     this.scene = scene; this.renderer = renderer;
     this.nearR = uniform(G.Q.treeNear);
-    this.palmR = uniform(G.Q.treeNear * 0.55);
+    this.palmR = uniform(G.Q.treeNear * (G.quality === 'high' || G.quality === 'ultra' ? 0.68 : 0.55));
     this.farR = uniform(G.Q.treeFar);
     this.lastFill = new THREE.Vector3(1e9, 0, 0);
     this.lastScatter = new THREE.Vector3(1e9, 0, 0);
@@ -33,6 +33,13 @@ export class Vegetation {
     const rnd = makeRng(2024);
     const { QX, QZ, QS, X0, Z0 } = W;
     const trees = { palm: [], broad: [], broad2: [], teak: [], mangrove: [], banana: [] };
+    // planted first: the garden trees of every house compound
+    for (const g of this.scene.userData.gardens || []) {
+      const [x, z] = g.p, y = getHeight(x, z);
+      if (y < 0.5) continue;
+      trees[g.sp].push({ x, y: y - 0.15, z, rot: rnd() * Math.PI * 2, s: (g.s || 1) * (0.8 + rnd() * 0.35), v: Math.floor(rnd() * flora.species[g.sp].variants.length) });
+      if (g.sp !== 'banana') G.colliders?.addCircle(x, z, g.sp === 'palm' ? 0.3 : 0.5, y - 1, y + 6);
+    }
     const col = G.colliders;
     for (let j = 0; j < QZ; j++) {
       if (j % 64 === 0) { progress?.(j / QZ * 0.5); await new Promise((r) => setTimeout(r, 0)); }
@@ -82,10 +89,19 @@ export class Vegetation {
       S.near = S.variants.map((v) => {
         const g = v.geo.clone();
         g.setAttribute('iOrigin', new THREE.InstancedBufferAttribute(new Float32Array(nearCap[sp] * 3), 3));
-        const m = new THREE.InstancedMesh(g, S.mats.map((mm) => mm.clone()), nearCap[sp]);
-        m.count = 0; m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+        const m = new THREE.InstancedMesh(g, S.mats.map((mm) => {
+          const c = mm.clone();
+          // NodeMaterial.clone() does not carry these over reliably
+          c.alphaTest = mm.alphaTest; c.side = mm.side; c.map = mm.map; c.envMapIntensity = mm.envMapIntensity;
+          return c;
+        }), nearCap[sp]);
+        m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        g.attributes.iOrigin.setUsage(THREE.DynamicDrawUsage);
+        hideAll(m);
+        m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
         this.scene.add(m);
         this.near.push(m);
+        if (location.search.includes('nonear')) m.visible = false;
         return m;
       });
     }
@@ -152,7 +168,8 @@ export class Vegetation {
         geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
         geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
         geo.setIndex(I);
-        const fm = new THREE.MeshStandardNodeMaterial({ map: rt.texture, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, color: 0xb4ac8c });
+        const fm = new THREE.MeshStandardNodeMaterial({ map: rt.texture, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 1, color: 0xaca67e });
+        fm.envMapIntensity = 0.25;
         // collapse impostors inside the near radius and beyond the far radius
         const list = this.trees[sp].filter((t) => t.v === vi);
         const im = new THREE.InstancedMesh(geo, fm, Math.max(1, list.length));
@@ -168,6 +185,7 @@ export class Vegetation {
         im.castShadow = false; im.receiveShadow = false; im.frustumCulled = false;
         this.scene.add(im);
         S.far.push({ mesh: im, list, mat: fm });
+        if (location.search.includes('nofar')) im.visible = false;
       }
     }
     // distance-gating node, shared: uses the instance's translation column
@@ -184,7 +202,9 @@ export class Vegetation {
     const fernGeo = await loadFern();
     const mk = (geo, mat, cap, shadow = false) => {
       const m = new THREE.InstancedMesh(geo, mat, cap);
-      m.count = 0; m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = true;
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      hideAll(m);
+      m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = true;
       this.scene.add(m);
       return m;
     };
@@ -192,7 +212,7 @@ export class Vegetation {
       grass: mk(grass, M.grass, Math.round(22000 * G.Q.grass)),
       rice: mk(rice, M.rice, Math.round(16000 * G.Q.grass)),
       tea: mk(tea, M.tea, Math.round(16000 * G.Q.grass), true),
-      fern: fernGeo ? mk(fernGeo.geometry, fernGeo.material, Math.round(2500 * G.Q.grass), true) : null,
+      fern: fernGeo ? mk(fernGeo.geometry, fernGeo.material, Math.round(600 * G.Q.grass), false) : null,
     };
   }
 
@@ -241,7 +261,7 @@ export class Vegetation {
         if (nearestRoad(x, z).d < 2.5) continue;
         if (G.colliders.blocked(x, z, 0.4)) continue;
         const forest = b[1] / 255;
-        if (S.fern && forest > 0.35 && h(gx, gz, 7) < 0.22) put('fern', x, y - 0.05, z, r * 9, 0.9 + h(gx, gz, 8) * 1.1);
+        if (S.fern && forest > 0.35 && d2 < 35 * 35 && h(gx, gz, 7) < 0.3) put('fern', x, y - 0.05, z, r * 9, 0.9 + h(gx, gz, 8) * 1.1);
         else put('grass', x, y - 0.05, z, r * 9, 0.45 + h(gx, gz, 9) * 0.5, 0.35 + h(gx, gz, 10) * 0.6 + (zone === Z.meadow ? 0.35 : 0));
       }
     }
@@ -292,6 +312,15 @@ function farGate(nearR, farR) {
   const keep = step(nearR, d).mul(step(d, farR));
   return positionLocal.mul(keep);
 }
+// Start an instanced mesh with every slot filled by a collapsed (zero-scale)
+// matrix, so the GPU buffers are created at full size before the first frame.
+const _zero = new THREE.Matrix4().makeScale(0, 0, 0);
+function hideAll(m) {
+  for (let i = 0; i < m.instanceMatrix.count; i++) m.setMatrixAt(i, _zero);
+  m.count = m.instanceMatrix.count;
+  m.instanceMatrix.needsUpdate = true;
+}
+
 function nearGate(base, nearR) {
   const o = instanceOrigin();
   const d = length(o.xz.sub(U.camPos.xz));

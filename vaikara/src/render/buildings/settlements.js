@@ -22,6 +22,7 @@ export class Settlements {
     this.lamps = [];
     this.jetties = []; // used by props for boats
     this.counts = { shop: 0, house: 0, hut: 0 };
+    this.gardens = [];
   }
 
   // ── helpers
@@ -49,6 +50,7 @@ export class Settlements {
   // ── building types (local +z = front)
   house(x, z, ry, o = {}) {
     const k = this.kit, r = this.rnd;
+    const ownWash = !k.tints; if (ownWash) k.wash(r);
     const w = o.w || 7 + r() * 3.5, d = o.d || 5.5 + r() * 2;
     const { y } = this.footY(x, z, w + 2, d + 3, ry);
     const ph = 0.6;
@@ -57,11 +59,18 @@ export class Settlements {
     const wh = o.h || 3.0;
     k.lbox(wallMat, x, z, ry, 0, y + ph, 0, w, wh, d);
     // door and windows on the front
-    k.lbox('wood', x, z, ry, 0, y + ph, d / 2 + 0.02, 1.1, 2.1, 0.1);
+    k.lbox('wood', x, z, ry, 0, y + ph, d / 2 + 0.02, 1.4, 2.35, 0.1);
+    k.lbox('wood', x, z, ry, 0, y + ph + 2.35, d / 2 + 0.05, 1.8, 0.18, 0.16);
     for (const sx of [-1, 1]) {
-      k.lbox('window', x, z, ry, sx * w * 0.3, y + ph + 1, d / 2 + 0.03, 0.9, 1.1, 0.06);
-      k.lbox('wood', x, z, ry, sx * w * 0.3, y + ph + 0.95, d / 2 + 0.06, 1.1, 0.1, 0.12);
+      const wx = sx * w * 0.3;
+      k.lbox('window', x, z, ry, wx, y + ph + 0.85, d / 2 + 0.03, 1.25, 1.35, 0.06);
+      k.lbox('wood', x, z, ry, wx, y + ph + 0.78, d / 2 + 0.06, 1.5, 0.12, 0.16);
+      k.lbox('wood', x, z, ry, wx, y + ph + 2.2, d / 2 + 0.06, 1.5, 0.12, 0.16);
+      for (const bx of [-0.36, 0, 0.36]) k.lbox('wood', x, z, ry, wx + bx, y + ph + 0.85, d / 2 + 0.07, 0.06, 1.35, 0.06);
     }
+    // veranda half wall (thinna) with a gap for the steps
+    for (const sx of [-1, 1]) k.lbox('laterite', x, z, ry, sx * (w / 4 + 0.55), y + ph, d / 2 + 1.6, w / 2 - 1.1, 0.55, 0.32);
+    k.lbox('sandstone', x, z, ry, 0, y, d / 2 + 2.15, 1.8, ph - 0.25, 0.7);
     // veranda posts
     const n = Math.max(2, Math.round(w / 2.2));
     for (let i = 0; i <= n; i++) {
@@ -71,11 +80,13 @@ export class Settlements {
     k.roof(o.roofMat || 'roof', x + Math.sin(ry) * 0.8, y + ph + wh + 0.1, z + Math.cos(ry) * 0.8, w + 0.6, d + 2.2, ry, { over: 1.1, pitch: 0.95 });
     this.collide(x, z, w, d, ry, y);
     G.colliders.addDeck(x + Math.sin(ry) * 0.6, z + Math.cos(ry) * 0.6, (w + 1.2) / 2, (d + 2.6) / 2, ry, y + ph);
+    if (ownWash) k.unwash();
     return y;
   }
 
   hut(x, z, ry, o = {}) {
     const k = this.kit, r = this.rnd;
+    k.wash(r);
     const w = 4 + r() * 1.6, d = 3.4 + r() * 0.8;
     const { y } = this.footY(x, z, w, d, ry);
     k.lbox('mud', x, z, ry, 0, y - 1.5, 0, w + 0.4, 1.8, d + 0.4);
@@ -83,6 +94,7 @@ export class Settlements {
     k.lbox('wood', x, z, ry, 0, y + 0.3, d / 2 + 0.02, 0.9, 1.7, 0.08);
     k.roof(o.roofMat || 'thatch', x, y + 2.3, z, w, d, ry, { over: 0.8, pitch: 1.05, gable: 0.8, flare: 0.1 });
     this.collide(x, z, w, d, ry, y, 4);
+    k.unwash();
     return y;
   }
 
@@ -230,6 +242,7 @@ export class Settlements {
     for (const side of [-1, 1]) {
       let run = null;
       const flush = () => {
+        if (run) this.kit.tints = run.tints || null;
         if (run && run.units.length >= 2) {
           // one continuous roof over the whole run
           const { units, ry, d, floors, y } = run;
@@ -246,6 +259,7 @@ export class Settlements {
           this.counts.shop += 1;
         }
         run = null;
+        this.kit.unwash();
       };
       this.walkRoad(name, centre, s0, s1, (x, z, tx, tz, s) => {
         const w = 6.5 + r() * 3;
@@ -265,7 +279,8 @@ export class Settlements {
         const ok = this.siteOK(hx, hz, 1.0, 0.25) && drift < 3 && this.clearOfRoads(hx, hz, run.off - 2.5)
           && this.free(hx, hz, Math.min(w, run.d) / 2 - 1.2);
         if (!ok) { flush(); return 4; }
-        if (run.y == null) run.y = this.footY(hx, hz, w * run.target, run.d, run.ry).y;
+        if (run.y == null) { run.y = this.footY(hx, hz, w * run.target, run.d, run.ry).y; this.kit.wash(r); run.tints = this.kit.tints; }
+        this.kit.tints = run.tints;
         this.shophouse(hx, hz, run.ry, w, { d: run.d, floors: run.floors, wall: run.wall, y: run.y, roof: false });
         run.units.push({ x: hx, z: hz, w });
         if (run.units.length >= run.target) { flush(); return w / 2 + 6 + r() * 6; } // lane between terraces
@@ -284,6 +299,7 @@ export class Settlements {
     // house sits towards the back of the plot, facing the gate
     const hx = x - s * 2, hz = z - c * 2;
     if (!this.free(hx, hz, Math.max(w, d) / 2 + 2)) return false;
+    k.wash(r);
     this.house(hx, hz, ry, { w, d, roofMat: o.roofMat || (r() < 0.55 ? 'roof' : 'roofOld'), wall: o.wall });
     // low laterite compound wall with a gate gap on the lane side
     const wallH = 1.15, t = 0.45;
@@ -317,6 +333,15 @@ export class Settlements {
       k.roof('thatch', bx, gy + 2.2, bz, 4.2, 3.4, ry, { over: 0.4, pitch: 0.8, gable: 0.8, flare: 0 });
       G.colliders.addBox(bx, bz, 2.1, 1.7, ry, gy, gy + 2.5);
     }
+    // garden spots: coconut palms along the walls, banana by the house, a mango in front
+    const at = (ox, oz) => [x + ox * c + oz * s, z - ox * s + oz * c];
+    const G2 = this.gardens;
+    for (let i = 0; i < 2 + Math.floor(r() * 3); i++) G2.push({ sp: 'palm', p: at((r() < 0.5 ? -1 : 1) * (PW / 2 - 1.8), (r() - 0.5) * (PD - 4)) });
+    G2.push({ sp: 'banana', p: at((r() < 0.5 ? -1 : 1) * (w / 2 + 3), -d / 2 - 2 + r() * 2) });
+    if (r() < 0.7) G2.push({ sp: 'broad', p: at((r() - 0.5) * (PW - 8), PD / 2 - 3.5), s: 0.55 });
+    if (r() < 0.5) G2.push({ sp: 'banana', p: at((r() < 0.5 ? -1 : 1) * (PW / 2 - 2.5), PD / 2 - 2.5) });
+    G.colliders.addReserve(x, z, Math.max(PW, PD) / 2 + 2); // the yard is the garden's, not the jungle's
+    k.unwash();
     this.counts.house++;
     (this.compoundsAt ||= []).push([Math.round(x), Math.round(z), +ry.toFixed(2)]);
     return true;
@@ -971,7 +996,7 @@ export class Settlements {
     }, 0.9);
     const M = materials();
     this.meshes = this.kit.build(this.scene, M);
-    Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station });
+    Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station, gardens: this.gardens });
     console.info('[vaikara] buildings', JSON.stringify(this.counts));
     progress?.(1);
   }

@@ -129,6 +129,7 @@ async function boot() {
   });
 
   const clock = new THREE.Timer();
+  const _dir = new THREE.Vector3(); let glareS = 0;
   let frames = 0, fpsT = 0, fps = 0;
   window.__vaikara = { G, sky, terrain, veg, player, fly, ui, frame: 0 };
   renderer.setAnimationLoop(() => {
@@ -139,7 +140,15 @@ async function boot() {
     G.focus.copy(fly.enabled ? fly.pos : player.pos);
     U.camPos.value.copy(camera.position);
     sky.update(dt);
-    renderer.toneMappingExposure = sky.exposure * (params.get('exp') ? +params.get('exp') : 1);
+    // simple eye adaptation: stop down when looking into a low sun; soften the disc at dawn/dusk
+    camera.getWorldDirection(_dir);
+    const sd = sky.sunDir, low = 1 - THREE.MathUtils.smoothstep(sd.y, 0.08, 0.5);
+    const glare = Math.pow(Math.max(0, _dir.dot(sd)), 6) * low * (1 - U.night.value);
+    glareS += (glare - glareS) * Math.min(1, dt * 2.5);
+    sky.sky.showSunDisc.value = 0.25 + 0.75 * THREE.MathUtils.smoothstep(sd.y, 0.06, 0.3);
+    const hr = G.hour;
+    post.warm.value = 1.4 * (THREE.MathUtils.smoothstep(hr, 5.8, 6.6) * (1 - THREE.MathUtils.smoothstep(hr, 7.6, 8.8)) + THREE.MathUtils.smoothstep(hr, 15.8, 17) * (1 - THREE.MathUtils.smoothstep(hr, 18.6, 19.3)));
+    renderer.toneMappingExposure = sky.exposure * (1 - 0.5 * glareS) * (params.get('exp') ? +params.get('exp') : 1);
     terrain.update(camera.position);
     water.update(camera.position);
     veg.update(camera.position, dt);

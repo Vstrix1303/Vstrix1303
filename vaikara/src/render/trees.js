@@ -81,27 +81,34 @@ const hsl = (h, s, l, a = 1) => `hsla(${h},${s}%,${l}%,${a})`;
 
 function frondTexture() {
   const rnd = makeRng(5);
-  return canvasTex(256, 1024, (x, w, h) => {
+  return canvasTex(512, 2048, (x, w, h) => {
     x.clearRect(0, 0, w, h);
     x.lineCap = 'round';
-    for (let i = 0; i < 140; i++) {
-      const t = 0.03 + (i / 140) * 0.95;
+    const N = 230;
+    for (let i = 0; i < N; i++) {
+      const t = 0.025 + (i / N) * 0.96;
       const y = h - t * h;
-      const len = Math.sin(Math.PI * Math.min(1, t * 1.15)) * (w * 0.47) * (0.85 + rnd() * 0.25);
+      const len = Math.sin(Math.PI * Math.min(1, t * 1.12)) * (w * 0.48) * (0.82 + rnd() * 0.25);
       for (const side of [-1, 1]) {
-        if (rnd() < 0.06) continue;
-        const ang = (0.55 + rnd() * 0.25) * side;
-        const ex = w / 2 + Math.sin(ang) * len, ey = y - Math.cos(ang) * len * 0.55;
-        const l = 22 + rnd() * 16, s = 45 + rnd() * 20, hue = 78 + rnd() * 22 - (t > 0.9 ? 20 : 0);
-        x.strokeStyle = hsl(hue, s, l);
-        x.lineWidth = 5 + rnd() * 3;
-        x.beginPath(); x.moveTo(w / 2, y); x.quadraticCurveTo(w / 2 + Math.sin(ang) * len * 0.5, y - len * 0.1, ex, ey); x.stroke();
-        x.strokeStyle = hsl(hue, s, l + 12, 0.6); x.lineWidth = 1.2;
-        x.beginPath(); x.moveTo(w / 2, y); x.quadraticCurveTo(w / 2 + Math.sin(ang) * len * 0.5, y - len * 0.1, ex, ey); x.stroke();
-        if (rnd() < 0.12) { x.strokeStyle = hsl(40, 45, 45, 0.9); x.lineWidth = 4; x.beginPath(); x.moveTo(ex - Math.sin(ang) * 10, ey + 4); x.lineTo(ex, ey); x.stroke(); }
+        if (rnd() < 0.05) continue;
+        const ang = (0.5 + rnd() * 0.28) * side;
+        const droop = len * (0.12 + rnd() * 0.1);
+        const ex = w / 2 + Math.sin(ang) * len, ey = y - Math.cos(ang) * len * 0.5 + droop;
+        const cx = w / 2 + Math.sin(ang) * len * 0.5, cy = y - len * 0.16;
+        const l = 20 + rnd() * 14 + (t < 0.3 ? 4 : 0), sat = 42 + rnd() * 20, hue = 76 + rnd() * 24 - (t > 0.92 ? 22 : 0);
+        // blade with a lighter midrib and a tapering tip
+        x.strokeStyle = hsl(hue, sat, l); x.lineWidth = 9 + rnd() * 4;
+        x.beginPath(); x.moveTo(w / 2, y); x.quadraticCurveTo(cx, cy, ex, ey); x.stroke();
+        x.strokeStyle = hsl(hue, sat, l + 6, 0.8); x.lineWidth = 4;
+        x.beginPath(); x.moveTo(w / 2, y); x.quadraticCurveTo(cx, cy, (cx + ex) / 2, (cy + ey) / 2); x.stroke();
+        x.strokeStyle = hsl(hue - 6, sat - 10, l + 20, 0.55); x.lineWidth = 1.4;
+        x.beginPath(); x.moveTo(w / 2, y); x.quadraticCurveTo(cx, cy, ex, ey); x.stroke();
+        if (rnd() < 0.14) { x.strokeStyle = hsl(38, 48, 46, 0.95); x.lineWidth = 7; x.beginPath(); x.moveTo(ex - Math.sin(ang) * 18, ey - 2); x.lineTo(ex, ey); x.stroke(); }
       }
     }
-    x.strokeStyle = hsl(60, 35, 40); x.lineWidth = 7;
+    const g = x.createLinearGradient(0, h, 0, 0);
+    g.addColorStop(0, hsl(48, 40, 46)); g.addColorStop(1, hsl(70, 35, 36));
+    x.strokeStyle = g; x.lineWidth = 12;
     x.beginPath(); x.moveTo(w / 2, h); x.lineTo(w / 2, 0); x.stroke();
   });
 }
@@ -176,8 +183,9 @@ function windNode(strength, flutter) {
   return positionLocal.add(vec3(sway.add(fl.mul(0.4)), fl.mul(0.6), sway.mul(0.5).add(fl.mul(0.3))));
 }
 
-function leafMaterial(map, { strength = 0.0015, flutter = 0.12, color = 0xffffff, rough = 0.75 } = {}) {
+function leafMaterial(map, { strength = 0.0015, flutter = 0.12, color = 0xffffff, rough = 1 } = {}) {
   const m = new THREE.MeshStandardNodeMaterial({ map, side: THREE.DoubleSide, alphaTest: 0.45, roughness: rough, metalness: 0, color });
+  m.envMapIntensity = 0.35; // leaves are matte: no sky sheen
   m.positionNode = windNode(strength, flutter);
   // a touch of translucency: leaves glow when the sun is behind them
   return m;
@@ -212,7 +220,7 @@ function palm(seed) {
   const nf = 18 + Math.floor(rnd() * 5);
   for (let f = 0; f < nf; f++) {
     const az = (f / nf) * TAU + rnd() * 0.3;
-    const up = f % 3 === 0 ? 0.9 : f % 3 === 1 ? 0.35 : -0.1;  // young fronds stand up, old ones droop
+    const up = f % 4 === 0 ? 0.9 : f % 4 === 1 ? 0.4 : f % 4 === 2 ? -0.05 : -0.5;  // young fronds stand up, old ones hang
     const L = 4.6 + rnd() * 1.4;
     const seg = 8;
     const dir = [Math.cos(az), Math.sin(az)];
@@ -279,7 +287,7 @@ function broadleaf(seed, opts = {}) {
   // leaf cards: clusters of crossed quads around each limb end → a full crown
   const crownR = opts.crown || H * 0.28;
   for (const b of blobs) {
-    const k = 5 + Math.floor(rnd() * 3);
+    const k = 6 + Math.floor(rnd() * 3);
     for (let i = 0; i < k; i++) {
       const cx = b[0] + (rnd() - 0.5) * crownR * 0.9, cy = b[1] + (rnd() - 0.2) * crownR * 0.6, cz = b[2] + (rnd() - 0.5) * crownR * 0.9;
       const s = crownR * (0.75 + rnd() * 0.5);
@@ -404,12 +412,12 @@ export function buildFlora() {
   coconut.positionNode = windNode(0.0011, 0);
   const M = {
     frond: leafMaterial(tex.frond, { strength: 0.0011, flutter: 0.14 }),
-    broad: leafMaterial(tex.broad, { strength: 0.0004, flutter: 0.06 }),
-    broad2: leafMaterial(tex.broad2, { strength: 0.0004, flutter: 0.06 }),
-    teak: leafMaterial(tex.teak, { strength: 0.0003, flutter: 0.08 }),
+    broad: leafMaterial(tex.broad, { strength: 0.0004, flutter: 0.06, color: 0xb8c8a0 }),
+    broad2: leafMaterial(tex.broad2, { strength: 0.0004, flutter: 0.06, color: 0xa8bc90 }),
+    teak: leafMaterial(tex.teak, { strength: 0.0003, flutter: 0.08, color: 0xc0c498 }),
     mangrove: leafMaterial(tex.mangrove, { strength: 0.0004, flutter: 0.05 }),
     banana: leafMaterial(tex.banana, { strength: 0.004, flutter: 0.1 }),
-    grass: leafMaterial(tex.grass, { strength: 0, flutter: 0.08, color: 0x8aa070 }),
+    grass: leafMaterial(tex.grass, { strength: 0, flutter: 0.08, color: 0x9ab070 }),
     rice: leafMaterial(tex.rice, { strength: 0, flutter: 0.06, color: 0xc8f080 }),
     tea: leafMaterial(tex.tea, { strength: 0, flutter: 0.02, color: 0x90b070 }),
   };

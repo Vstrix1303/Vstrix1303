@@ -43,6 +43,7 @@ export class Post {
       c.assign(mix(vec3(l), c, sat));
       // gentle filmic split-tone: warm highlights, teal-ish shadows
       c.assign(c.add(vec3(0.03, 0.012, -0.02).mul(smoothstep(0.4, 1.0, l)).mul(warm.add(0.6))));
+      c.assign(c.mul(mix(vec3(1), vec3(1.06, 0.98, 0.86), warm.mul(0.35))));
       c.assign(c.add(vec3(-0.008, 0.004, 0.012).mul(smoothstep(0.4, 0.0, l))));
       const d = length(uv().sub(0.5).mul(vec3(1.3, 1, 1).xy));
       c.assign(c.mul(mix(float(1), float(1).sub(vig), smoothstep(0.35, 0.95, d))));

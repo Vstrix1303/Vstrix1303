@@ -170,7 +170,7 @@ export async function terrainMaterial() {
   col = mix(col, col.mul(vec3(0.62, 1.12, 0.48)).mul(1.05), isPaddy.mul(0.75));
   col = mix(col, mix(vec3(0.05, 0.12, 0.03), vec3(0.11, 0.21, 0.05), teaRows), isTea.mul(0.85));
   const forestShade = bioS.g;
-  col = col.mul(float(1).sub(forestShade.mul(0.28)));
+  col = mix(col, col.mul(vec3(0.55, 0.68, 0.42)), forestShade.mul(0.8));
   // wet shoreline: darker and glossier near/below the water line
   const h = positionWorld.y;
   const wet = smoothstep(1.4, 0.1, h);

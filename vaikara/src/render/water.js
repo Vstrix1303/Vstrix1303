@@ -96,9 +96,14 @@ export class Water {
     const ground = infoF.r;
     const depth = max(positionWorld.y.sub(ground), 0.0);
     const openF = smoothstep(-15.0, -500.0, infoF.g);
-    const n1 = texture(nrm, p.mul(1 / 19).add(vec2(t.mul(0.013), t.mul(0.009)))).xyz.mul(2).sub(1);
-    const n2 = texture(nrm, p.mul(1 / 7.3).add(vec2(t.mul(-0.021), t.mul(0.017)))).xyz.mul(2).sub(1);
-    const n3 = texture(nrm, p.mul(1 / 61).add(vec2(t.mul(0.004), t.mul(-0.006)))).xyz.mul(2).sub(1);
+    // four rotated, irrationally-scaled samples + a noise warp so the pattern never lines up
+    const warp = texture(noise, p.mul(1 / 173)).rg.sub(0.5).mul(9.0);
+    const rot = (q, a) => vec2(q.x.mul(Math.cos(a)).sub(q.y.mul(Math.sin(a))), q.x.mul(Math.sin(a)).add(q.y.mul(Math.cos(a))));
+    const pw = p.add(warp);
+    const ns = (sc, a, vx, vy) => texture(nrm, rot(pw, a).div(sc).add(vec2(t.mul(vx), t.mul(vy)))).xyz.mul(2).sub(1);
+    const n1 = ns(19.3, 0.0, 0.013, 0.009);
+    const n2 = ns(7.37, 1.13, -0.021, 0.017).add(ns(4.91, 2.71, 0.026, -0.011)).mul(0.5);
+    const n3 = ns(61.7, 4.02, 0.004, -0.006);
     const camDist = length(positionWorld.sub(cameraPosition));
     const detail = smoothstep(1800.0, 60.0, camDist);
     const calm = mix(float(0.45), float(1.0), openF);
