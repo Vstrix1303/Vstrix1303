@@ -2,6 +2,9 @@
 import * as THREE from 'three';
 import { G } from './state.js';
 import { Human, CAST, makeStick, makePaddle, makeBucket, makeRod } from './characters.js';
+import { lookFor, OLD_OUTFITS } from './wardrobe.js';
+import { WEAPONS, makeWeapon, makeShield } from './weapons.js';
+import { segmentBlocked } from './physics.js';
 import { getHeight, PLAY_LIMIT } from './heightfield.js';
 import { groundAt, resolve, pointInBox, interiorAt } from './physics.js';
 import { clamp, damp, angleDamp, lerp, smoothstep } from './util.js';
@@ -11,12 +14,16 @@ export class Player {
     this.scene = scene; this.camera = camera;
     this.root = new THREE.Group();
     scene.add(this.root);
-    this.stick = makeStick(1.45);
+    this.stick = new THREE.Group();          // holds whichever weapon is in hand
+    this.shield = makeShield(); this.shield.visible = false;
+    this.rounds = 0; this.reloadT = 0; this.aiming = false; this.marmaN = 0;
     this.paddle = makePaddle(); this.paddle.visible = false;
     this.bucket = makeBucket(); this.bucket.visible = false;
     this.rod = makeRod(); this.rod.visible = false;
     this.bucketFull = false; this.blocking = false; this.blockStart = 0; this.poseOverride = null;
-    this.setOutfit('everyday');
+    this.buffs = {};
+    this.setLook(lookFor(null));
+    this.setWeapon('staff');
     this.pos = new THREE.Vector3(0, 3, 0);
     this.vel = new THREE.Vector3();
     this.vy = 0; this.yaw = 0; this.grounded = true;
@@ -35,17 +42,71 @@ export class Player {
     this.canDismount = true;
   }
 
-  setOutfit(key) {
-    if (!CAST.outfits[key]) key = 'everyday';
-    const def = CAST.outfits[key];
+  // the old whole outfits still work, as sets of pieces
+  setOutfit(key) { this.setLook(lookFor(null, { wear: OLD_OUTFITS[key] || OLD_OUTFITS.everyday })); }
+  setLook(look) {
+    const key = JSON.stringify(look);
+    if (key === this.lookKey) return;
+    this.lookKey = key;
     const old = this.h;
-    this.h = new Human({ ...def.look, build: 1.03, hero: G.quality === 'high' });
-    if (old) { this.root.remove(old.root); this.h.state = old.state; }
+    this.h = new Human({ ...look, build: 1.03, hero: G.quality === 'high' || G.quality === 'ultra' });
+    if (old) {
+      this.root.remove(old.root); this.h.state = old.state; this.h.mountQ = old.mountQ;
+      for (const m of [this.stick, this.paddle, this.rod, this.bucket, this.shield]) m?.parent?.remove(m);
+    }
     this.h.near = true; this.h.grip = true; this.h.heroLOD = true;
     this.h.onStep = () => { if (this.mode === 'foot' && this.grounded && this.speedNow > 0.4) G.audio?.sfx(this.swimming || this.pos.y < -0.1 ? 'wade' : 'step', this.crouch ? 0.3 : this.speedNow > 5 ? 0.85 : 0.6); };
     this.root.add(this.h.root);
     this.h.hold(this.stick); this.h.hold(this.paddle); this.h.hold(this.rod); this.h.hold(this.bucket, false);
-    this.outfit = key;
+    if (this.shield) this.h.hold(this.shield, false);
+    this.onLook?.();
+  }
+  setWeapon(key) {
+    if (!WEAPONS[key]) key = 'staff';
+    this.weapon = key; this.wdef = WEAPONS[key];
+    this.stick.clear(); this.wmesh = makeWeapon(key); this.stick.add(this.wmesh);
+    this.stick.traverse((o) => { o.castShadow = true; });
+    this.aiming = false; this.reloadT = 0;
+    const st = G.story?.state;
+    if (st && this.wdef.gun) this.rounds = st.rounds ?? 0;
+  }
+  // the revolver: aimed down the camera's line, or at the nearest enemy in front when fired from the hip
+  fire() {
+    const st = G.story.state, W = this.wdef;
+    if (this.reloadT > 0 || this.strikeCd > 0) return;
+    if (!(this.rounds > 0)) { if ((st.ammo || 0) > 0) this.reload(); else { G.audio?.sfx('ui'); G.ui.toast('Click. No cartridges — the trader at the Puthenthura godown sells them.', 3); this.strikeCd = 0.5; } return; }
+    this.rounds--; st.rounds = this.rounds; this.strikeCd = W.cd;
+    G.audio?.sfx('shot'); this.shake = Math.max(this.shake, 0.35);
+    const fl = this.wmesh.userData.flash; if (fl) { fl.visible = true; setTimeout(() => (fl.visible = false), 60); }
+    const cam = this.camera, o = cam.position, dir = new THREE.Vector3(); cam.getWorldDirection(dir);
+    let best = null, bt = 1e9;
+    for (const n of G.npcs) {
+      if (!n.canBeHit || n.ko || !n.active) continue;
+      const cx = n.pos.x - o.x, cy = n.pos.y + 1.25 * (n.h.S || 1) - o.y, cz = n.pos.z - o.z;
+      const dx = n.pos.x - this.pos.x, dz = n.pos.z - this.pos.z, d = Math.hypot(dx, dz);
+      if (d > W.reach || segmentBlocked(this.pos.x, this.pos.z, n.pos.x, n.pos.z)) continue;
+      let score;
+      if (this.aiming) {
+        const t = cx * dir.x + cy * dir.y + cz * dir.z; if (t < 0.5) continue;
+        const px = cx - dir.x * t, py = cy - dir.y * t, pz = cz - dir.z * t;
+        if (Math.hypot(px, py, pz) > 0.6 + t * 0.006) continue;
+        score = t;
+      } else {
+        if (d > 18 || (dx * Math.sin(this.yaw) + dz * Math.cos(this.yaw)) / (d || 1) < 0.82) continue;
+        score = d;
+      }
+      if (score < bt) { bt = score; best = n; }
+    }
+    if (best) { best.takeHit(W.dmg, this.pos.x, this.pos.z); G.audio?.sfx('thud'); G.fx?.dust(best.pos, 2, 0.6); }
+    // a shot carries: every guard within earshot comes for you
+    for (const n of G.npcs) if (n.guard && n.active && !n.ko && !n.hostile && Math.hypot(n.pos.x - this.pos.x, n.pos.z - this.pos.z) < 48) n.becomeHostile(false);
+    if (!this.rounds && (st.ammo || 0) > 0) setTimeout(() => this.reload(), 350);
+    G.story.save();
+  }
+  reload() {
+    const st = G.story.state;
+    if (this.reloadT > 0 || !(st.ammo > 0) || this.rounds >= this.wdef.shots) return;
+    this.reloadT = this.wdef.reload; G.audio?.sfx('reload');
   }
   setCarry(what) {
     this.bucket.visible = what === 'bucket';
@@ -104,12 +165,13 @@ export class Player {
 
   damage(n, fromX, fromZ, attacker) {
     if (this.health <= 0 || G.story?.invulnerable) return 'none';
+    if (this.buffs.guard > 0) n *= 0.6;
     if (this.blocking && fromX != null) {
       const dx = fromX - this.pos.x, dz = fromZ - this.pos.z, d = Math.hypot(dx, dz) || 1;
       if ((dx * Math.sin(this.yaw) + dz * Math.cos(this.yaw)) / d > 0.1) {
         G.audio?.sfx('clang');
-        if (G.time - this.blockStart < 0.32) { this.shake = Math.max(this.shake, 0.2); return 'parry'; }
-        n *= 0.15; this.stamina = Math.max(0, this.stamina - 16); this.shake = Math.max(this.shake, 0.3);
+        if (G.time - this.blockStart < (this.wdef.parry || 0.32)) { this.shake = Math.max(this.shake, 0.2); return 'parry'; }
+        n *= this.wdef.guard; this.stamina = Math.max(0, this.stamina - 16); this.shake = Math.max(this.shake, 0.3);
         this.health -= n; this.hurtT = 0;
         if (this.health <= 0) { this.health = 0; this.h.state = 'ko'; G.story?.fail('You were beaten down.'); }
         return 'block';
@@ -149,7 +211,7 @@ export class Player {
     const inp = G.input;
     const free = !this.locked && !this.photo && this.health > 0 && G.input.enabled;
     // --- camera angles
-    if (!this.cine) {
+    if (!this.cine && !G.wheelOpen) {
       this.camYaw -= inp.dx * 0.0026;
       this.camPitch = clamp(this.camPitch + inp.dy * 0.0022, -0.32, 1.25);
       this.zoom = clamp(this.zoom + inp.wheel * 0.08, 0.6, 1.8);
@@ -161,6 +223,7 @@ export class Player {
     const wx = rx * ix + fx * iy, wz = rz * ix + fz * iy;
     const wl = Math.hypot(wx, wz);
     this.strikeCd -= dt; this.hurtT += dt;
+    for (const k in this.buffs) { this.buffs[k] -= dt; if (this.buffs[k] <= 0) delete this.buffs[k]; }
 
     if (this.mode === 'foot') {
       if (free && inp.consume('KeyC')) this.crouch = !this.crouch;
@@ -168,14 +231,17 @@ export class Player {
       this.swimming = deepWater && this.pos.y < 0.1;
       if (this.stamina <= 0) this.sprintLock = true;
       if (this.stamina > 25) this.sprintLock = false;
-      const wantBlock = free && (inp.down('Block') || inp.down('KeyQ')) && !this.swimming && this.stamina > 1;
+      const rmb = free && (inp.down('Block') || inp.down('KeyQ')) && !this.swimming;
+      const gun = this.wdef.gun && this.stick.visible;
+      this.aiming = gun && rmb && !this.h.carry; this.h.aim = this.aiming;
+      const wantBlock = rmb && !gun && this.stamina > 1;
       if (wantBlock && !this.blocking) this.blockStart = G.time;
       this.blocking = wantBlock; this.h.blocking = wantBlock;
       const sprinting = sprintKey && wl > 0.1 && !this.sprintLock && !this.crouch && !this.swimming && !this.blocking && !this.h.carry;
       let sp = this.crouch ? 1.9 : sprinting ? 7.2 : this.blocking ? 2.0 : this.h.carry ? 3.9 : 4.3;
       if (this.swimming) sp = 2.1;
       else if (getHeight(this.pos.x, this.pos.z) < -0.25 && !this.onDeck) sp *= 0.62;
-      if (sprinting) this.stamina = Math.max(0, this.stamina - 11 * dt); else this.stamina = Math.min(100, this.stamina + (wl > 0.1 ? 8 : 16) * dt);
+      if (sprinting) this.stamina = Math.max(0, this.stamina - (this.buffs.wind > 0 ? 0 : 11) * dt); else this.stamina = Math.min(100, this.stamina + (wl > 0.1 ? 8 : 16) * dt);
       // momentum: it takes a stride or two to get going, and to pull up
       const cur = Math.hypot(this.vel.x, this.vel.z), k = !this.grounded ? 2.5 : wl * sp > cur ? 6.5 : 8.5;
       this.vel.x = damp(this.vel.x, wx * sp, k, dt); this.vel.z = damp(this.vel.z, wz * sp, k, dt);
@@ -194,16 +260,24 @@ export class Player {
       else this.pos.y = damp(this.pos.y, ground, 22, dt);
       const hsp = Math.hypot(this.vel.x, this.vel.z);
       this.speedNow = hsp;
-      if (this.blocking) { const tgt = this.nearestHostile(6); if (tgt) this.yaw = angleDamp(this.yaw, Math.atan2(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z), 14, dt); }
+      if (this.aiming) this.yaw = angleDamp(this.yaw, this.camYaw + Math.PI, 18, dt);
+      else if (this.blocking) { const tgt = this.nearestHostile(6); if (tgt) this.yaw = angleDamp(this.yaw, Math.atan2(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z), 14, dt); }
       else if (wl > 0.1 && this.h.strikeT < 0) this.yaw = angleDamp(this.yaw, Math.atan2(wx, wz), hsp > 5 ? 6.5 : 10, dt);
       this.h.speed = hsp;
       if (this.health > 0) this.h.state = this.poseOverride || (this.swimming ? 'swim' : this.crouch ? 'crouch' : hsp > 0.25 ? 'move' : 'idle');
       this.root.position.copy(this.pos); this.root.rotation.set(0, this.yaw, 0);
       // attack
-      if (free && (inp.consume('Attack') || inp.consume('KeyF')) && this.strikeCd <= 0 && !this.swimming && this.stamina > 6 && !this.blocking && !this.h.carry) {
-        this.h.strikeDur = 0.42; this.h.strikeT = 0; this.strikeCd = 0.62; this.pendingHit = 0.17; this.stamina -= 7; this.crouch = false;
+      if (this.reloadT > 0) {
+        this.reloadT -= dt;
+        if (this.reloadT <= 0) { const st = G.story.state, take = Math.min(this.wdef.shots - this.rounds, st.ammo || 0); st.ammo -= take; this.rounds += take; st.rounds = this.rounds; G.audio?.sfx('reload'); G.story.save(); }
+      }
+      if (free && gun && inp.consume('KeyR')) this.reload();
+      if (free && gun && (inp.consume('Attack') || inp.consume('KeyF')) && !this.swimming && !this.h.carry) this.fire();
+      else if (free && (inp.consume('Attack') || inp.consume('KeyF')) && this.strikeCd <= 0 && !this.swimming && this.stamina > 6 && !this.blocking && !this.h.carry) {
+        const W = this.wdef;
+        this.h.strikeDur = W.dur; this.h.strikeT = 0; this.strikeCd = W.cd; this.pendingHit = W.dur * 0.4; this.stamina -= 7 * Math.max(0.6, W.dur / 0.42); this.crouch = false;
         // face the camera direction when striking from standstill
-        if (wl < 0.1) { const tgt = this.nearestHostile(3.2); if (tgt) this.yaw = Math.atan2(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z); }
+        if (wl < 0.1) { const tgt = this.nearestHostile(this.wdef.reach + 1); if (tgt) this.yaw = Math.atan2(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z); }
         G.audio?.sfx('swing');
       }
       if (this.pendingHit >= 0) {
@@ -239,6 +313,7 @@ export class Player {
       if (m.paddling) { this.footT -= dt * 0.67; if (this.footT <= 0) { this.footT = 1; G.audio?.sfx('paddle', 0.6); } }
     }
     if (this.hurtT > 6 && this.health > 0) this.health = Math.min(100, this.health + 7 * dt);
+    if (this.buffs.mend > 0 && this.health > 0) this.health = Math.min(100, this.health + 5 * dt);
     if (this.mode === 'foot') {
       this.h.setWorld(this.pos.x, this.pos.y, this.pos.z, this.yaw);
       this.h.air = !this.grounded && !this.swimming && this.health > 0;
@@ -250,7 +325,8 @@ export class Player {
         this.h.gaze = best ? { x: best.pos.x, y: best.pos.y + 1.55 * best.h.S, z: best.pos.z } : null;
       }
     } else { this.h.air = false; this.h.gaze = null; }
-    this.h.staff = this.stick.visible && this.mode === 'foot';
+    this.h.staff = this.stick.visible && this.mode === 'foot' && !!this.wdef.low;
+    this.shield.visible = this.stick.visible && this.mode === 'foot' && !!this.wdef.shield;
     this.h.update(dt);
     this.updateCamera(dt);
   }
@@ -265,15 +341,21 @@ export class Player {
     return best;
   }
   resolveHit() {
-    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw), W = this.wdef;
     let any = false;
+    const inReach = [];
     for (const n of G.npcs) {
       if (!n.canBeHit || n.ko || !n.active) continue;
       const dx = n.pos.x - this.pos.x, dz = n.pos.z - this.pos.z, d = Math.hypot(dx, dz);
-      if (d > 2.15) continue;
-      if (d > 0.4 && (dx * fx + dz * fz) / d < 0.3) continue;
-      if (n.takeHit(50, this.pos.x, this.pos.z)) any = true;
+      if (d > W.reach) continue;
+      if (d > 0.4 && (dx * fx + dz * fz) / d < W.arc) continue;
+      inReach.push([d, n]);
     }
+    inReach.sort((a, b) => a[0] - b[0]);
+    // the otta finds a vital point every few blows
+    let dmg = W.dmg;
+    if (W.marma && inReach.length) { this.marmaN = (this.marmaN + 1) % W.marma; if (!this.marmaN) { dmg *= 3; G.ui.toast('<b>Marma!</b>', 1.2); } }
+    for (const [, n] of (W.multi ? inReach : inReach.slice(0, 2))) if (n.takeHit(dmg, this.pos.x, this.pos.z)) any = true;
     if (any) { G.audio?.sfx('thud'); this.shake = Math.max(this.shake, 0.25); }
   }
 
@@ -282,7 +364,7 @@ export class Player {
     const focus = this.worldPos(new THREE.Vector3());
     const mode = this.mode;
     const headY = mode === 'horse' ? 2.35 : mode === 'boat' ? 1.25 : this.crouch ? 1.15 : 1.55;
-    const baseDist = (mode === 'horse' ? 6.2 : mode === 'boat' ? (this.mount.chundan ? 13.5 : 7.6) : 3.7) * this.zoom;
+    const baseDist = (mode === 'horse' ? 6.2 : mode === 'boat' ? (this.mount.chundan ? 13.5 : 7.6) : this.aiming ? 1.9 : 3.7) * (this.aiming ? 1 : this.zoom);
     if (this.photo) {
       this.photoAng += dt * 0.12;
       this.camYaw += dt * 0.12;
@@ -305,7 +387,7 @@ export class Player {
       if ((b && py < b.top + 0.3) || py < getHeight(px, pz) + 0.3) { dist = Math.max(0.9, dist * (i - 1) / steps); break; }
     }
     this.camDistCur = this.snapCam ? dist : (dist < this.camDistCur ? damp(this.camDistCur, dist, 20, dt) : damp(this.camDistCur, dist, 4, dt));
-    const side = mode === 'foot' && !this.photo ? 0.42 : 0;
+    const side = mode === 'foot' && !this.photo ? (this.aiming ? 0.62 : 0.42) : 0;
     const desired = new THREE.Vector3(
       this.camTarget.x + dir.x * this.camDistCur + Math.cos(this.camYaw) * side,
       this.camTarget.y + dir.y * this.camDistCur,
@@ -318,7 +400,7 @@ export class Player {
 
     this.shake = Math.max(0, this.shake - dt * 1.6);
     const sprintFov = mode === 'horse' ? smoothstep(6, 12, this.speedNow) * 9 : smoothstep(4.5, 7, this.speedNow) * 5;
-    let fov = 60 + sprintFov;
+    let fov = this.aiming ? 44 : 60 + sprintFov;
 
     if (this.cine) {
       this.cineBlend = Math.min(1, this.cineBlend + dt / (this.cine.blend ?? 1.2));

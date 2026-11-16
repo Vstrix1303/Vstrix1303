@@ -123,7 +123,8 @@ function skirtGeometry(d, long, shirtOver) {
     let e = extent(y, 0.02);
     if (y < hipY - 0.1) e = [Math.max(e[0], widest[0]), Math.max(e[1], widest[1] * 0.95), Math.max(e[2], widest[2] * 0.95)];
     widest = [Math.max(widest[0], e[0]), Math.max(widest[1], e[1]), Math.max(widest[2], e[2])];
-    const pad = i === 0 ? 0.006 : 0.016 + (shirtOver && i < 2 ? 0.01 : 0);
+    // cloth hangs loose below the hips, so a thigh brought forward stays inside it
+    const pad = i === 0 ? 0.006 : i === 1 ? 0.016 + (shirtOver ? 0.01 : 0) : 0.034;
     const t = (waist - y) / (waist - hemY);
     const wt = clamp((hipY - y) / 0.25, 0, 1), ws = long ? clamp((kneeY + 0.05 - y) / 0.25, 0, 1) : 0, wh = clamp((t - 0.35) / 0.65, 0, 1) * (long ? 0.3 : 0.22);
     return {
@@ -340,7 +341,7 @@ function hairMaterial(o, d) {
   const base = hairMat(o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e)), Lm = d.m.landmarks;
   const m = base.clone();
   const e = [(Lm.eyeL[0] + Lm.eyeR[0]) / 2, (Lm.eyeL[1] + Lm.eyeR[1]) / 2, (Lm.eyeL[2] + Lm.eyeR[2]) / 2];
-  const U = { uHE: { value: new THREE.Vector3(...e) }, uHM: { value: Lm.mouth[1] }, uHR: { value: o.receding ? 0.025 : 0 }, uHF: { value: o.female ? 1 : 0 } };
+  const U = { uHE: { value: new THREE.Vector3(...e) }, uHM: { value: Lm.mouth[1] }, uHR: { value: o.receding ? 0.025 : 0 }, uHF: { value: o.female || o.longHair ? 1 : 0 } };
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vHR;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvHR = position;');
@@ -393,7 +394,7 @@ export function buildBody(h, o, key) {
   // the inside of the mouth (MakeHuman's lips are parted, with nothing behind them)
   { const Lm = m.landmarks, mi = new THREE.Mesh(MOUTH_GEO, MOUTH_MAT); mi.position.set(Lm.mouth[0] - B[4][0], Lm.mouth[1] - B[4][1] - 0.003, Lm.mouth[2] - B[4][2] - 0.034); mi.scale.set(0.021, 0.011, 0.016); bs[24].add(mi); }
   const hat = o.headgear && o.headgear !== 'thorthu';
-  if (!o.bald) h.hairMesh = extra(hairGeometry(d, o.female ? 'long' : o.receding ? 'receding' : 'short'), hairMaterial(o, d));
+  if (!o.bald) h.hairMesh = extra(hairGeometry(d, o.female || o.longHair ? 'long' : o.receding ? 'receding' : 'short'), hairMaterial(o, d));
   if (o.trousers == null && o.mundu != null) {
     // the mundu's own cloth, painted by the same atlas the old figures used
     h.skirt = extra(skirtGeometry(d, !!o.munduLong, o.shirt != null && o.style !== 'blouse'), h.skirtMaterial);

@@ -2,7 +2,8 @@
 import * as THREE from 'three';
 import { loadRealTextures, loadHumans } from './assets.js';
 import { G, QUALITY } from './state.js';
-import { UI } from './ui.js';
+import { UI, EQUIP } from './ui.js';
+import { setupWheel } from './wheel.js';
 import { Input } from './input.js';
 import { AudioSys } from './audio.js';
 import { Player } from './player.js';
@@ -77,6 +78,7 @@ async function boot() {
 
   await nextFrame();
   const W = await buildWorld(scene, async (p, t) => { ui.loading(p, t); await nextFrame(); await nextFrame(); });
+  setupWheel(EQUIP);
   ui.attach(scene);
   const post = new Post(renderer, scene, camera);
   const story = G.story = new Story();
@@ -162,11 +164,12 @@ async function boot() {
   }
   document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === canvas;
-    if (!locked && wasLocked && G.started && !G.paused && !G.mapOpen) setPaused(true);
+    if (!locked && wasLocked && G.started && !G.paused && !G.mapOpen && !G.shopOpen && !G.wheelOpen && performance.now() - (G.uiT || 0) > 700) setPaused(true);
     wasLocked = locked;
   });
   addEventListener('keydown', (e) => {
     if (e.code === 'Escape' && G.mapOpen) { mapUI.close(); return; }
+    if (G.shopOpen) return;
     if (e.code === 'KeyM' && G.started && !G.paused && !e.repeat) {
       if (G.mapOpen) mapUI.close(); else if (!story.busy && !ui.subResolve && !story.failing) mapUI.open();
       return;
@@ -261,6 +264,9 @@ async function boot() {
             if (input.consume('KeyT')) $('photoTip').classList.toggle('on');
           } else if (input.consume('KeyH')) ui.setHud(ui.hudHidden);
           if (input.consume('KeyX') && !player.locked && !story.busy) G.act.whistle();
+          if (input.consume('Cycle')) G.cycleWeapon?.();
+          if (input.consume('KeyI') && !player.locked && !story.busy && !G.activity) G.act.satchel();
+          if (input.consume('KeyV') && !player.locked && player.health > 0) G.act.quickUse();
         }
         player.update(dt);
         for (let i = 0; i < G.npcs.length; i++) G.npcs[i].update(dt);

@@ -587,7 +587,7 @@ export class Human {
     const hairC = o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e), hairM = hairMat(hairC);
     const gear = o.headgear, gc = o.gearColor, hat = gear && gear !== 'thorthu';
     const put = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
-    if (!o.bald && !bodyKey) put(head, hairGeo(fem, !!o.receding, hsc, !!hat), hairM);
+    if (!o.bald && !bodyKey) put(head, hairGeo(fem || !!o.longHair, !!o.receding, hsc, !!hat), hairM);
     if (o.bun) { const b = put(head, bunGeo(), hairM, 0, 0.1, -0.112 * hsc); b.rotation.x = -1.15; if (o.flowers) { const f = put(head, new THREE.TorusGeometry(0.036, 0.011, 6, 14), AM(0xf3efe2, 0.9), 0, 0.1, -0.118 * hsc); f.rotation.x = 0.42; } }
     const onHead = (geo, mat) => { const m = put(head, geo, mat, 0, 0, 0.002); m.scale.set(hsc, 1, hsc); return m; };
     if (gear === 'turban') { const cm = clothMat(gc ?? 0xb02a22, true); onHead(hatGeo('turban'), cm).rotation.x = -0.12; const k = put(head, knotGeo(), cm, -0.05, 0.15, -0.105); k.rotation.set(0.3, 0, 0.2); }

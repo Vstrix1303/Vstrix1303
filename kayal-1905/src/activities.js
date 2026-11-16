@@ -8,6 +8,10 @@ import { groundAt } from './physics.js';
 import { CAST } from './characters.js';
 import { makePickup, fmtMoney } from './story.js';
 import { PLACES } from './places.js';
+import { Shop } from './shop.js';
+import { WARDROBE, SLOTS, SLOT_NAME, HAIR, FACE, lookFor } from './wardrobe.js';
+import { ITEMS, BUFF_NAME, useItem, quickUse } from './items.js';
+import { WEAPONS, AMMO } from './weapons.js';
 
 const PAGE_LINES = [
   '“Ouseph, boatman — lent Rs 12, entered Rs 90.”', '“Kunjipennu, widow — lent Rs 60, entered Rs 300.”', '“Interest to be reckoned monthly, and upon the interest.”',
@@ -101,36 +105,121 @@ export function setupActivities(scene, W, amb) {
   ferryman('Ferryman', SPOTS.portLanding.x + 1.3, SPOTS.portLanding.z - 9, 0, 1);
   ferryman('Ferryman', SPOTS.hamletJettyEnd.x - 9, 150.9, Math.PI / 2, 2);
 
-  // ------------------------------------------------ the tailor of Puthenthura
-  {
-    const keys = Object.keys(CAST.outfits);
-    let idx = 0, offerT = -99;
-    amb('Tailor', { ...CAST.villagerM[3], headgear: 'fez' }, -437.5, -392.6, 0, { facePlayer: true, talkLabel: 'Tailor — browse / buy', talkCond: free, onTalk: (n) => {
-      const st = S().state;
-      if (G.time - offerT < 9) {
-        const k = keys[idx], o = CAST.outfits[k];
-        if (!st.outfits.includes(k)) { if (!S().canPay(o.price)) { n.speak(`${fmtMoney(o.price)}, and not an anna less. Come back when the pepper is sold.`); return; } S().addMoney(-o.price); st.outfits.push(k); }
-        st.outfit = k; p().setOutfit(k); S().save();
-        G.audio?.sfx('pickup');
-        n.speak(`${o.name}. It sits well on a boatman's shoulders.`);
-        offerT = -99;
-      } else {
-        idx = (idx + 1) % keys.length;
-        const k = keys[idx], o = CAST.outfits[k], own = st.outfits.includes(k);
-        n.speak(`“${o.name}” — ${own ? 'yours already' : fmtMoney(o.price)}. Speak to me again to ${own ? 'put it on' : 'buy it'}.`);
-        offerT = G.time;
-      }
-    } });
+  // ------------------------------------------------ shops: clothes, food, medicine
+  const shop = G.shop = new Shop();
+  const st = () => S().state;
+  const pay = (n, what) => { if (!S().canPay(n)) { G.audio?.sfx('ui'); ui().toast(`Not enough money for ${what}.`, 2.5); return false; } if (n) S().addMoney(-n); G.audio?.sfx('coin'); return true; };
+  const colourOf = (look) => look.shoulderCloth ?? look.shirt ?? look.gearColor ?? look.bag ?? look.mundu ?? (look.cape ? 0x8a7a4a : look.mark ? 0xd8b070 : look.sandals ? 0x6a4a2a : 0x8d5b3c);
+  const preview = (over) => p().setLook(lookFor(st(), over));
+  // a tab of pieces for one slot; sold: which of them this shop has
+  const wearTab = (slot, sold, free = false) => ({ name: SLOT_NAME[slot], items: () => Object.entries(WARDROBE[slot]).filter(([k, it]) => st().owned.includes(slot + ':' + k) || sold(it)).map(([k, it]) => {
+    const id = slot + ':' + k, own = () => st().owned.includes(id), worn = () => st().wear[slot] === k;
+    return {
+      name: it.name, desc: it.desc, price: it.price, swatch: colourOf(it.look),
+      tag: () => (worn() ? { text: 'WEARING', cls: 'worn' } : own() ? { text: 'OWNED', cls: 'own' } : { text: fmtMoney(it.price) }),
+      label: () => (worn() ? 'Wearing' : own() || free ? 'Wear' : `Buy · ${fmtMoney(it.price)}`),
+      can: () => !worn() && (own() || free || S().canPay(it.price)),
+      preview: () => preview({ wear: { ...st().wear, [slot]: k } }),
+      act: () => { if (!own() && !free) { if (!pay(it.price, it.name)) return; st().owned.push(id); } st().wear[slot] = k; S().save(); S().dress(); },
+    };
+  }) });
+  const itemTab = (name, kind) => ({ name, items: () => Object.entries(ITEMS).filter(([, it]) => it.sold.includes(kind)).map(([k, it]) => ({
+    name: it.name, desc: `${it.ml} — ${it.desc}`, price: it.price, swatch: it.swatch,
+    stat: (st().items[k] || 0) ? `In your satchel: ${st().items[k]}` : '',
+    tag: () => ({ text: fmtMoney(it.price) + (st().items[k] ? `  ·  ×${st().items[k]}` : '') }),
+    label: () => `Buy · ${fmtMoney(it.price)}`, can: () => S().canPay(it.price),
+    act: () => { if (!pay(it.price, it.name)) return; st().items[k] = (st().items[k] || 0) + 1; S().save(); },
+  })) });
+  const satchelTab = () => ({ name: 'Satchel', empty: 'Your satchel is empty. Food and medicine are sold in the bazaar.', items: () => Object.keys(st().items).filter((k) => st().items[k] > 0 && ITEMS[k]).map((k) => ({
+    name: `${ITEMS[k].name}  ×${st().items[k]}`, desc: `${ITEMS[k].ml} — ${ITEMS[k].desc}`, swatch: ITEMS[k].swatch,
+    tag: () => ({ text: '×' + st().items[k], cls: 'own' }), label: () => 'Use', can: () => true, act: () => useItem(k),
+  })) });
+  const restore = () => S().dress();
+  // weapons: bought once, then equipped from the wheel (Tab) or here
+  const NEED = { 4: 'after the race at Champakulam', 5: 'once you have stood against the Company in the open' };
+  const weaponTab = (name, at) => ({ name, items: () => Object.entries(WEAPONS).filter(([, w]) => w.at === at).map(([k, w]) => {
+    const own = () => st().weapons.includes(k), cur = () => p().weapon === k, early = () => w.need && st().done < w.need;
+    return {
+      name: `${w.name} · ${w.ml}`, desc: w.desc + (early() ? `  Not yet — ${NEED[w.need] || 'later in the story'}.` : ''), price: w.price,
+      stat: w.gun ? `Damage ${w.dmg} · range ${w.reach} m · ${w.shots} rounds` : `Damage ${w.dmg} · reach ${w.reach} m · ${w.multi ? 'hits all around' : w.dur < 0.32 ? 'very fast' : w.dur > 0.6 ? 'slow' : 'steady'}${w.shield ? ' · shield' : ''}`,
+      tag: () => (cur() ? { text: 'IN HAND', cls: 'worn' } : own() ? { text: 'OWNED', cls: 'own' } : early() ? { text: 'LATER' } : { text: fmtMoney(w.price) }),
+      label: () => (cur() ? 'In hand' : own() ? 'Take it' : `Buy · ${fmtMoney(w.price)}`),
+      can: () => !cur() && (own() || (!early() && S().canPay(w.price))),
+      act: () => {
+        if (!own()) { if (!pay(w.price, w.name)) return; st().weapons.push(k); if (w.gun) { st().ammo = (st().ammo || 0) + AMMO.n; st().rounds = w.shots; } ui().toast(`<b>${w.name}</b> — yours. Hold <b>Tab</b> for the weapon wheel, or press <b>${['staff', 'cheruvadi', 'otta', 'kathi', 'val', 'urumi', 'revolver'].indexOf(k) + 1}</b>.`, 5); }
+        st().weapon = k; p().setWeapon(k); S().save();
+      },
+    };
+  }) });
+  const ammoItem = () => ({ name: AMMO.name, desc: AMMO.desc, price: AMMO.price, stat: `Carried: ${st().ammo || 0} spare, ${p().weapon === 'revolver' ? p().rounds : st().rounds || 0} loaded`,
+    tag: () => ({ text: fmtMoney(AMMO.price) }), label: () => `Buy · ${fmtMoney(AMMO.price)}`, can: () => st().weapons.includes('revolver') && S().canPay(AMMO.price),
+    act: () => { if (!pay(AMMO.price, 'cartridges')) return; st().ammo = (st().ammo || 0) + AMMO.n; S().save(); } });
+  // the barber: a hairstyle or a shave is paid for each time
+  const styleTab = (name, key, SET) => ({ name, items: () => Object.entries(SET).map(([k, it]) => {
+    const cur = () => st()[key] === k;
+    return {
+      name: it.name, desc: it.desc, price: it.price,
+      tag: () => (cur() ? { text: 'CURRENT', cls: 'worn' } : { text: it.price ? fmtMoney(it.price) : 'free' }),
+      label: () => (cur() ? 'Current' : it.price ? `Pay · ${fmtMoney(it.price)}` : 'Choose'),
+      can: () => !cur() && S().canPay(it.price),
+      preview: () => preview({ [key]: k }),
+      act: () => { if (!pay(it.price, it.name)) return; st()[key] = k; S().save(); S().dress(); G.audio?.sfx('swing', 0.3); },
+    };
+  }) });
+  const KEEPER_SAYS = {
+    cloth: ['Feel that weave. Your grandfather wore our cloth.', 'Try it on, try it on. The mirror is free.'],
+    tailor: ['Every stitch by hand, sahib or no sahib.', 'A Bombay man should dress like a Bombay man.'],
+    provisions: ['Weigh it yourself if you like.', 'Fresh this morning from the Kuttanad boats.'],
+    vaidyasala: ['Bitter medicine, sweet health.', 'For the body that fights, the oil that the kalari masters use.'],
+    tea: ['Eat. A man cannot fight the Company on an empty stomach.'],
+    market: ['Take two, they are small this week.'],
+    kollan: ['Feel the balance. My grandfather forged for the Raja\'s Nair brigade.', 'Iron is honest. It does what the hand asks.'],
+    kalari: ['A weapon is the last thing a kalari teaches, not the first.', 'Oil the body, then the blade.'],
+    gun: ['You did not buy this from me.', 'Keep it wrapped. The peons have eyes.'],
+    barber: ['Sit, sit. Head still — this razor came from Sheffield.', 'Bombay barbers! They cut hair like they cut cloth. Let me fix it.', 'You know what the Peishkar\'s clerk told me in this chair? Never mind. Head still.'],
+  };
+  A.shop = (kind, n) => {
+    if (!S() || S().busy || G.activity || p().mode !== 'foot') return;
+    if (n) { n.talkT = 4; n.yaw = Math.atan2(p().pos.x - n.pos.x, p().pos.z - n.pos.z); p().yaw = Math.atan2(n.pos.x - p().pos.x, n.pos.z - p().pos.z); }
+    const say = KEEPER_SAYS[kind]; if (n && say) n.speak(say[(Math.random() * say.length) | 0]);
+    const bazaar = (it) => it.at !== 'tailor', all = () => true;
+    const defs = {
+      cloth: { title: 'Cloth Shop', ml: 'തുണിക്കട', sub: 'Balaramapuram weaves, mill cloth from Bombay.', camera: true, tabs: [wearTab('lower', bazaar), wearTab('upper', bazaar), wearTab('head', bazaar), wearTab('extra', bazaar)] },
+      tailor: { title: 'The Tailor of Puthenthura', ml: 'തയ്യൽക്കട', sub: 'Cut to measure, finished by the next tide.', camera: true, tabs: SLOTS.map((sl) => wearTab(sl, all)) },
+      provisions: { title: 'Provisions', ml: 'പലചരക്ക്', sub: 'Rice, oil, jaggery — and food for the road.', tabs: [itemTab('For the road', 'provisions'), satchelTab()] },
+      vaidyasala: { title: 'Vaidyasala', ml: 'വൈദ്യശാല', sub: 'Ayurvedic medicines, prepared by the vaidyan.', tabs: [itemTab('Medicines', 'vaidyasala'), satchelTab()] },
+      tea: { title: 'Tea Shop', ml: 'ചായക്കട', sub: 'Chaya, and whatever is hot in the pot.', tabs: [{ name: 'Food', items: () => [{ name: 'A glass of chaya', desc: 'Hot, sweet and strong. Drunk here: restores health and breath.', price: 1, swatch: 0xa8743a, label: () => 'Drink · 1 as', can: () => S().canPay(1) || S().state.done <= 1, act: () => { if (S().state.done > 1 && !pay(1, 'a chaya')) return; p().health = 100; p().stamina = 100; G.audio?.sfx('pickup'); ui().toast('Hot, sweet, and strong enough to stand a spoon in.', 3); } }, ...itemTab('', 'tea').items()] }, satchelTab()] },
+      barber: { title: 'The Barber', ml: 'ക്ഷുരകൻ', sub: 'Under the banyan, with a razor, a mirror and a great deal of news.', camera: true, tabs: [styleTab('Hair', 'hair', HAIR), styleTab('Moustache & beard', 'face', FACE)] },
+      kollan: { title: 'The Blacksmith', ml: 'കൊല്ലൻ', sub: 'Bell-metal for the kitchen, iron for everything else.', tabs: [weaponTab('Blades', 'kollan')] },
+      kalari: { title: 'Kalari', ml: 'കളരി', sub: 'The gurukkal teaches the weapons of the old fighting art — and sells the oil.', tabs: [weaponTab('Weapons', 'kalari'), itemTab('Oil', 'kalari')] },
+      gun: { title: 'Behind the Godown', ml: 'ഗോഡൗൺ', sub: 'No questions asked, and none answered.', tabs: [{ name: 'Goods', items: () => [...weaponTab('', 'gun').items(), ammoItem()] }] },
+      market: { title: 'Market Stall', ml: 'ചന്ത', sub: 'Fruit and sweets for the road.', tabs: [itemTab('Stall', 'market'), satchelTab()] },
+    };
+    const d = defs[kind]; if (!d) return;
+    shop.open({ ...d, onClose: restore });
+  };
+  // I: the satchel, anywhere
+  A.satchel = () => shop.open({ title: 'Satchel', ml: 'സഞ്ചി', sub: (() => { const b = Object.keys(p().buffs).map((k) => `${BUFF_NAME[k]} ${Math.ceil(p().buffs[k] / 60)} min`); return b.length ? 'Now: ' + b.join(' · ') : 'Food and medicine you carry. V eats the best thing for your wounds.'; })(), camera: false, tabs: [satchelTab()] });
+  A.quickUse = quickUse;
+  // changing clothes at home: anything owned, for nothing
+  if (SPOTS.homeHall) G.interactables.push({ pos: SPOTS.homeHall, r: 2.6, label: 'Change clothes', cond: () => free(), action: () => shop.open({ title: 'The Wardrobe', ml: 'അലമാര', sub: 'What you own, folded in the old teak chest.', camera: true, onClose: restore, tabs: SLOTS.map((sl) => wearTab(sl, () => false, true)) }) });
+  // the barber, under the banyan in the square
+  if (SPOTS.aalthara) {
+    const a = SPOTS.aalthara, bx = a.x + 3.9, bz = a.z - 3.4;
+    amb('Barber', { ...CAST.villagerM[0], shoulderCloth: 0xe6dfcb, mark: 'chandanam' }, bx, bz, Math.atan2(a.x - bx, a.z - bz) + 2.4, { facePlayer: true, talkLabel: 'Barber — hair and shave', talkCond: free, onTalk: (n) => A.shop('barber', n) });
   }
+  // the kalari master, by the banyan
+  if (SPOTS.aalthara) {
+    const a = SPOTS.aalthara, gx = a.x - 4.4, gz = a.z - 3.6;
+    amb('Gurukkal', { ...CAST.villagerM[2], shoulderCloth: undefined, munduLong: false, mundu: 0xb8402c, knot: true, mark: 'chandanam', moustache: 'big', grey: false, age: false, muscle: true }, gx, gz, Math.atan2(a.x - gx, a.z - gz) - 2.2, { facePlayer: true, talkLabel: 'Kalari master — weapons', talkCond: free, onTalk: (n) => A.shop('kalari', n) });
+  }
+  // the man behind the godown at Puthenthura
+  amb('Trader', { ...CAST.villagerM[5], shirt: 0x3a3a34, style: 'kurta', longSleeves: true, headgear: 'cap', gearColor: 0x2a2a2a, beard: 'stubble' }, -447.6, -393.2, 0.2, { facePlayer: true, talkLabel: 'Trader — "goods"', talkCond: () => free() && S().state.done >= 3, onTalk: (n) => A.shop('gun', n) });
+  // the tailor of Puthenthura
+  amb('Tailor', { ...CAST.villagerM[3], headgear: 'fez' }, -437.5, -392.6, 0, { facePlayer: true, talkLabel: 'Tailor — browse / buy', talkCond: free, onTalk: (n) => A.shop('tailor', n) });
 
   // ------------------------------------------------ tea
-  amb('Tea-seller', CAST.villagerM[3], SPOTS.teaShop.x + 0.3, SPOTS.teaShop.z + 0.2, 2.2, { facePlayer: true, talkLabel: 'Buy a glass of chaya (1 anna)', onTalk: (n) => {
-    if (!S().canPay(1) && S().state.done > 1) { n.speak('No annas? Sit anyway. Pay me when the Company pays you.'); }
-    else if (S().state.done > 1) S().addMoney(-1);
-    p().health = 100; p().stamina = 100;
-    n.speak(['Hot, sweet, and strong enough to stand a spoon in.', 'Chaya cures everything but debt, Madhava.', 'First glass of the monsoon. Drink.'][(Math.random() * 3) | 0]);
-    G.audio?.sfx('pickup');
-  } });
+  amb('Tea-seller', CAST.villagerM[3], SPOTS.teaShop.x + 0.3, SPOTS.teaShop.z + 0.2, 2.2, { facePlayer: true, talkLabel: 'Tea shop — chaya and food', onTalk: (n) => (free() ? A.shop('tea', n) : (p().health = 100, n.speak('Drink. Talk later.'))) });
 
   // ------------------------------------------------ cargo runs for the quay clerk
   amb('Quay clerk', { ...CAST.villagerM[5], headgear: 'cap' }, -403.6, -340.5, Math.PI / 2, { facePlayer: true, talkLabel: 'Ask for a cargo run', talkCond: () => free() && S().state.done >= 3, onTalk: (n) => {

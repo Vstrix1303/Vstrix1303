@@ -24,8 +24,10 @@ every texture, model, animation, sound effect and note of music is generated pro
 | `Shift` | Run · gallop · racing stroke (uses stamina) |
 | `Space` / `C` | Jump / crouch (stealth) |
 | `E` | Talk · begin a mission · gather · mount · board · dismount |
-| Left click / `F` | Strike with your staff |
-| Right click / `Q` | Block — block just as a blow lands to stagger the attacker |
+| Left click / `F` | Strike · fire the revolver |
+| Right click / `Q` | Block — block just as a blow lands to stagger the attacker · aim the revolver |
+| `Tab` (hold) / `1`–`7` | Weapon wheel · choose a weapon · `R` reloads the revolver |
+| `I` / `V` | Satchel · eat or drink the best thing for your wounds |
 | `M` | **The map**: drag to pan, wheel to zoom, click to set a waypoint |
 | `X` | Whistle for your horse (once Sultan is yours) |
 | `P` | Photo mode (orbit camera, HUD off; `[` `]` change the hour, `R` toggles rain) |
@@ -255,6 +257,55 @@ The remaining block-built models were rebuilt as smooth, shaped surfaces.
     every few lines.
   - **Cuts and movement**: hard cuts, with a slow creep-in on each shot.
   - **Clean framing**: the camera stays out of walls, and tightens up indoors.
+
+## Version 11 — traffic, shopping, a wardrobe, the barber and weapons
+
+- **Traffic on every road.** Bullock carts loaded with sacks, coconuts or hay; the *jutka*, the light
+  one-horse carriage of South Indian roads; riders, among them Company peons; people on foot carrying
+  umbrellas or head-loads; boatmen paddling cargo along the canal.
+  - **How it runs:** travellers appear on the roads around you, mostly coming toward you and never where you'd
+    see them pop in. They disappear once far behind, so the roads feel busy without the whole map being
+    simulated, which keeps it light on integrated graphics.
+  - **How they behave:** they keep to the left, follow one road into the next at junctions, queue behind slower traffic,
+    stop for anyone in the way (and tell you to move), and flinch and shout if you gallop past.
+- **Shops in the bazaar.** Talk to a keeper to open the counter.
+  - **Cloth shop:** mundus, lungis, shirts, shoulder cloths, headwear, extras.
+  - **Provisions:** food for the road.
+  - **Vaidyasala:** Ayurvedic medicines.
+  - **Blacksmith:** blades.
+  - **Market:** fruit and jaggery.
+  - **Tea shop:** chaya and hot food.
+  - **Tailor at Puthenthura:** keeps the finer pieces (kurta, Bombay jacket, crimson turban, sandals).
+- **Dress piece by piece.** Clothes are bought by the piece in four slots (mundu & lungi, upper cloth, headwear,
+  extras) and combined freely. The camera turns to Madhavan so every piece can be tried on before it's
+  bought. Anything you own can be changed for free at the teak wardrobe in the tharavadu. Old saves keep
+  their outfits, converted into pieces.
+- **The barber** under the banyan in the square has five hairstyles:
+  - knotted behind (as you started)
+  - short crop
+  - loose to the shoulders
+  - kudumi, the old shaved head with a front tuft
+  - shaved clean
+
+  He also does five moustache and beard styles, including the great upturned *komban meesha*.
+- **The satchel (I).** Bananas, puttu and kadala, rice and fish curry, jaggery and ginger (sprint without tiring), kashayam
+  (full health, then faster healing) and marma oil (blows hurt less). **V** eats the cheapest thing that
+  covers your wounds.
+- **Weapons, with a weapon wheel (hold Tab) or keys 1–7:**
+  1. **Lathi**: the long staff you start with.
+  2. **Cheruvadi**: a short stick, very fast.
+  3. **Otta**: the curved kalari stick; every third blow lands on a *marma* (vital point) for triple damage.
+  4. **Vettukathi**: a heavy billhook.
+  5. **Val and paricha**: sword and shield; blocks hardly hurt and the parry window is wider.
+  6. **Urumi**: the flexible coiled sword; slow, but it cuts everyone around you.
+  7. **Webley revolver**: hold right mouse to aim with a crosshair, R to reload, six rounds. Every guard within earshot comes running.
+
+  Where to get them:
+  - **The kalari master by the banyan:** the short stick, the otta, the urumi and marma oil.
+  - **The blacksmith in the bazaar:** the billhook and the sword.
+  - **A trader behind the Puthenthura godown:** the revolver and cartridges, later in the story.
+- **Smaller fixes:** the mundu hangs looser below the hips, so thighs no longer show through it, and small
+  sums show as annas ("4 as") rather than "Rs 0 · 4 as".
 
 ## A note on the setting
 

@@ -221,6 +221,11 @@ export function updateMotion(h, dt) {
   if (h.gripL) g.fingL = 1.3;
 
   // ---- fighting
+  if (h.aim) {            // a revolver held out at arm's length, the other hand steadying the wrist
+    g.armR = -1.5; g.elR = -0.04; g.armRz = -0.08; g.wristR = 0.05; g.fingR = 1.3;
+    g.armL = -1.32; g.elL = -0.75; g.armLz = -0.42; g.fingL = 1.0; g.twist = 0.18; g.head = 0.02; g.spine += 0.04;
+    k = 26;
+  }
   if (h.blocking && h.strikeT < 0) {
     g.armR = -1.35; g.elR = -1.5; g.armRz = -0.3; g.armL = -1.2; g.elL = -1.4; g.armLz = 0.3; g.spine += 0.14; g.hipY -= 0.07; g.fingL = g.fingR = 1.3; g.twist = -0.25; g.head = -0.1;
     k = 26;

@@ -6,11 +6,17 @@ import { clamp } from './util.js';
 const $ = (id) => document.getElementById(id);
 // what Madhavan has in hand (drawn for this game)
 const svg = (inner) => `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
-const EQUIP = {
+export const EQUIP = {
   staff: svg('<path d="M12 54 L52 10" stroke="#0b0806" stroke-width="9"/><path d="M12 54 L52 10" stroke="#b98a52" stroke-width="5"/><path d="M46 17 L52 10 M12 54 L18 47" stroke="#e9c15a" stroke-width="5"/>'),
   paddle: svg('<path d="M14 54 L40 22" stroke="#0b0806" stroke-width="8"/><path d="M14 54 L40 22" stroke="#b98a52" stroke-width="4"/><ellipse cx="46" cy="15" rx="7" ry="12" transform="rotate(38 46 15)" fill="#b98a52" stroke="#0b0806" stroke-width="3"/>'),
   horse: svg('<path d="M18 52 V30 a14 14 0 0 1 28 0 V52" stroke="#0b0806" stroke-width="13"/><path d="M18 52 V30 a14 14 0 0 1 28 0 V52" stroke="#c9c2b0" stroke-width="7"/><g fill="#0b0806"><circle cx="18" cy="42" r="1.6"/><circle cx="46" cy="42" r="1.6"/><circle cx="21" cy="24" r="1.6"/><circle cx="43" cy="24" r="1.6"/><circle cx="32" cy="17" r="1.6"/></g>'),
   bucket: svg('<path d="M16 26 L22 54 H42 L48 26 Z" fill="#9a7648" stroke="#0b0806" stroke-width="3.5"/><path d="M17 34 H47 M19 45 H45" stroke="#0b0806" stroke-width="2.5"/><path d="M16 26 Q32 4 48 26" stroke="#0b0806" stroke-width="3.5"/><ellipse cx="32" cy="26" rx="16" ry="4" fill="#6fa8b4" stroke="#0b0806" stroke-width="3"/>'),
+  short: svg('<path d="M20 46 L44 18" stroke="#0b0806" stroke-width="9"/><path d="M20 46 L44 18" stroke="#5a3a22" stroke-width="5"/><path d="M20 46 L24 41" stroke="#e9c15a" stroke-width="5"/>'),
+  otta: svg('<path d="M14 52 C22 40 30 40 32 30 C34 20 44 16 50 12" stroke="#0b0806" stroke-width="10" fill="none"/><path d="M14 52 C22 40 30 40 32 30 C34 20 44 16 50 12" stroke="#5a3a22" stroke-width="5.5" fill="none"/><circle cx="50" cy="12" r="4.5" fill="#5a3a22" stroke="#0b0806" stroke-width="2.5"/>'),
+  kathi: svg('<path d="M16 52 L28 40" stroke="#0b0806" stroke-width="9"/><path d="M16 52 L28 40" stroke="#8a6a42" stroke-width="5"/><path d="M27 41 L46 18 Q54 12 52 22 Q44 30 34 46 Z" fill="#c9cdd2" stroke="#0b0806" stroke-width="3"/>'),
+  val: svg('<circle cx="22" cy="40" r="14" fill="#6a4426" stroke="#0b0806" stroke-width="3.5"/><circle cx="22" cy="40" r="3.5" fill="#e9c15a" stroke="#0b0806" stroke-width="1.5"/><path d="M30 50 L54 10" stroke="#0b0806" stroke-width="7"/><path d="M33 45 L54 10" stroke="#d6dade" stroke-width="3.5"/><path d="M26 44 L36 50" stroke="#e9c15a" stroke-width="5"/>'),
+  urumi: svg('<path d="M14 52 L22 44" stroke="#0b0806" stroke-width="9"/><path d="M14 52 L22 44" stroke="#5a3a22" stroke-width="5"/><path d="M22 44 C40 30 58 36 50 48 C44 56 30 50 36 38 C40 30 52 24 56 14" stroke="#0b0806" stroke-width="6" fill="none"/><path d="M22 44 C40 30 58 36 50 48 C44 56 30 50 36 38 C40 30 52 24 56 14" stroke="#d6dade" stroke-width="2.5" fill="none"/>'),
+  gun: svg('<path d="M12 22 H50 V30 H30 L26 48 H16 L20 30 H12 Z" fill="#3a3c40" stroke="#0b0806" stroke-width="3.5" stroke-linejoin="round"/><circle cx="32" cy="30" r="5" fill="#55585e" stroke="#0b0806" stroke-width="2.5"/><path d="M17 33 L24 44" stroke="#6a4426" stroke-width="5"/>'),
   rod: svg('<path d="M10 54 L52 10" stroke="#0b0806" stroke-width="6"/><path d="M10 54 L52 10" stroke="#c9a85a" stroke-width="2.6"/><path d="M52 10 Q58 30 46 44" stroke="#e8e0c8" stroke-width="1.6"/><path d="M46 44 q-4 6 2 8" stroke="#c9c2b0" stroke-width="2.4"/>'),
 };
 
@@ -139,7 +145,7 @@ export class UI {
     if (this.barkT > 0) { this.barkT -= dt; if (this.barkT <= 0) this.el.bark.classList.remove('on'); }
     this.hurtV = Math.max(0, this.hurtV - dt * 1.4);
     if (this.areaT > 0) { this.areaT -= dt; if (this.areaT <= 0) this.el.areaSub.textContent = ''; }
-    const eq = p.mode === 'horse' ? 'horse' : p.mode === 'boat' ? 'paddle' : p.rod.visible ? 'rod' : p.bucket.visible ? 'bucket' : 'staff';
+    const eq = p.mode === 'horse' ? 'horse' : p.mode === 'boat' ? 'paddle' : p.rod.visible ? 'rod' : p.bucket.visible ? 'bucket' : (p.wdef?.icon || 'staff');
     if (eq !== this.equip) { this.equip = eq; document.getElementById('equip').innerHTML = EQUIP[eq]; }
     if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0) this.el.banner.classList.remove('on'); }
     if (this.moneyT > 0) { this.moneyT -= dt; if (this.moneyT <= 0) this.el.moneyDelta.className = ''; }

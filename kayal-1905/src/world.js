@@ -237,17 +237,20 @@ export async function buildWorld(scene, progress) {
       anchal: ['The anchal runner leaves at noon for Quilon. Letters go by his bell, not by the Company\'s post.', 'Two letters for the Company bungalow this week. Thick ones. Sealed.'],
       pottery: ['Fired yesterday. Tap it — no cracks. The clay comes from the canal bank.', 'A pot for water, a pot for rice, a pot for the toddy. A house is pots.'],
     };
-    (SPOTS.shops || []).forEach((sh, i) => {
+    const SELLS = { provisions: ['provisions', 'Shop — food for the road'], cloth: ['cloth', 'Shop — clothes'], vaidyasala: ['vaidyasala', 'Shop — medicines'], vessels: ['kollan', 'Blacksmith — blades'] };
+    const shopOK = () => G.story?.mode === 'free' && G.player.mode === 'foot' && !G.activity;
+        (SPOTS.shops || []).forEach((sh, i) => {
       const ky = sh.keeper.y + 0.95 - 0.85;
-      amb(['Shopkeeper', 'Cloth merchant', 'Brazier', 'Vaidyan', 'Anchal clerk', 'Grocer', 'Potter'][['provisions', 'cloth', 'vessels', 'vaidyasala', 'anchal', 'provisions2', 'pottery'].indexOf(sh.kind)] || 'Shopkeeper',
-        keepers[i % keepers.length], sh.keeper.x, sh.keeper.z, sh.ry, { y: ky, pose: 'bench', facePlayer: true, lines: say[sh.kind] || BARKS.village });
+      amb(['Shopkeeper', 'Cloth merchant', 'Blacksmith', 'Vaidyan', 'Anchal clerk', 'Grocer', 'Potter'][['provisions', 'cloth', 'vessels', 'vaidyasala', 'anchal', 'provisions2', 'pottery'].indexOf(sh.kind)] || 'Shopkeeper',
+        keepers[i % keepers.length], sh.keeper.x, sh.keeper.z, sh.ry, { y: ky, pose: 'bench', facePlayer: true, lines: say[sh.kind] || BARKS.village,
+          ...(SELLS[sh.kind] ? { talkLabel: SELLS[sh.kind][1], onTalk: (n) => (shopOK() ? G.act.shop(SELLS[sh.kind][0], n) : n.speak()) } : {}) });
       if (i % 3 !== 2) amb(i % 2 ? 'Customer' : 'Villager', buyers[i % buyers.length], sh.customer.x, sh.customer.z, sh.ry + Math.PI + (i % 2 ? 0.25 : -0.2), { pose: 'talk', lines: BARKS.bazaar });
     });
   }
   // ---- the market: women and men behind the stalls, buyers in front
   if (SPOTS.marketStalls) {
     const ry = SPOTS.marketRy;
-    SPOTS.marketStalls.forEach((p, i) => amb(i % 2 ? 'Vegetable-seller' : 'Fish-seller', i % 2 ? VM[i % 6] : VF[i % 4], p.x, p.z, ry, { y: p.y + 0.4, pose: i === 3 ? 'work' : 'talk', facePlayer: true, lines: BARKS.market }));
+    SPOTS.marketStalls.forEach((p, i) => amb(i % 2 ? 'Vegetable-seller' : 'Fish-seller', i % 2 ? VM[i % 6] : VF[i % 4], p.x, p.z, ry, { y: p.y + 0.4, pose: i === 3 ? 'work' : 'talk', facePlayer: true, lines: BARKS.market, ...(i % 2 ? { talkLabel: 'Market stall — fruit and sweets', onTalk: (n) => (G.story?.mode === 'free' && !G.activity ? G.act.shop('market', n) : n.speak()) } : {}) }));
     SPOTS.marketBuyers.forEach((p, i) => amb('Buyer', i % 2 ? VM[(i + 2) % 6] : VF[(i + 1) % 4], p.x, p.z, ry + Math.PI + (i - 1) * 0.3, { y: p.y + 0.4, pose: 'talk', lines: BARKS.bazaar }));
   }
   // ---- the school: the asan on his stool, children on the benches with their slates

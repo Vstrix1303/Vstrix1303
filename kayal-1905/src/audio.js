@@ -146,6 +146,8 @@ export class AudioSys {
       case 'chirp': for (let k = 0; k < 3; k++) this.tone('sine', 3200 + Math.random() * 1400, 2600 + Math.random() * 800, 0.035 * v, 0.008, 0.06, k * 0.09); break;
       case 'frog': for (let k = 0; k < 4; k++) this.tone('square', 260, 210, 0.03 * v, 0.01, 0.07, k * 0.16); break;
       case 'elephant': this.tone('sawtooth', 300, 560, 0.14 * v, 0.2, 0.9); this.tone('square', 310, 590, 0.05 * v, 0.2, 0.9, 0.03); break;
+      case 'shot': this.burst('lowpass', 2600, 0.5, 1.0 * v, 0.001, 0.32, null, 0, 300); this.tone('sine', 120, 38, 0.8 * v, 0.002, 0.3); this.burst('highpass', 3500, 0.4, 0.35 * v, 0.001, 0.08); this.burst('bandpass', 700, 0.6, 0.18 * v, 0.12, 1.4, null, 0.05, 200); break;
+      case 'reload': for (let k = 0; k < 3; k++) this.burst('highpass', 3800, 1.5, 0.16 * v, 0.001, 0.035, null, k * 0.11); break;
       case 'clang': [1840, 2760, 3975].forEach((f, i) => this.tone('triangle', f, f * 0.98, 0.2 / (i + 1), 0.001, 0.22)); this.burst('highpass', 4000, 0.5, 0.2, 0.001, 0.06); break;
       case 'growl': this.tone('sawtooth', 120, 80, 0.2 * v, 0.08, 0.5); this.burst('bandpass', 500, 2, 0.14, 0.1, 0.5, null, 0, 1800); break;
       case 'hiss': this.burst('highpass', 3200, 0.4, 0.4, 0.02, 1.3, null, 0, 6000); break;

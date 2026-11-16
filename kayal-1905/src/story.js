@@ -11,6 +11,7 @@ import { NPC } from './npc.js';
 import { TEX } from './textures.js';
 import { MISSIONS } from './missions.js';
 import { Director } from './director.js';
+import { lookFor, DEFAULT_WEAR, FREE_PIECES, OLD_OUTFITS, WARDROBE, HAIR, FACE } from './wardrobe.js';
 
 export const CANCEL = Symbol('cancel');
 const SAVE_KEY = 'kayal1905.save.v2';
@@ -21,9 +22,26 @@ export function loadSave() {
 }
 export function fmtMoney(a) {
   const r = Math.floor(a / 16), an = a % 16;
+  if (!r && an) return `${an} as`;
   return `Rs ${r}` + (an ? ` · ${an} as` : '');
 }
-const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], outfit: 'everyday', outfits: ['everyday', 'boatman'], fish: 0, jobs: 0, wins: 0 });
+const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], wear: { ...DEFAULT_WEAR }, owned: [...FREE_PIECES], hair: 'bun', face: 'meesha', items: {}, weapons: ['staff'], weapon: 'staff', fish: 0, jobs: 0, wins: 0 });
+// saves from before the wardrobe: whole outfits become the pieces they were made of
+function migrate(st) {
+  if (st.outfits && !st.wear) {
+    st.wear = { ...(OLD_OUTFITS[st.outfit] || DEFAULT_WEAR) };
+    for (const k of st.outfits) { const o = OLD_OUTFITS[k]; if (o) for (const sl in o) st.owned.push(sl + ':' + o[sl]); }
+  }
+  delete st.outfits; delete st.outfit;
+  st.owned = [...new Set([...FREE_PIECES, ...(st.owned || [])])];
+  for (const sl in DEFAULT_WEAR) if (!WARDROBE[sl][st.wear[sl]]) st.wear[sl] = DEFAULT_WEAR[sl];
+  if (!HAIR[st.hair]) st.hair = 'bun';
+  if (!FACE[st.face]) st.face = 'meesha';
+  st.items = st.items || {};
+  st.weapons = [...new Set(['staff', ...(st.weapons || [])])];
+  if (!st.weapons.includes(st.weapon)) st.weapon = 'staff';
+  return st;
+}
 
 export function makePickup(scene, pos, kind = 'sack') {
   const g = new THREE.Group();
@@ -93,8 +111,9 @@ export class Story {
   }
   canPay(a) { return this.state.annas >= a; }
 
-  newGame() { this.state = freshState(); G.player.setOutfit(this.state.outfit); this.save(); G.ui.setMoney(fmtMoney(0)); this.startMission(0); }
-  continueGame(s) { this.state = { ...freshState(), ...s }; { const st = this.state, O = CAST.outfits; st.outfits = [...new Set(['everyday', 'boatman', ...st.outfits.filter((k) => O[k])])]; if (!O[st.outfit]) st.outfit = 'everyday'; } G.ui.setMoney(fmtMoney(this.state.annas)); G.player.setOutfit(this.state.outfit); this.enterFree({ fresh: true }); }
+  dress() { G.player.setLook(lookFor(this.state)); G.player.setWeapon?.(this.state.weapon); }
+  newGame() { this.state = freshState(); this.dress(); this.save(); G.ui.setMoney(fmtMoney(0)); this.startMission(0); }
+  continueGame(s) { const fresh = freshState(); this.state = migrate({ ...fresh, ...s, owned: [...fresh.owned, ...((s && s.owned) || [])], wear: s && s.wear ? { ...s.wear } : (s && s.outfits ? undefined : { ...fresh.wear }) }); G.ui.setMoney(fmtMoney(this.state.annas)); this.dress(); this.enterFree({ fresh: true }); }
 
   cancel() {
     if (this.tk) this.tk.cancelled = true;
