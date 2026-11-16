@@ -6,7 +6,7 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "game": "node copy-game.cjs",
+    "game": "node copy-game.cjs && node fetch-assets.cjs",
     "start": "npm run game && electron .",
     "dist": "npm run game && electron-builder",
     "dist:win": "npm run game && electron-builder --win",

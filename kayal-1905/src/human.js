@@ -455,7 +455,7 @@ function addRelief(o, res) {
   if (base.userData.relief) return;
   base.userData.relief = true;
   const n = normalFromCanvas(base.userData.canvas, 256, 2.2);
-  for (const m of texCache.values()) if (m === base || m.userData.baseKey === base.userData.key) { m.normalMap = n; m.normalScale.set(0.45, 0.45); m.needsUpdate = true; }
+  base.normalMap = n; base.normalScale.set(0.45, 0.45); base.needsUpdate = true;
 }
 function makeTexture(o, res = 512) {
   const key = JSON.stringify(o) + (res !== 512 ? '@' + res : '');
@@ -480,24 +480,32 @@ function makeTexture(o, res = 512) {
   return m;
 }
 // the same character with another face: only the head region is repainted
-function faceMaterial(o, expr, open, blink, res = 512) {
-  const base = makeTexture(o, res);
-  if ((!expr || expr === 'neutral') && !open && !blink) return base;
-  const key = base.userData.key + '|' + expr + (open ? '|o' : '') + (blink ? '|b' : '');
-  if (texCache.has(key)) return texCache.get(key);
-  const c = document.createElement('canvas'); c.width = c.height = res;
-  const g = c.getContext('2d');
-  g.drawImage(base.userData.canvas, 0, 0);
-  g.scale(res / 512, res / 512);
+// A changed face (expression, open mouth, closed eyes) is painted into ONE texture that belongs to this
+// figure and is reused for every change; it exists only while the figure is near enough to be seen.
+function paintFace(h) {
+  const base = makeTexture(h.look, h.res), res = h.res;
+  if (!h.faceCanvas) {
+    h.faceCanvas = document.createElement('canvas'); h.faceCanvas.width = h.faceCanvas.height = res;
+    h.faceTex = new THREE.CanvasTexture(h.faceCanvas); h.faceTex.colorSpace = THREE.SRGBColorSpace; h.faceTex.anisotropy = 4;
+    h.faceMat = base.clone(); h.faceMat.map = h.faceTex; h.faceMat.emissiveMap = h.faceTex;
+  }
+  h.faceMat.normalMap = base.normalMap;
+  const g = h.faceCanvas.getContext('2d'), k = res / 512;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.drawImage(base.userData.canvas, R_HEAD[0] * k, R_HEAD[1] * k, (R_HEAD[2] - R_HEAD[0]) * k, (R_HEAD[3] - R_HEAD[1]) * k, R_HEAD[0] * k, R_HEAD[1] * k, (R_HEAD[2] - R_HEAD[0]) * k, (R_HEAD[3] - R_HEAD[1]) * k);
+  if (!h.faceBodyCopied) { g.drawImage(base.userData.canvas, 0, 0); h.faceBodyCopied = true; }
+  g.scale(k, k);
   g.save(); g.beginPath(); g.rect(R_HEAD[0], R_HEAD[1], R_HEAD[2] - R_HEAD[0], R_HEAD[3] - R_HEAD[1]); g.clip();
-  paintHead(g, { ...o, expr, mouthOpen: open, blink }, makeRng(base.userData.seed));
+  paintHead(g, { ...h.look, expr: h.expr, mouthOpen: h.mouthOpen, blink: h.blink }, makeRng(base.userData.seed));
   g.globalAlpha = 0.5; g.globalCompositeOperation = 'overlay'; g.drawImage(grainCanvas(), 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   g.restore();
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-  const m = base.clone(); m.map = t; m.emissiveMap = t; m.userData = { baseKey: base.userData.key };
-  texCache.set(key, m);
-  return m;
+  h.faceTex.needsUpdate = true;
+  return h.faceMat;
+}
+function freeFace(h) {
+  if (!h.faceCanvas) return;
+  h.faceTex.dispose(); h.faceMat.dispose();
+  h.faceCanvas = h.faceTex = h.faceMat = null; h.faceBodyCopied = false;
 }
 
 // simple shared materials for rigid accessories
@@ -598,7 +606,10 @@ export class Human {
     const w = this.w, c = Math.cos(w.yaw), s = Math.sin(w.yaw), dx = fx - w.x, dz = fz - w.z, l = Math.hypot(dx, dz) || 1;
     flinch(this, (dx * c - dz * s) / l, (dx * s + dz * c) / l, k);
   }
-  refreshFace() { this.mesh.material = faceMaterial(this.look, this.expr, this.mouthOpen, this.blink, this.res); }
+  refreshFace() {
+    const plain = this.expr === 'neutral' && !this.mouthOpen && !this.blink;
+    this.mesh.material = plain ? makeTexture(this.look, this.res) : paintFace(this);
+  }
   // facial expression: 'neutral' | 'determined' | 'laughing' | 'worried' | 'angry' | 'grieving'
   setExpression(e = 'neutral', hold = 0) {
     if (!EXPR[e]) e = 'neutral';
@@ -624,7 +635,9 @@ export class Human {
     if (this.exprT > 0) { this.exprT -= dt; if (this.exprT <= 0) this.setExpression('neutral'); }
     const t = this.t, mo = this.talking && (Math.sin(t * 17) + Math.sin(t * 7.3)) > 0.15;
     if (mo !== this.mouthOpen) { this.mouthOpen = mo; this.refreshFace(); }
-    if (this.near && !this.relief) { this.relief = true; addRelief(this.look, this.res); }
+    if (this.near && !this.relief) { this.relief = true; addRelief(this.look, this.res); if (this.faceMat) this.faceMat.normalMap = makeTexture(this.look, this.res).normalMap; }
+    // walked out of sight with a plain face: give the private face texture back
+    if (this.faceCanvas && !this.near && this.mesh.material !== this.faceMat) freeFace(this);
     updateMotion(this, dt);
   }
 }

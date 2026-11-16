@@ -5,9 +5,27 @@ import { GB, TRS, boxGeo, hipRoofGeo, gableRoofGeo, gableEndGeo } from './geo.js
 import { TEX } from './textures.js';
 import { getHeight } from './heightfield.js';
 import { addBox, addPlatform, addCircle, addInterior } from './physics.js';
+import { REAL, hasReal, realMaterial } from './assets.js';
 
 export function makeMaterials() {
   const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0, vertexColors: true, ...o });
+  const mats = baseMaterials(std);
+  if (hasReal()) {
+    // photo-scanned surfaces; repeat values put each texture at its real-world scale
+    Object.assign(mats, {
+      wall: realMaterial('plaster', { repeat: 0.8, tint: [1.22, 1.22, 1.2], bump: 0.9 }),
+      laterite: realMaterial('laterite', { repeat: 1.1, tint: [1.12, 0.62, 0.46], bump: 1.2 }),
+      roof: realMaterial('roof', { repeat: 0.5, side: THREE.DoubleSide, bump: 1.3, tint: [1.08, 1.0, 0.96] }),
+      thatch: realMaterial('thatch', { repeat: 0.7, side: THREE.DoubleSide, tint: [1.25, 1.08, 0.8], bump: 1.4 }),
+      plank: realMaterial('plank', { repeat: 0.8, tint: [1.15, 1.05, 0.95] }),
+      wood: realMaterial('wood', { repeat: 1.2, tint: [0.48, 0.34, 0.26] }),
+      stone: realMaterial('stone', { repeat: 0.8, tint: [1.22, 1.1, 0.92] }),
+      sack: realMaterial('sack', { repeat: 2.5, tint: [1.1, 1.0, 0.85] }),
+    });
+  }
+  return mats;
+}
+function baseMaterials(std) {
   return {
     wall: std({ map: TEX.wall, roughness: 0.95 }),
     laterite: std({ map: TEX.laterite, bumpMap: TEX.laterite, bumpScale: 1.2 }),

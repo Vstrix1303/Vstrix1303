@@ -25,5 +25,6 @@ export const G = {
 export const QUALITY = {
   low: { pixelRatio: 0.75, shadow: 1024, msaa: 0, reflection: 0, grass: 9000, bloom: false, rain: 2500, treeScale: 0.6 },
   medium: { pixelRatio: 1, shadow: 2048, msaa: 2, reflection: 384, grass: 22000, bloom: true, rain: 5000, treeScale: 0.85 },
-  high: { pixelRatio: 1.25, shadow: 2048, msaa: 4, reflection: 640, grass: 42000, bloom: true, rain: 8000, treeScale: 1 },
+  high: { pixelRatio: 1.25, shadow: 2048, msaa: 4, reflection: 640, grass: 42000, bloom: true, rain: 8000, treeScale: 1, ao: true },
+  ultra: { pixelRatio: 1.5, shadow: 4096, msaa: 4, reflection: 1024, grass: 70000, bloom: true, rain: 10000, treeScale: 1.2, ao: true },
 };

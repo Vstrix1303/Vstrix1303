@@ -10,6 +10,8 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.0",
+    "n8ao": "^1.9.4",
+    "postprocessing": "^6.36.4",
     "three": "^0.170.0"
   }
 }

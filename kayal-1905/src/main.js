@@ -1,5 +1,6 @@
 // KAYAL — Travancore, 1905. Entry point & main loop.
 import * as THREE from 'three';
+import { loadRealTextures } from './assets.js';
 import { G, QUALITY } from './state.js';
 import { UI } from './ui.js';
 import { Input } from './input.js';
@@ -63,6 +64,8 @@ async function boot() {
   const input = G.input = new Input(canvas);
   const audio = G.audio = new AudioSys();
   buildTextures();
+  ui.loading(0.02, 'Loading surfaces');
+  await loadRealTextures(renderer, (p) => ui.loading(0.02 + p * 0.08, 'Loading surfaces'));
   const player = G.player = new Player(scene, camera);
 
   await nextFrame();
@@ -107,8 +110,8 @@ async function boot() {
   const qLabel = () => (qb.textContent = `Graphics: ${G.quality[0].toUpperCase() + G.quality.slice(1)}`);
   qLabel();
   qb.onclick = () => {
-    const order = ['low', 'medium', 'high'];
-    const next = order[(order.indexOf(G.quality) + 1) % 3];
+    const order = ['low', 'medium', 'high', 'ultra'];
+    const next = order[(order.indexOf(G.quality) + 1) % order.length];
     store.set('kayal1905.quality', next);
     qb.textContent = `Graphics: ${next[0].toUpperCase() + next.slice(1)} — reloading…`;
     setTimeout(() => location.reload(), 300);

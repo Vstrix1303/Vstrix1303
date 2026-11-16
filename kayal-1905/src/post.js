@@ -5,6 +5,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { N8AOPass } from 'n8ao';
 import { G, QUALITY } from './state.js';
 
 const GradeShader = {
@@ -76,13 +78,21 @@ export class Post {
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: q.msaa });
     this.composer = new EffectComposer(renderer, rt);
-    this.composer.addPass(new RenderPass(scene, camera));
+    if (q.ao) {
+      // ambient occlusion from the real depth of the frame: contact shadow where walls meet the ground,
+      // under eaves and verandahs, between leaves — without halos round alpha-cut foliage
+      this.ao = new N8AOPass(scene, camera, size.x, size.y);
+      Object.assign(this.ao.configuration, { aoRadius: 2.4, distanceFalloff: 0.7, intensity: 2.6, aoSamples: G.quality === 'ultra' ? 16 : 12, denoiseSamples: 8, denoiseRadius: 10, halfRes: G.quality !== 'ultra', gammaCorrection: false });
+      this.composer.addPass(this.ao);
+    } else this.composer.addPass(new RenderPass(scene, camera));
     if (q.bloom) {
       this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.36, 0.95, 0.9);
       this.composer.addPass(this.bloom);
     }
     this.grade = new ShaderPass(GradeShader);
     this.composer.addPass(this.grade);
+    // the AO path renders without MSAA, so smooth the edges after grading
+    if (q.ao) { this.smaa = new SMAAPass(size.x, size.y); this.composer.addPass(this.smaa); }
     this.u = this.grade.uniforms;
   }
   setSize(w, h) { this.composer.setSize(w, h); this.u.uAspect.value = w / h; }

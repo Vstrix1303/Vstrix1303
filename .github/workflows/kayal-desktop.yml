@@ -1,5 +1,5 @@
-# Builds the KAYAL desktop app for Windows, macOS and Linux.
-# Download the results from the run's "Artifacts" section on the Actions tab.
+# Builds the KAYAL desktop app for Windows (installer + portable zip).
+# Download the result from the run's "Artifacts" section on the Actions tab.
 name: KAYAL desktop app
 
 on:
@@ -10,21 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            name: windows
-            cmd: npx electron-builder --win
-          - os: macos-latest
-            name: macos
-            cmd: npx electron-builder --mac
-          - os: ubuntu-latest
-            name: linux
-            cmd: npx electron-builder --linux
-    runs-on: ${{ matrix.os }}
+  windows:
+    runs-on: windows-latest
     defaults:
       run:
         working-directory: kayal-1905/desktop
@@ -35,19 +22,22 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: kayal-1905/desktop/package-lock.json
+      # photo-scanned textures from Poly Haven, kept between runs so they download only once
+      - uses: actions/cache@v4
+        with:
+          path: kayal-1905/desktop/.asset-cache
+          key: polyhaven-${{ hashFiles('kayal-1905/assets.json') }}
+          restore-keys: polyhaven-
       - run: npm ci
       - run: npm run game
-      - run: ${{ matrix.cmd }} --publish never
+      - run: npx electron-builder --win --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - uses: actions/upload-artifact@v4
         with:
-          name: Kayal-1905-${{ matrix.name }}
+          name: Kayal-1905-windows
           path: |
             kayal-1905/desktop/dist/*.exe
             kayal-1905/desktop/dist/*.zip
-            kayal-1905/desktop/dist/*.dmg
-            kayal-1905/desktop/dist/*.AppImage
-            kayal-1905/desktop/dist/*.tar.gz
           if-no-files-found: error
           retention-days: 30

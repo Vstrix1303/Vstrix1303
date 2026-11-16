@@ -1,5 +1,6 @@
 // Coconut palms, jungle trees, banana plants, pepper vines, grass & lotus.
 import * as THREE from 'three';
+import { hasReal, realMaterial } from './assets.js';
 import { G, QUALITY } from './state.js';
 import { GB } from './geo.js';
 import { TEX } from './textures.js';
@@ -310,8 +311,8 @@ export function buildFlora(scene, env, keepClear, bigTrees = []) {
   const bananaMat = foliageMaterial(TEX.banana, `
     float bw = uv.x * uv.x;
     transformed.y += sin(uTime * 1.7 + ph + position.x) * 0.1 * bw * uWind;`, 0.3);
-  const palmBark = new THREE.MeshStandardMaterial({ map: TEX.palmBark, roughness: 0.95, vertexColors: true });
-  const bark = new THREE.MeshStandardMaterial({ map: TEX.bark, roughness: 0.95, vertexColors: true });
+  const palmBark = hasReal() ? realMaterial('palm', { repeat: 1, tint: [1.1, 1.08, 1.02], bump: 1.4 }) : new THREE.MeshStandardMaterial({ map: TEX.palmBark, roughness: 0.95, vertexColors: true });
+  const bark = hasReal() ? realMaterial('bark', { repeat: 1, tint: [0.95, 0.9, 0.85], bump: 1.4 }) : new THREE.MeshStandardMaterial({ map: TEX.bark, roughness: 0.95, vertexColors: true });
 
   const blocked = (x, z, pad) => {
     if (pointInBox(x, z, pad)) return true;

@@ -1,5 +1,6 @@
 // Terrain mesh, splat mask, GPU height texture and the parchment map.
 import * as THREE from 'three';
+import { REAL, hasReal } from './assets.js';
 import { WORLD, HALF, GRID, CELL, N, heights, heightFn, getHeight, ROADS, LOC } from './heightfield.js';
 import { TEX } from './textures.js';
 import { clamp, lerp } from './util.js';
@@ -104,6 +105,57 @@ const GLSL_COLOR = /* glsl */`
   diffuseColor.rgb = tcol;
 `;
 
+
+// the same layout as above, painted with photo-scanned ground: grass, laterite soil, mud and sand
+const GLSL_REAL = /* glsl */`
+  vec2 muv = vWPos.xz / ${WORLD.toFixed(1)} + 0.5;
+  vec3 tmask = vec3(0.0);
+  float inside = step(0.0, muv.x) * step(muv.x, 1.0) * step(0.0, muv.y) * step(muv.y, 1.0);
+  if (inside > 0.5) tmask = texture2D(uMask, muv).rgb;
+  float n1 = texture2D(uNoise, vWPos.xz * 0.031).r;
+  float n2 = texture2D(uNoise, vWPos.xz * 0.0071).g;
+  float n3 = texture2D(uNoise, vWPos.xz * 0.37).b;
+  float n4 = texture2D(uNoise, vWPos.xz * 0.11).a;
+  float tslope = 1.0 - normalize(vWN).y;
+  vec2 P = vWPos.xz;
+  // two scales of every texture, mixed by noise, so the repeat never shows
+  float tm = smoothstep(0.35, 0.65, n1);
+  vec3 cG = mix(texture2D(uGc, P * 0.41).rgb, texture2D(uGc, P * 0.097 + 0.37).rgb, 0.35 + 0.3 * tm);
+  vec3 cS = mix(texture2D(uSc, P * 0.36).rgb, texture2D(uSc, P * 0.083 + 0.21).rgb, 0.35 + 0.3 * tm);
+  vec3 cM = mix(texture2D(uMc, P * 0.33).rgb, texture2D(uMc, P * 0.071 + 0.53).rgb, 0.4);
+  vec3 cY = mix(texture2D(uYc, P * 0.29).rgb, texture2D(uYc, P * 0.067 + 0.11).rgb, 0.4);
+  vec3 nG = texture2D(uGn, P * 0.41).xyz * 2.0 - 1.0, nS = texture2D(uSn, P * 0.36).xyz * 2.0 - 1.0;
+  vec3 nM = texture2D(uMn, P * 0.33).xyz * 2.0 - 1.0, nY = texture2D(uYn, P * 0.29).xyz * 2.0 - 1.0;
+  // monsoon-green: pull the scanned grass toward the deep greens of Kerala, with drier patches here and there
+  float gl = dot(cG, vec3(0.3, 0.59, 0.11));
+  vec3 tcol = mix(cG * vec3(0.55, 0.62, 0.36), vec3(gl * 0.3, gl * 0.6, gl * 0.13), 0.7) * mix(vec3(0.8, 0.95, 0.85), vec3(1.15, 1.1, 0.8), smoothstep(0.3, 0.7, n2));
+  tcol = mix(tcol, cG * vec3(0.72, 0.66, 0.44), smoothstep(0.6, 0.85, n1) * 0.4);
+  float thill = smoothstep(10.0, 40.0, vWPos.y);
+  tcol = mix(tcol, tcol * vec3(0.66, 0.8, 0.62), thill * 0.7);
+  tcol = mix(tcol, tcol * vec3(0.48, 0.62, 0.42) * (0.5 + n4), (1.0 - inside) * thill);
+  float teaM = tmask.b * smoothstep(9.0, 17.0, vWPos.y);
+  float stripe = smoothstep(-0.25, 0.25, sin(vWPos.y * 3.3 + n4 * 1.6));
+  tcol = mix(tcol, mix(SRGB(0.13, 0.25, 0.10), SRGB(0.24, 0.41, 0.15), stripe) * (0.55 + 3.0 * cG.g), teaM);
+  vec3 tn = nG;
+  float wSl = smoothstep(0.2, 0.4, tslope + (n1 - 0.5) * 0.12);
+  tcol = mix(tcol, cM * vec3(1.0, 0.92, 0.84), wSl); tn = mix(tn, nM, wSl);
+  float shore = smoothstep(1.25, 0.25, vWPos.y + (n1 - 0.5) * 0.8);
+  tcol = mix(tcol, cY * 1.05, shore); tn = mix(tn, nY, shore);
+  float pad = tmask.g * (1.0 - shore * 0.4);
+  tcol = mix(tcol, mix(SRGB(0.20, 0.25, 0.14), SRGB(0.24, 0.35, 0.13), n4) * (0.55 + 2.2 * cM.g), pad); tn = mix(tn, nM * vec3(0.5, 0.5, 1.0), pad);
+  float troad = smoothstep(0.25, 0.75, tmask.r + (n3 - 0.5) * 0.4);
+  tcol = mix(tcol, cS * (0.92 + 0.16 * n1), troad); tn = mix(tn, nS, troad);
+  tcol = mix(tcol, SRGB(0.30, 0.25, 0.16), smoothstep(0.1, -1.2, vWPos.y));
+  float tPuddle = max(uWet * troad * smoothstep(0.48, 0.6, n1), tmask.g * 0.22 * smoothstep(0.4, 0.62, n1));
+  tcol *= 1.0 - 0.32 * uWet;
+  tn = mix(tn, vec3(0.0, 0.0, 1.0), tPuddle);
+  diffuseColor.rgb = tcol;
+`;
+const GLSL_REAL_NORMAL = /* glsl */`
+  vec3 twn = normalize(vWN + vec3(tn.x, 0.0, -tn.y) * 0.9);
+  normal = normalize((viewMatrix * vec4(twn, 0.0)).xyz);
+`;
+
 export function makeTerrainMaterial() {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.96, metalness: 0 });
   mat.onBeforeCompile = (sh) => {
@@ -111,6 +163,8 @@ export function makeTerrainMaterial() {
     sh.uniforms.uNoise = terrainU.uNoise;
     sh.uniforms.uWet = terrainU.uWet;
     sh.uniforms.uDirt = terrainU.uDirt; sh.uniforms.uGrassD = terrainU.uGrassD;
+    const real = hasReal();
+    if (real) for (const [u, slot, m] of [['uGc', 'grass', 'c'], ['uGn', 'grass', 'n'], ['uSc', 'soil', 'c'], ['uSn', 'soil', 'n'], ['uMc', 'mud', 'c'], ['uMn', 'mud', 'n'], ['uYc', 'sand', 'c'], ['uYn', 'sand', 'n']]) sh.uniforms[u] = { value: REAL[slot][m] };
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec3 vWN;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvWN = normalize(mat3(modelMatrix) * objectNormal);');
@@ -118,10 +172,13 @@ export function makeTerrainMaterial() {
       .replace('#include <common>', `#include <common>
         varying vec3 vWPos; varying vec3 vWN;
         uniform sampler2D uMask; uniform sampler2D uNoise; uniform sampler2D uDirt; uniform sampler2D uGrassD; uniform float uWet;
+        ${real ? 'uniform sampler2D uGc, uGn, uSc, uSn, uMc, uMn, uYc, uYn;' : ''}
         vec3 SRGB(float r, float g, float b) { return pow(vec3(r, g, b), vec3(2.2)); }`)
-      .replace('#include <map_fragment>', GLSL_COLOR)
+      .replace('#include <map_fragment>', real ? GLSL_REAL : GLSL_COLOR)
+      .replace('#include <normal_fragment_maps>', real ? GLSL_REAL_NORMAL : '#include <normal_fragment_maps>')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.06, tPuddle);');
   };
+  mat.customProgramCacheKey = () => (hasReal() ? 'terrain-real' : 'terrain');
   return mat;
 }
 

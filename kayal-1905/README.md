@@ -195,6 +195,19 @@ The remaining block-built models were rebuilt as smooth, shaped surfaces.
   own fine normal maps; horse coats and elephant hide have relief too.
 - Soft shadow-mapped sunlight and ACES filmic tone mapping (both already in place since version 1).
 
+## Version 8 — real surfaces (desktop app)
+
+- **Photo-scanned textures** (from Poly Haven, all CC0 — public domain): leafy grass, red laterite soil
+  for the roads, mud on the slopes and banks, coastal sand, weathered whitewash, laterite block walls,
+  aged clay roof tiles, thatch, weathered planks, teak, granite steps, palm and tree bark, hessian sacks.
+  Each comes with colour, surface-relief (normal) and roughness/ambient-occlusion maps, at its real-world
+  scale; the ground mixes two scales of every texture so the repeat never shows.
+- **Ambient occlusion** on High and Ultra (N8AO): soft contact shadow where walls meet the ground, under
+  eaves and verandahs, between objects — with SMAA edge smoothing.
+- **Ultra preset**: higher resolution, 4096 px shadows, sharper reflections, denser grass and forest.
+  Choose it with the *Graphics* button on the title screen.
+- The browser version keeps the hand-painted textures (the photo-scanned set is 36 MB).
+
 ## A note on the setting
 
 Travancore in 1905 was a princely state under a British Resident; its district officers were the Dewan
@@ -208,32 +221,21 @@ This is a browser game built by one author in two passes. It aims for the *feel*
 open-world game with stylised procedural art — roughly early-2000s character fidelity under modern
 lighting. It is not the product of a few hundred artists and several years.
 
-## Desktop app
+## Desktop app (Windows)
 
-KAYAL also runs as an installable desktop application (Windows, macOS, Linux) — its own window,
-fullscreen by default (**F11** or **Alt+Enter** to toggle), *Quit to desktop* in the menus, the fast GPU
-preferred on laptops, and saves kept on the computer.
+KAYAL runs as an installable Windows application — its own window, fullscreen by default (**F11** or
+**Alt+Enter** to toggle), *Quit to desktop* in the menus, the fast GPU preferred on laptops, saves kept on
+the computer — and only the desktop app has the photo-scanned surfaces described under version 8.
 
 **Getting it.** Every push builds the app on GitHub: open the repository's **Actions** tab → the latest
-*KAYAL desktop app* run → **Artifacts** at the bottom, and download the one for your system.
+*KAYAL desktop app* run → **Artifacts** → `Kayal-1905-windows`. Inside are an installer
+(`Kayal-1905-…-win-x64.exe`) and a portable `…-win-x64.zip` (unzip and run `Kayal 1905.exe`).
 
-| System | File | How to start |
-|---|---|---|
-| Windows | `Kayal-1905-…-win-x64.exe` (installer) or `…-win-x64.zip` (portable) | Run the installer, or unzip and run `Kayal 1905.exe` |
-| macOS | `Kayal-1905-…-mac-universal.dmg` | Drag *Kayal 1905* to Applications |
-| Linux | `Kayal-1905-…-x86_64.AppImage` | `chmod +x` it and run |
+The app is not code-signed (that needs a paid certificate), so Windows SmartScreen warns on first launch:
+click *More info* → *Run anyway*. Saves made in a browser do not carry over to the desktop app.
 
-The app is not code-signed (that needs paid developer certificates), so the first launch shows a warning:
-
-- **Windows** — SmartScreen: *More info* → *Run anyway*.
-- **macOS** — open it once, then go to *System Settings → Privacy & Security* and click *Open Anyway*
-  (on older macOS, right-click the app → *Open* also works). If macOS says the app "is damaged", run
-  `xattr -cr "/Applications/Kayal 1905.app"` in Terminal once, then open it again.
-
-Saves made in a browser do not carry over to the desktop app (each keeps its own).
-
-**From source** (needs Node.js): `cd kayal-1905/desktop && npm install && npm start` runs it;
-`npm run dist` packages it for the current system into `desktop/dist/`.
+**From source** (needs Node.js): `cd kayal-1905/desktop && npm install && npm start` runs it (the textures
+download on first run); `npm run dist:win` packages it into `desktop/dist/`.
 
 ## Build from source
 
