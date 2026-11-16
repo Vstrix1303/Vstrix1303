@@ -16,6 +16,21 @@ npm run dev          # open the printed http://localhost:5173 link in Chrome or 
 ```
 
 `npm run build` produces a static site in `dist/` that you can host anywhere (`npm run preview` serves it locally).
+
+### Desktop app (Windows, macOS, Linux)
+
+Vaikara also ships as a desktop application (Electron). It bundles its own Chromium with WebGPU, so it runs the
+same everywhere, full-screen, with no browser and no server.
+
+```bash
+npm run app          # build and launch the desktop app
+npm run dist:win     # Windows installer + portable .exe  → release/   (run on Windows)
+npm run dist:mac     # macOS .dmg                          → release/   (run on a Mac)
+npm run dist:linux   # Linux AppImage                      → release/
+```
+
+Or let GitHub build them: the **Vaikara desktop builds** workflow (Actions tab → *Run workflow*) produces all three
+and attaches them to the run as downloads. In the app: `F11` full screen, `F12` developer tools.
 WebGPU needs a recent Chrome/Edge (or Safari 26+). Other browsers use the WebGL2 path with the same shaders.
 
 ### Controls
@@ -67,6 +82,11 @@ southern channel on a timetable; canoes thread the mangroves; rice boats cruise 
 **Monsoon**: the weather drifts between clear, cloudy, rain and storm: an overcast sky, rain streaks, wet
 glossy ground with puddles, ripples on the water, a heavier swell, lightning and thunder (sound is generated in
 the browser: rain, wind, surf, thunder).
+
+**People**: everyone, including the traveller, is a procedural 1905 character skinned to the Mixamo skeleton,
+so standard Mixamo animations drive them: mundu with gold kasavu border, jubba, thorthu, checked lungi,
+saree with pallu, set-mundu, khaki police uniform, colonial white suit with pith helmet, head cloths, palm-leaf
+hats; painted faces, varied skin tones, builds and heights (`?lineup` shows them side by side).
 
 **Places to enter**: about 12 bazaar shops around the square (counters, shelves, sacks, a lamp) and 8 town
 houses (two rooms, a cot, a chest, a lamp).
