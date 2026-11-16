@@ -32,7 +32,9 @@ function pickQuality() {
   let q = params.get('q');
   try { q = q || localStorage.getItem('vaikara.quality'); } catch { /* storage blocked */ }
   if (!QUALITY_PRESETS[q]) q = 'high';
-  G.quality = q; G.Q = QUALITY_PRESETS[q];
+  G.quality = q; G.Q = { ...QUALITY_PRESETS[q] };
+  if (params.has('noshadow')) G.Q.shadows = false;
+  if (params.has('nocsm')) G.Q.csm = false;
   const box = $('qual');
   box.innerHTML = '';
   for (const k of Object.keys(QUALITY_PRESETS)) {
@@ -41,6 +43,27 @@ function pickQuality() {
     b.onclick = () => { try { localStorage.setItem('vaikara.quality', k); } catch { /* ignore */ } location.search = new URLSearchParams({ ...Object.fromEntries(params), q: k }).toString(); };
     box.appendChild(b);
   }
+}
+
+if (params.has('gpudebug') && window.GPUBuffer) { // log who destroys per-object GPU buffers
+  const d = GPUBuffer.prototype.destroy; let n = 0;
+  GPUBuffer.prototype.destroy = function () {
+    if (/object/.test(this.label) && n++ < 6) console.warn('[gpudebug] destroy', this.label, new Error().stack.split('\n').slice(5, 22).map((l) => l.trim().replace(/\(?vaikara:\/\/app\/assets\//, '').replace(/\)$/, '')).join(' < '));
+    return d.call(this);
+  };
+}
+
+// three.js r186: the shared shadow-pass override material copies each caster's
+// alphaTest; flipping it between 0 and >0 bumps the material version, which
+// makes every shadow render object rebuild mid-frame (destroying GPU buffers the
+// shadow pass is still using: missing/garbled shadows on WebGPU, and wasted CPU).
+// Each render object is keyed per caster already, so the bump is not needed.
+{
+  const d = Object.getOwnPropertyDescriptor(THREE.Material.prototype, 'alphaTest');
+  Object.defineProperty(THREE.Material.prototype, 'alphaTest', {
+    configurable: true, get: d.get,
+    set(v) { if (this.isShadowPassMaterial) this._alphaTest = v; else d.set.call(this, v); },
+  });
 }
 
 async function boot() {
@@ -70,6 +93,17 @@ async function boot() {
   renderer.shadowMap.enabled = G.Q.shadows;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   G.renderer = renderer;
+  if (params.has('gpudebug')) { // report render objects whose cache key changes (they get rebuilt mid-frame)
+    const RO = renderer._objects, get = RO.get.bind(RO); let n = 0;
+    RO.get = (object, material, ...rest) => {
+      const map = RO.getChainMap(rest[5]);
+      const prev = map.get([object, material, rest[3], rest[2]]);
+      if (prev && n < 12 && (prev.version !== material.version || prev.needsUpdate) && prev.initialCacheKey !== prev.getCacheKey()) {
+        n++; console.warn('[gpudebug] rebuild', object.type, object.name || '', material.type, material.name || '', 'v', prev.version, '->', material.version, 'needsUpdate', prev.needsUpdate);
+      }
+      return get(object, material, ...rest);
+    };
+  }
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.25, 32000);
@@ -141,7 +175,8 @@ async function boot() {
     if (bt) { player.board(bt); player.camYaw = player.boatYaw + 2.6; player.camPitch = 0.25; player.camDist = 9; }
   }
   G.focus.copy(fly.enabled ? fly.pos : player.pos);
-  villagers.prefill(G.focus); traffic.prefill(G.focus);
+  if (!params.has('novill')) villagers.prefill(G.focus);
+  traffic.prefill(G.focus);
   status('Compiling shaders…', 0.94); await tick();
   const audio = new Audio();
   const weather = new Weather(scene, sky, audio);
@@ -189,7 +224,7 @@ async function boot() {
   const clock = new THREE.Timer();
   const _dir = new THREE.Vector3(); let glareS = 0;
   let frames = 0, fpsT = 0, fps = 0;
-  window.__vaikara = { humans, Input, data: { getHeight, waterLevelAt, W: WD }, G, weather, interact, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
+  window.__vaikara = { THREE, humans, Input, data: { getHeight, waterLevelAt, W: WD }, G, weather, interact, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
   renderer.setAnimationLoop(() => {
     clock.update(); const dt = Math.min(0.05, clock.getDelta());
     G.dt = dt; G.time += dt; U.time.value = G.time;
@@ -218,7 +253,7 @@ async function boot() {
     props.update(dt, camera.position);
     traffic.update(dt, G.focus);
     for (const m of lineup) m.update(dt);
-    villagers.update(dt, G.focus, camera);
+    if (!params.has('novill')) villagers.update(dt, G.focus, camera);
     if (params.has('nopost')) renderer.render(scene, camera); else post.render();
     Input.endFrame();
     frames++; fpsT += dt; window.__vaikara.frame++;

@@ -114,8 +114,11 @@ export class Kit {
 
   cyl(mat, x, y, z, r0, r1, h, seg = 12, tile = TILE[mat] || 2, open = false) {
     const g = new THREE.CylinderGeometry(r1, r0, h, seg, 1, open);
-    const uvA = g.attributes.uv;
-    for (let k = 0; k < uvA.count; k++) uvA.setXY(k, uvA.getX(k) * (Math.PI * 2 * Math.max(r0, r1)) / tile, uvA.getY(k) * h / tile);
+    const uvA = g.attributes.uv, nA = g.attributes.normal, pA = g.attributes.position;
+    for (let k = 0; k < uvA.count; k++) {
+      if (Math.abs(nA.getY(k)) > 0.99) uvA.setXY(k, pA.getX(k) / tile, pA.getZ(k) / tile); // caps: planar
+      else uvA.setXY(k, uvA.getX(k) * (Math.PI * 2 * Math.max(r0, r1)) / tile, uvA.getY(k) * h / tile);
+    }
     this.push(mat, g, x, y + h / 2, z);
   }
 

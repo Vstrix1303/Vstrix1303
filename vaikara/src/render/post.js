@@ -1,7 +1,7 @@
 // Post: scene pass → GTAO (contact shadows) → bloom → tone map (AgX) →
 // colour grade + vignette → FXAA.
 import * as THREE from 'three/webgpu';
-import { sample, pass, mrt, output, normalView, directionToColor, colorToDirection, uniform, vec3, vec4, float, uv, mix, smoothstep, length, dot, clamp, renderOutput, Fn, pow } from 'three/tsl';
+import { sample, pass, mrt, output, normalView, packNormalToRGB, unpackRGBToNormal, uniform, vec3, vec4, float, uv, mix, smoothstep, length, dot, clamp, renderOutput, Fn, pow } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
@@ -18,9 +18,9 @@ export class Post {
     let col = sp.getTextureNode('output');
     if (G.Q.ao) {
       try {
-        sp.setMRT(mrt({ output, normal: directionToColor(normalView) }));
+        sp.setMRT(mrt({ output, normal: packNormalToRGB(normalView) }));
         const nTex = sp.getTextureNode('normal');
-        const nrm = sample((u) => colorToDirection(nTex.sample(u)));
+        const nrm = sample((u) => unpackRGBToNormal(nTex.sample(u)));
         const aoPass = ao(sp.getTextureNode('depth'), nrm, camera);
         aoPass.resolutionScale = 0.5;
         aoPass.radius.value = 1.2;

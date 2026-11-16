@@ -78,7 +78,7 @@ export class Sky {
     this.sun.shadow.radius = 2;
     this.sun.shadow.camera.near = 1; this.sun.shadow.camera.far = 6000;
     scene.add(this.sun, this.sun.target);
-    if (G.Q.shadows) {
+    if (G.Q.shadows && G.Q.csm !== false) {
       this.csm = new CSMShadowNode(this.sun, { cascades: G.Q.cascades, maxFar: G.Q.shadowFar, mode: 'practical', lightMargin: 500 });
       this.csm.fade = true;
       this.sun.shadow.shadowNode = this.csm;
@@ -202,7 +202,7 @@ export class Sky {
     this.envTarget = this.pmrem.fromScene(this.envScene, 0, 1, 2000);
     this.scene.environment = this.envTarget.texture;
     this.scene.environmentIntensity = (0.5 - 0.06 * (1 - U.night.value)) * (1 - 0.3 * U.cloud.value) + 0.12 * U.cloud.value;
-    if (old) old.dispose();
+    if (old && !location.search.includes('nobake')) old.dispose();
   }
 
   // Monsoon modifiers on top of the hour's lighting (weather.js sets this.wx).

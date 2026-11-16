@@ -248,7 +248,7 @@ export class Terrain {
     this.group.add(c.meshes[l]);
     c.lod = l;
     // free very fine meshes when far away
-    for (let k = 0; k < 2; k++) if (k < l - 1 && c.meshes[k]) { c.meshes[k].geometry.dispose(); c.meshes[k] = null; }
+    if (!location.search.includes('nodispose')) for (let k = 0; k < 2; k++) if (k < l - 1 && c.meshes[k]) { c.meshes[k].geometry.dispose(); c.meshes[k] = null; }
   }
 
   update(cam, budget = 6) {

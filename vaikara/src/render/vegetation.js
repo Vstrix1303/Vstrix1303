@@ -168,6 +168,8 @@ export class Vegetation {
         geo.setIndex(I);
         const fm = new THREE.MeshStandardNodeMaterial({ map: rt.texture, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 1, color: 0xaca67e });
         fm.envMapIntensity = 0.25;
+        // thin fronds lose coverage in the mip chain: boost alpha so distant crowns don't vanish
+        fm.opacityNode = texture(rt.texture, uv()).a.mul(2.6).min(1);
         fm.emissiveNode = texture(rt.texture, uv()).rgb.mul(vec3(0.68, 0.65, 0.5)).mul(U.sunColor).mul(0.3);
         // a flat card has no real orientation: light it as a crown half-turned to the sun
         fm.normalNode = transformNormalToView(normalize(vec3(U.sunDir.x.mul(0.55), 0.8, U.sunDir.z.mul(0.55))));
