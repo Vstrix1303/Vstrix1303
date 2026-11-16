@@ -23,6 +23,7 @@ export class Settlements {
     this.jetties = []; // used by props for boats
     this.counts = { shop: 0, house: 0, hut: 0 };
     this.gardens = [];
+    this.shopFronts = []; this.shoreSpots = []; this.namedJetty = {}; this.ferries = [];
   }
 
   // ── helpers
@@ -283,6 +284,7 @@ export class Settlements {
         this.kit.tints = run.tints;
         this.shophouse(hx, hz, run.ry, w, { d: run.d, floors: run.floors, wall: run.wall, y: run.y, roof: false });
         run.units.push({ x: hx, z: hz, w });
+        this.shopFronts.push({ x: hx + Math.sin(run.ry) * (run.d / 2 + 1.4), z: hz + Math.cos(run.ry) * (run.d / 2 + 1.4), ry: run.ry });
         if (run.units.length >= run.target) { flush(); return w / 2 + 6 + r() * 6; } // lane between terraces
         return w;
       });
@@ -384,6 +386,7 @@ export class Settlements {
       }
       if (!best || best.d < 12) continue;
       spots.push({ x, z, face: best.b, dw: best.d });
+      if (spots.length % 3 === 0) this.shoreSpots.push({ x: x + Math.cos(best.b) * (best.d - 6), z: z + Math.sin(best.b) * (best.d - 6), face: best.b });
     }
     // seed 2–4 clusters along the shore, then fill each cluster
     spots.sort((p, q) => p.dw - q.dw);
@@ -435,13 +438,9 @@ export class Settlements {
     const y = getHeight(x, z);
     k.cyl('laterite', x, y - 1.2, z, 6.5, 6.2, 1.9, 24, 1.6);
     k.cyl('sandstone', x, y + 0.65, z, 6.7, 6.7, 0.15, 24, 3);
-    // the banyan: a thick trunk and a wide canopy of leaf clusters (bark/leaf from the kit)
-    k.cyl('wood', x, y + 0.7, z, 1.3, 0.9, 6, 12, 2);
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * TAU, rr = i ? 5.5 : 0;
-      k.sphere('canopy', x + Math.cos(a) * rr, y + 8 + (i ? 0 : 2), z + Math.sin(a) * rr, i ? 4.2 : 5, TAU, Math.PI, 0.7, 12);
-      if (i % 2) k.cyl('wood', x + Math.cos(a) * 6.5, y + 0.7, z + Math.sin(a) * 6.5, 0.12, 0.12, 6.5, 5); // aerial roots
-    }
+    // the banyan itself is a big broadleaf from the vegetation system, planted on the platform
+    this.gardens.push({ sp: 'broad2', p: [x, z], s: 2.1, yOff: 0.75 });
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU + 0.3; k.cyl('wood', x + Math.cos(a) * 5.2, y + 0.7, z + Math.sin(a) * 5.2, 0.1, 0.1, 7.5, 5); } // aerial roots
     G.colliders.addCircle(x, z, 6.6, y - 2, y + 0.75);
     G.colliders.addDeck(x, z, 4.6, 4.6, 0, y + 0.75);
     // keep the square open: no houses or trees within 32 m
@@ -453,6 +452,33 @@ export class Settlements {
     k.box('wood', wx, wy + 2.45, wz, 2.6, 0.15, 0.15, 0);
     G.colliders.addCircle(wx, wz, 1.4, wy, wy + 1);
     this.squareAt = { x, z };
+  }
+
+  // Two landings facing each other across a channel; records a ferry route.
+  channelCrossing([cx, cz], name) {
+    // channel direction from the deepest neighbourhood: find water centre first
+    let best = [cx, cz], bh = getHeight(cx, cz);
+    for (let a = 0; a < TAU; a += 0.3) for (const d of [10, 20, 30]) { const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d, h = getHeight(x, z); if (h < bh) { bh = h; best = [x, z]; } }
+    const banks = [];
+    let bestPair = null;
+    for (let a = 0; a < Math.PI; a += 0.1) {
+      const ends = [];
+      for (const sg of [1, -1]) {
+        for (let t = 2; t < 120; t += 2) {
+          const x = best[0] + Math.cos(a) * t * sg, z = best[1] + Math.sin(a) * t * sg;
+          if (getHeight(x, z) > 1.0) { ends.push([x, z, t]); break; }
+        }
+      }
+      if (ends.length === 2 && (!bestPair || ends[0][2] + ends[1][2] < bestPair.w)) bestPair = { w: ends[0][2] + ends[1][2], ends, a };
+    }
+    if (!bestPair) return;
+    for (const [x, z] of bestPair.ends) {
+      const dx = best[0] - x, dz = best[1] - z, l = Math.hypot(dx, dz);
+      const len = Math.min(14, l * 0.4);
+      this.jetty(x - dx / l * 2, z - dz / l * 2, x + dx / l * len, z + dz / l * len);
+      banks.push(this.jetties[this.jetties.length - 1]);
+    }
+    this.ferries.push({ name, a: banks[0], b: banks[1] });
   }
 
   // ── landmarks
@@ -990,13 +1016,16 @@ export class Settlements {
       for (const pl of [P.muthalappuzha, P.veliyathura, P.kayalore, P.southern_ferry, P.kalliyar_ferry, P.karimulam]) {
         const [x, z] = this.findLand(pl.x, pl.z, 1.0, 200);
         this.jettyOut(x, z, 24);
+        this.namedJetty[pl.id] = this.jetties[this.jetties.length - 1];
       }
       // Kalliyar: a landing on the south bank too
-      { const [x, z] = this.findLand(P.kalliyar_ferry.x - 20, P.kalliyar_ferry.z + 160, 1.0, 200); this.jettyOut(x, z, 20); }
+      { const [x, z] = this.findLand(P.kalliyar_ferry.x - 20, P.kalliyar_ferry.z + 160, 1.0, 200); this.jettyOut(x, z, 20); this.namedJetty.kalliyar_south = this.jetties[this.jetties.length - 1]; }
+      // a crossing over the ferry channel south of the paddy, with a landing on each bank
+      this.channelCrossing(toWorld(800, 868), 'southern_crossing');
     }, 0.9);
     const M = materials();
     this.meshes = this.kit.build(this.scene, M);
-    Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station, gardens: this.gardens });
+    Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station, gardens: this.gardens, shopFronts: this.shopFronts, shoreSpots: this.shoreSpots, namedJetty: this.namedJetty, ferries: this.ferries });
     console.info('[vaikara] buildings', JSON.stringify(this.counts));
     progress?.(1);
   }

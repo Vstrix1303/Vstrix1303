@@ -23,7 +23,7 @@ async function model(id) {
 }
 
 // Lofted boat hull: length L, beam B, depth D; upturned ends (Kerala style).
-function hullGeometry(L, B, D, rise = 0.5, seg = 18) {
+export function hullGeometry(L, B, D, rise = 0.5, seg = 18) {
   const P = [], I = [], UV = [];
   const ring = 9;
   for (let i = 0; i <= seg; i++) {

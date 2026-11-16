@@ -15,6 +15,8 @@ import { Player } from './game/player.js';
 import { FlyCam } from './game/flycam.js';
 import { UI } from './game/ui.js';
 import { Colliders } from './game/physics.js';
+import { Villagers } from './game/npcs.js';
+import { Traffic } from './render/traffic.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -87,6 +89,11 @@ async function boot() {
   status('Launching the boats…', 0.87); await tick();
   const props = new Props(scene);
   await props.build();
+  const traffic = new Traffic(scene);
+  traffic.build();
+  status('Waking the villagers…', 0.89); await tick();
+  const villagers = new Villagers(scene);
+  try { await villagers.load(); } catch (e) { console.warn('villagers', e); }
 
   status('Waking the traveller…', 0.9); await tick();
   Input.init(canvas);
@@ -106,6 +113,8 @@ async function boot() {
     fly.enable(true); fly.pos.set(x, y, z); fly.yaw = yaw || 0; fly.pitch = pitch || 0;
   }
 
+  G.focus.copy(fly.enabled ? fly.pos : player.pos);
+  villagers.prefill(G.focus); traffic.prefill(G.focus);
   status('Compiling shaders…', 0.94); await tick();
   const post = new Post(renderer, scene, camera);
   G.focus.copy(fly.enabled ? fly.pos : player.pos);
@@ -131,7 +140,7 @@ async function boot() {
   const clock = new THREE.Timer();
   const _dir = new THREE.Vector3(); let glareS = 0;
   let frames = 0, fpsT = 0, fps = 0;
-  window.__vaikara = { G, sky, terrain, veg, player, fly, ui, frame: 0 };
+  window.__vaikara = { G, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
   renderer.setAnimationLoop(() => {
     clock.update(); const dt = Math.min(0.05, clock.getDelta());
     G.dt = dt; G.time += dt; U.time.value = G.time;
@@ -154,6 +163,8 @@ async function boot() {
     veg.update(camera.position, dt);
     towns.update(dt);
     props.update(dt, camera.position);
+    traffic.update(dt, G.focus);
+    villagers.update(dt, G.focus, camera);
     if (params.has('nopost')) renderer.render(scene, camera); else post.render();
     Input.endFrame();
     frames++; fpsT += dt; window.__vaikara.frame++;
@@ -164,7 +175,7 @@ async function boot() {
       scene.traverse((o) => { if (o.isMesh && o.visible) { const g = o.geometry; const t = (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); if (t > 2e5) rows.push(`${o.name || o.material?.type || '?'}:${o.isInstancedMesh ? o.count + 'x' : ''}${(t / 1e6).toFixed(2)}M`); } });
       console.info('[vaikara] heavy', rows.join(' | '));
     }
-    if (fpsT > 0.5) { fps = frames / fpsT; frames = 0; fpsT = 0; ui.stats(fps, renderer.info); }
+    if (fpsT > 0.5) { fps = frames / fpsT; frames = 0; fpsT = 0; ui.stats(fps, renderer.info, villagers.count); }
   });
 }
 

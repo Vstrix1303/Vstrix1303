@@ -411,7 +411,7 @@ export function buildFlora() {
   const coconut = new THREE.MeshStandardNodeMaterial({ color: 0x5f6a26, roughness: 0.6 });
   coconut.positionNode = windNode(0.0011, 0);
   const M = {
-    frond: leafMaterial(tex.frond, { strength: 0.0011, flutter: 0.14 }),
+    frond: leafMaterial(tex.frond, { strength: 0.0011, flutter: 0.14, color: 0xa4b484 }),
     broad: leafMaterial(tex.broad, { strength: 0.0004, flutter: 0.06, color: 0xb8c8a0 }),
     broad2: leafMaterial(tex.broad2, { strength: 0.0004, flutter: 0.06, color: 0xa8bc90 }),
     teak: leafMaterial(tex.teak, { strength: 0.0003, flutter: 0.08, color: 0xc0c498 }),

@@ -2,7 +2,7 @@
 // posts) in a spatial hash; the player capsule is resolved against them in XZ.
 const CELL = 32;
 export class Colliders {
-  constructor() { this.hash = new Map(); this.decks = []; }
+  constructor() { this.hash = new Map(); this.decks = []; this.dyn = []; } // dyn: moving circles (carts, villagers)
   key(i, j) { return i * 73856093 ^ j * 19349663; }
   insert(o, minx, minz, maxx, maxz) {
     for (let i = Math.floor(minx / CELL); i <= Math.floor(maxx / CELL); i++)
@@ -45,6 +45,10 @@ export class Colliders {
     return best;
   }
   resolve(p, radius, y) {
+    for (const o of this.dyn) {
+      const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), m = o.r + radius;
+      if (d < m && d > 1e-5 && Math.abs(y - o.y) < 2.5) { p.x = o.x + dx / d * m; p.z = o.z + dz / d * m; }
+    }
     for (const o of this.near(p.x, p.z)) {
       if (o.t >= 2 || y > o.y1 || y + 1.7 < o.y0) continue;
       if (o.t === 1) {

@@ -165,8 +165,8 @@ export class UI {
     $('clockTime').textContent = fmt(G.hour) + (G.timeScale ? '' : ' ·');
   }
 
-  stats(fps, info) {
-    $('stats').textContent = `${fps.toFixed(0)} fps · ${G.backend} · ${G.quality}\n${(info.render.triangles / 1e6).toFixed(2)}M tris · ${info.render.calls} calls`;
+  stats(fps, info, people = 0) {
+    $('stats').textContent = `${fps.toFixed(0)} fps · ${G.backend} · ${G.quality}\n${(info.render.triangles / 1e6).toFixed(2)}M tris · ${info.render.calls} calls · ${people} people`;
   }
 }
 void placeById;

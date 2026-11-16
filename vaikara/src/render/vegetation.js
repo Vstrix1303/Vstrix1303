@@ -37,7 +37,7 @@ export class Vegetation {
     for (const g of this.scene.userData.gardens || []) {
       const [x, z] = g.p, y = getHeight(x, z);
       if (y < 0.5) continue;
-      trees[g.sp].push({ x, y: y - 0.15, z, rot: rnd() * Math.PI * 2, s: (g.s || 1) * (0.8 + rnd() * 0.35), v: Math.floor(rnd() * flora.species[g.sp].variants.length) });
+      trees[g.sp].push({ x, y: y - 0.15 + (g.yOff || 0), z, rot: rnd() * Math.PI * 2, s: (g.s || 1) * (0.8 + rnd() * 0.35), v: Math.floor(rnd() * flora.species[g.sp].variants.length) });
       if (g.sp !== 'banana') G.colliders?.addCircle(x, z, g.sp === 'palm' ? 0.3 : 0.5, y - 1, y + 6);
     }
     const col = G.colliders;
