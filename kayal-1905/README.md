@@ -161,6 +161,40 @@ Built from twelve hand-supplied reference sheets (cast, expressions, outfits, ho
 - **Other animals**: cattle share the gait system, the elephant ambles with a rolling body, egrets flap
   in bursts and glide.
 
+## Version 6 — the models
+
+The remaining block-built models were rebuilt as smooth, shaped surfaces.
+
+- **Horses and cattle** are modelled anatomically: barrel with withers, back and croup, shoulder and
+  haunch swelling out of the same skin, a neck with crest and throat, a head with jaw, muzzle, nostrils,
+  eyes and ears, and legs with knee, hock, fetlock, pastern and hoof (each joint animated). Horses have
+  a mane, forelock, full tail, saddle with girth and stirrups, and a bridle; the cattle are humped zebu
+  with dewlap and horns.
+- **The elephant** has the arched back and twin-domed head of the Asian elephant, fan ears, curved
+  tusks, a tapering trunk that curls, pillar legs with knees and toenails, creased hide, and — for the
+  temple elephant — a gilded *nettipattam* and a bordered saddle-cloth.
+- **Egrets** have a body, a drawn-back neck, trailing legs and two-jointed wings with spread primaries.
+- **Trees** fork into limbs and boughs and carry their leaves in many small sprays instead of a few
+  large cards; trunks flare at the foot. Palms have round, ringed trunks and longer-jointed fronds.
+- **Boats** have round-bilged hulls with gunwale rails, stem and stern posts and ribs.
+- **The bullock cart** has spoked wheels, a slatted bed, pole and yoke, and a hooped mat cover.
+- **Creepers and pepper vines** are leaf sprays rather than green blobs.
+
+## Version 7 — materials and light
+
+- **No primitive-built characters or animals.** Hair is a shell lofted over the skull with a real
+  hairline; hats and head-cloths are turned on smooth profiles; ears are cupped; the braid is plaited;
+  the satchel is a soft pouch; hooves, saddle, saddle-cloth and tack are shaped. The only simple solids
+  left are things that are that shape — beads, eyeballs, rings, a walking stick.
+- **Image-based lighting.** The sky itself (and the lit ground below the horizon) is captured as an
+  environment map and lights and reflects in every surface, so roughness and metalness read as
+  materials. It is re-captured as the hour and weather change.
+- **Per-part finish.** Each character carries a roughness/metalness map — skin with a soft sheen, wet
+  eyes, matte cloth, polished boots, gold thread and jewellery that is actually metallic — and a relief
+  (normal) map derived from the painted folds and creases. Hair, wound cloth and woven cloth have their
+  own fine normal maps; horse coats and elephant hide have relief too.
+- Soft shadow-mapped sunlight and ACES filmic tone mapping (both already in place since version 1).
+
 ## A note on the setting
 
 Travancore in 1905 was a princely state under a British Resident; its district officers were the Dewan

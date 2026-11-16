@@ -63,7 +63,7 @@ const SKULL = [
   [1.708, 0.077, 0.095, 0.098], [1.724, 0.0755, 0.091, 0.096], [1.741, 0.0705, 0.083, 0.090], [1.756, 0.061, 0.070, 0.080], [1.769, 0.046, 0.050, 0.060],
 ];
 const HEAD_Y = [1.500, 1.520, 1.538, 1.551, 1.560, 1.567, 1.574, 1.581, 1.588, 1.5945, 1.601, 1.609, 1.618, 1.626, 1.631, 1.636, 1.643, 1.652, 1.661, 1.669, 1.677, 1.684, 1.691, 1.700, 1.712, 1.726, 1.741, 1.756, 1.769];
-function skullAt(y) {
+export function skullAt(y) {
   for (let i = 1; i < SKULL.length; i++) if (y <= SKULL[i][0]) { const a = SKULL[i - 1], b = SKULL[i], t = (y - a[0]) / (b[0] - a[0]); return [lerp(a[1], b[1], t), lerp(a[2], b[2], t), lerp(a[3], b[3], t)]; }
   const l = SKULL[SKULL.length - 1]; return [l[1], l[2], l[3]];
 }
@@ -118,7 +118,7 @@ export function bodyGeometry(o) {
   for (const [y, rx0, zf0, zb0, w] of T) {
     let rx = rx0, zf = zf0, zb = zb0;
     if (belly && y > 0.88 && y < 1.2) { const k = Math.max(0, 1 - Math.abs(y - 1.05) / 0.17); zf += 0.055 * k; rx += 0.018 * k; }
-    if (shirtOver && y < 1.0) { rx += 0.014; zf += 0.014; zb += 0.012; }
+    if (shirtOver && y < 1.0) { rx += 0.024; zf += 0.034; zb += 0.03; }
     const k = y >= 1.5 ? nkS : y > 1.46 ? lerp(bk, nkS, (y - 1.46) / 0.04) : bk;
     rx *= k; zf *= k; zb *= k;
     torsoAt.push([y, rx, zf, zb]);
@@ -126,8 +126,8 @@ export function bodyGeometry(o) {
   }
   if (shirtOver) {
     const hem = o.style === 'frock' ? 0.66 : 0.80;
-    tr[0] = { c: [0, hem, 0.002], ax: [0.186, 0, 0], az: [0, 0, 0.132], azB: [0, 0, 0.134], w: [[B.hips, 1]], v: 1 };
-    if (o.style === 'frock') tr.splice(1, 0, { c: [0, 0.84, 0.002], ax: [0.18, 0, 0], az: [0, 0, 0.126], azB: [0, 0, 0.13], w: [[B.hips, 1]], v: 0.94 });
+    tr[0] = { c: [0, hem, 0.002], ax: [0.2, 0, 0], az: [0, 0, 0.152], azB: [0, 0, 0.15], w: [[B.hips, 1]], v: 1 };
+    if (o.style === 'frock') tr.splice(1, 0, { c: [0, 0.84, 0.002], ax: [0.198, 0, 0], az: [0, 0, 0.15], azB: [0, 0, 0.148], w: [[B.hips, 1]], v: 0.94 });
     g.loft(tr, 20, R_TORSO, {});
   } else g.loft(tr, 20, R_TORSO, { capStart: 0.01 });
 

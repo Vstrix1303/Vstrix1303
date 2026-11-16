@@ -6,7 +6,7 @@ import { GB, TRS } from './geo.js';
 import { LOC, getHeight, canalZ, ROADS } from './heightfield.js';
 import { pointInBox } from './physics.js';
 import { makeRng, TAU } from './util.js';
-import { house, kettu, spiceHouse, nasraniHouse, wall, P, olakkuda, barrel, toolbox, castNet, poles, compound } from './houses.js';
+import { house, kettu, spiceHouse, nasraniHouse, wall, P, olakkuda, barrel, toolbox, castNet, poles, compound, creeper } from './houses.js';
 
 export const SPOTS = {};   // named world positions used by the story
 const BRASS = [0.95, 0.72, 0.28];
@@ -118,14 +118,25 @@ function well(b, x, z) {
 }
 
 function cart(b, x, z, ry) {
+  // a bullock cart: spoked wheels, a slatted bed, a pole and yoke, a hooped cover of woven matting
   b.place(x, z, ry);
-  b.box('plank', 1.5, 0.12, 2.6, 0, 0.95, 0, { tile: 1 });
+  const WOOD = [0.62, 0.5, 0.4];
+  b.box('plank', 1.36, 0.08, 2.5, 0, 0.92, 0, { tile: 1 });
   for (const sx of [-1, 1]) {
-    b.cyl('wood', 0.75, 0.75, 0.1, sx * 0.9, 0.7, 0, { seg: 14, rz: Math.PI / 2 });
-    b.box('plank', 0.06, 0.5, 2.6, sx * 0.72, 1.05, 0, { tile: 1 });
+    b.geo('wood', new THREE.TorusGeometry(0.72, 0.05, 6, 22), new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(sx * 0.9, 0.77, 0), WOOD);
+    b.cyl('wood', 0.1, 0.1, 0.24, sx * 0.9, 0.77 - 0.12, 0, { seg: 10, rz: Math.PI / 2, col: WOOD });
+    for (let i = 0; i < 6; i++) b.box('wood', 0.035, 1.38, 0.05, sx * 0.9, 0.77 - 0.69, 0, { rx: i * Math.PI / 6, col: WOOD });
+    b.box('plank', 0.05, 0.36, 2.5, sx * 0.68, 1.0, 0, { tile: 1 });
+    for (let i = 0; i < 5; i++) b.box('wood', 0.045, 0.5, 0.045, sx * 0.68, 0.96, -1.1 + i * 0.55, { col: WOOD });
+    b.box('wood', 0.07, 0.07, 4.3, sx * 0.3, 0.84, 0.9, { rx: -0.07, col: WOOD });
   }
-  b.box('wood', 0.1, 0.1, 2.6, 0, 0.9, 2.4, { rx: -0.12 });
-  b.collider(0, 0, 1.0, 1.4);
+  b.cyl('wood', 0.05, 0.05, 2.0, 0, 0.77 - 1.0, 0, { seg: 7, rz: Math.PI / 2, col: WOOD });
+  b.box('wood', 1.5, 0.09, 0.09, 0, 0.98, 3.0, { col: WOOD });
+  for (const sx of [-0.55, 0.55]) b.cyl('wood', 0.025, 0.025, 0.3, sx, 0.72, 3.0, { seg: 5, col: WOOD });
+  const hoop = new THREE.CylinderGeometry(0.72, 0.72, 2.2, 14, 1, true, 0, Math.PI);
+  b.geo('thatch', hoop, new THREE.Matrix4().makeRotationY(Math.PI / 2).multiply(new THREE.Matrix4().makeRotationZ(Math.PI / 2)).setPosition(0, 1.02, -0.1), [1.05, 0.95, 0.7]);
+  for (const sz of [-1.2, 1.0]) b.geo('wood', new THREE.TorusGeometry(0.73, 0.02, 4, 12, Math.PI), new THREE.Matrix4().setPosition(0, 1.02, sz), WOOD);
+  b.collider(0, 0, 1.05, 1.5);
 }
 
 function haystack(b, x, z, s = 1) {
@@ -233,9 +244,7 @@ export function buildStructures(scene) {
     for (let i = 0; i < 26; i++) {
       const u = rng() * 2 - 1, side = i % 3;
       const cx = side === 0 ? u * X : side === 1 ? -X : (Math.abs(u) < 0.14 ? 9 : u * X), cz = side === 0 ? Zb : side === 1 ? Zb + (u * 0.5 + 0.5) * (Zf - Zb) : Zf;
-      const gc = [0.11 + rng() * 0.06, 0.26 + rng() * 0.08, 0.09], along = side !== 1;
-      b.sphere('paint', 0.5 + rng() * 0.3, cx, 1.5, cz, { sx: along ? 1.5 : 0.8, sy: 0.6, sz: along ? 0.8 : 1.5, col: gc });
-      b.sphere('paint', 0.42, cx + (along ? 0.3 : -0.3), 1.0, cz + (side === 0 ? -0.3 : 0.3), { sx: along ? 1.1 : 0.35, sy: 1.1, sz: along ? 0.35 : 1.1, col: gc });
+      creeper(b, cx, 1.5, cz, side !== 1 ? 0 : Math.PI / 2, 1.3 + rng() * 0.8);
       if (i % 4 === 0) b.sphere('paint', 0.16, cx + 0.3, 1.72, cz + 0.3, { col: [0.9, 0.35, 0.5] });
     }
     for (const sx of [-1, 1]) {

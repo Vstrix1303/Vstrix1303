@@ -36,7 +36,7 @@ function palmGeo(rng, o) {
   const lx = Math.cos(ld) * lean, lz = Math.sin(ld) * lean;
   const path = (t) => [lx * t * t, H * t, lz * t * t];
   const tc = o.trunkCol || [1, 1, 1];
-  trunk.tube(path, (t) => o.trunkR * (1 + 0.7 * (1 - smoothstep(0, 0.1, t))) * (1 - 0.32 * t), 6, 5, H / 1.6, tc, 2);
+  trunk.tube(path, (t) => o.trunkR * (1 + 0.8 * Math.pow(1 - smoothstep(0, 0.12, t), 2) + 0.35 * smoothstep(0.93, 1, t)) * (1 - 0.32 * t), 12, 9, H / 1.6, tc, 2);
   const T = path(1);
   // crown bulge
   const n = o.fronds;
@@ -46,7 +46,7 @@ function palmGeo(rng, o) {
     const pitch0 = lerp(1.3, -0.45, Math.pow(age, 0.85));
     const L = o.frondLen * (0.82 + rng() * 0.3);
     const droop = lerp(0.8, 1.5, rng());
-    const hw = o.frondW, seg = 5, fold = 0.5;
+    const hw = o.frondW, seg = 8, fold = 0.5;
     const side = [-Math.sin(az), 0, Math.cos(az)];
     let px = T[0], py = T[1] - 0.1, pz = T[2];
     const shade = 0.72 + 0.28 * (1 - age) + rng() * 0.1;
@@ -75,7 +75,7 @@ function palmGeo(rng, o) {
   }
   // coconuts
   if (o.nuts) {
-    const ico = new THREE.IcosahedronGeometry(0.16, 0);
+    const ico = new THREE.IcosahedronGeometry(0.16, 1);
     for (let i = 0; i < o.nuts; i++) {
       const a = rng() * TAU, r = 0.24 + rng() * 0.1;
       const m = new THREE.Matrix4().makeTranslation(T[0] + Math.cos(a) * r, T[1] - 0.35 - rng() * 0.25, T[2] + Math.sin(a) * r);
@@ -104,40 +104,51 @@ function palmGeo(rng, o) {
 
 // ---------------------------------------------------------------- broadleaf
 function treeGeo(rng, o) {
+  // A real crown: the trunk forks into limbs, limbs into boughs, and the
+  // leaves hang in many small sprays at the ends of them.
   const trunk = new GB(), leaf = new GB();
   const H = o.height, R = o.canopy;
   const bend = [(rng() - 0.5) * 1.2, (rng() - 0.5) * 1.2];
   const path = (t) => [bend[0] * t * t, H * t, bend[1] * t * t];
-  trunk.tube(path, (t) => o.trunkR * (1.5 - 0.5 * smoothstep(0, 0.15, t)) * (1 - 0.45 * t), 5, 6, H / 2, [1, 1, 1], 2);
-  const top = path(1);
-  const centers = [[top[0], top[1] + R * 0.25, top[2], R]];
-  const nb = o.branches ?? 3;
+  trunk.tube(path, (t) => o.trunkR * (1 + 1.2 * Math.pow(1 - smoothstep(0, 0.2, t), 2)) * (1 - 0.42 * t), 9, 9, H / 2.2, [1, 1, 1], 2);
+  const top = path(1), tufts = [];
+  const limb = (s, dir, len, r, depth) => {
+    const e = [s[0] + dir[0] * len, s[1] + dir[1] * len, s[2] + dir[2] * len], sag = len * 0.1;
+    const p = (t) => [lerp(s[0], e[0], t), lerp(s[1], e[1], t) + Math.sin(t * Math.PI) * sag, lerp(s[2], e[2], t)];
+    trunk.tube(p, (t) => r * (1 - 0.55 * t), depth ? 3 : 5, depth ? 5 : 7, len / 1.5, [1, 1, 1], 1);
+    if (depth < 2 && len > R * 0.32) {
+      const n = depth === 0 ? 3 : 2;
+      for (let i = 0; i < n; i++) {
+        const st = p(Math.min(1, 0.45 + 0.55 * (i + rng()) / n));
+        const dx = dir[0] + (rng() - 0.5) * 1.5, dy = dir[1] * 0.6 + rng() * 0.6, dz = dir[2] + (rng() - 0.5) * 1.5, l = Math.hypot(dx, dy, dz) || 1;
+        limb(st, [dx / l, dy / l, dz / l], len * (0.5 + rng() * 0.25), r * 0.5, depth + 1);
+      }
+    }
+    if (depth >= 1) { tufts.push([e[0], e[1], e[2], len * 0.7 + R * 0.12]); const m = p(0.6); tufts.push([m[0], m[1] + 0.2, m[2], len * 0.45 + R * 0.1]); }
+  };
+  const nb = (o.branches ?? 3) + 2;
   for (let i = 0; i < nb; i++) {
-    const a = i / nb * TAU + rng(), t0 = 0.5 + rng() * 0.3, s = path(t0);
-    const len = R * (0.7 + rng() * 0.5);
-    const e = [s[0] + Math.cos(a) * len, s[1] + len * 0.75, s[2] + Math.sin(a) * len];
-    trunk.tube((t) => [lerp(s[0], e[0], t), lerp(s[1], e[1], t) + Math.sin(t * 3.14) * 0.3, lerp(s[2], e[2], t)], (t) => o.trunkR * 0.5 * (1 - 0.6 * t), 3, 5, len / 2, [1, 1, 1], 1);
-    centers.push([e[0], e[1] + R * 0.1, e[2], R * 0.72]);
+    const a = i / nb * TAU + rng() * 0.8, s = path(0.45 + rng() * 0.45), up = 0.3 + rng() * 0.55, c = Math.cos(up);
+    limb(s, [Math.cos(a) * c, Math.sin(up), Math.sin(a) * c], R * (0.75 + rng() * 0.4), o.trunkR * 0.42, 0);
   }
-  const cards = o.cards;
-  const cc = [top[0], top[1], top[2]];
+  limb(top, [0.1, 0.99, 0.05], R * 0.55, o.trunkR * 0.36, 1);
+  tufts.push([top[0], top[1] + R * 0.3, top[2], R * 0.55]);
+  const cards = o.cards, cc = [top[0], top[1] - R * 0.15, top[2]], s0 = R * 2.25 / Math.sqrt(cards);
   for (let i = 0; i < cards; i++) {
-    const c = centers[i % centers.length];
-    // random direction, biased upward
-    let dx = rng() * 2 - 1, dy = rng() * 1.5 - 0.45, dz = rng() * 2 - 1;
+    const c = tufts[i % tufts.length];
+    let dx = rng() * 2 - 1, dy = rng() * 1.6 - 0.6, dz = rng() * 2 - 1;
     const dl = Math.hypot(dx, dy, dz) || 1; dx /= dl; dy /= dl; dz /= dl;
-    const rr = c[3] * (0.5 + rng() * 0.5);
-    const px = c[0] + dx * rr, py = c[1] + dy * rr * 0.72, pz = c[2] + dz * rr;
-    // card plane normal: outward-ish with jitter
-    const nrm = new THREE.Vector3(dx + (rng() - 0.5) * 0.9, dy + (rng() - 0.5) * 0.9, dz + (rng() - 0.5) * 0.9).normalize();
+    const rr = c[3] * Math.cbrt(rng());
+    const px = c[0] + dx * rr, py = c[1] + dy * rr * 0.7, pz = c[2] + dz * rr;
+    // sprays lie roughly flat and droop outward, the way leaves present themselves to the light
+    const nrm = new THREE.Vector3(dx * 0.6 + (rng() - 0.5) * 0.8, 0.9 + (rng() - 0.5) * 0.9, dz * 0.6 + (rng() - 0.5) * 0.8).normalize();
     const tan = new THREE.Vector3().crossVectors(nrm, Math.abs(nrm.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0)).normalize();
     const bit = new THREE.Vector3().crossVectors(nrm, tan);
-    const s = c[3] * (0.58 + rng() * 0.32);
-    // shading normal: from canopy centre outward, lifted up
-    const sn = new THREE.Vector3(px - cc[0], py - cc[1] + R * 0.5, pz - cc[2]).normalize();
-    const depth = clamp((py - (cc[1] - R * 0.6)) / (R * 1.6), 0, 1);
-    const sh = 0.55 + 0.5 * depth + rng() * 0.1;
-    const col = [sh * o.tint[0], sh * o.tint[1], sh * o.tint[2]];
+    const s = s0 * (0.75 + rng() * 0.6);
+    const sn = new THREE.Vector3(px - cc[0], py - cc[1] + R * 0.6, pz - cc[2]).normalize();
+    const out = clamp(Math.hypot(px - cc[0], (py - cc[1]) * 0.8, pz - cc[2]) / (R * 1.25), 0, 1), depth = clamp((py - (cc[1] - R * 0.7)) / (R * 1.7), 0, 1);
+    const sh = 0.36 + 0.42 * depth + 0.3 * out * out + rng() * 0.12, warm = 0.94 + rng() * 0.14;
+    const col = [sh * o.tint[0] * warm, sh * o.tint[1], sh * o.tint[2] * (1.9 - warm) * 0.95];
     const q = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].map(([a, b, u, v]) =>
       leaf.vert(px + (tan.x * a + bit.x * b) * s, py + (tan.y * a + bit.y * b) * s, pz + (tan.z * a + bit.z * b) * s, sn.x, sn.y, sn.z, u, v, ...col));
     leaf.quad(q[0], q[1], q[2], q[3]);
@@ -371,12 +382,16 @@ export function buildFlora(scene, env, keepClear, bigTrees = []) {
   }
 
   // --- broadleaf trees
+  // forest trees carry a moderate crown; the shade trees people live under are modelled in full
+  const cf = G.quality === 'low' ? 1.3 : G.quality === 'medium' ? 1.9 : 2.5, cn = G.quality === 'low' ? 3 : G.quality === 'medium' ? 5 : 7;
   const tv = [
-    treeGeo(rng, { height: 5.2, canopy: 3.6, trunkR: 0.3, cards: 30, tint: [1, 1, 1] }),
-    treeGeo(rng, { height: 9.5, canopy: 4.4, trunkR: 0.36, cards: 33, tint: [0.92, 1, 0.9] }),
-    treeGeo(rng, { height: 13, canopy: 5.2, trunkR: 0.45, cards: 36, tint: [0.85, 0.95, 0.85], branches: 4 }),
+    treeGeo(rng, { height: 5.2, canopy: 3.6, trunkR: 0.3, cards: Math.round(30 * cf), tint: [1, 1, 1] }),
+    treeGeo(rng, { height: 9.5, canopy: 4.4, trunkR: 0.36, cards: Math.round(33 * cf), tint: [0.92, 1, 0.9] }),
+    treeGeo(rng, { height: 13, canopy: 5.2, trunkR: 0.45, cards: Math.round(36 * cf), tint: [0.85, 0.95, 0.85], branches: 4 }),
+    treeGeo(rng, { height: 5.6, canopy: 4.0, trunkR: 0.34, cards: Math.round(30 * cn), tint: [1, 1, 1], branches: 4 }),
+    treeGeo(rng, { height: 9.5, canopy: 4.8, trunkR: 0.42, cards: Math.round(34 * cn), tint: [0.92, 1, 0.9], branches: 4 }),
   ];
-  const tl = [[], [], []];
+  const tl = [[], [], [], [], []];
   const treeAt = (x, z, vi) => {
     const h = getHeight(x, z);
     if (h < 0.9 || blocked(x, z, 3) || maskAt(x, z, 1) > 0.2 || maskAt(x, z, 2) > 0.35) return;
@@ -400,12 +415,12 @@ export function buildFlora(scene, env, keepClear, bigTrees = []) {
   for (const [cx, cz, r, n] of [[LOC.village.x, LOC.village.z, 130, 26], [LOC.port.x - 30, LOC.port.z, 100, 16], [LOC.temple.x, LOC.temple.z, 40, 6]]) {
     for (let i = 0; i < n; i++) {
       const a = rng() * TAU, d = Math.sqrt(rng()) * r;
-      treeAt(cx + Math.cos(a) * d, cz + Math.sin(a) * d, 0);
+      treeAt(cx + Math.cos(a) * d, cz + Math.sin(a) * d, 3);
     }
   }
   for (const [x, z, vi, sc] of bigTrees) {
     const s = sc || 1.15;
-    tl[vi].push({ x, y: getHeight(x, z) - 0.2, z, ry: rng() * TAU, s, tint: [1, 1, 1] });
+    tl[vi ? 4 : 3].push({ x, y: getHeight(x, z) - 0.2, z, ry: rng() * TAU, s, tint: [1, 1, 1] });
     addCircle(x, z, 0.5 * s);
   }
   tv.forEach((v, i) => {

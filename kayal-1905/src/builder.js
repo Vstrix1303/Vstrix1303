@@ -24,6 +24,7 @@ export function makeMaterials() {
     tin: std({ map: TEX.tin, roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide }),
     paint: std({ roughness: 0.8 }),
     brass: std({ color: 0xffffff, roughness: 0.32, metalness: 0.55, emissive: 0x3a2606, emissiveIntensity: 0.6 }),
+    leaf: std({ map: TEX.leaves, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9 }),
     net: std({ map: TEX.net, transparent: true, alphaTest: 0.2, side: THREE.DoubleSide, depthWrite: false }),
   };
 }
@@ -159,7 +160,7 @@ export class Builder {
     const out = {};
     for (const k in this.g) {
       const mesh = new THREE.Mesh(this.g[k].build(), mats[k]);
-      mesh.castShadow = k !== 'net';
+      mesh.castShadow = k !== 'net' && k !== 'leaf';
       mesh.receiveShadow = true;
       mesh.matrixAutoUpdate = false;
       scene.add(mesh);

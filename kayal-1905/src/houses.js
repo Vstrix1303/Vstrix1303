@@ -371,8 +371,7 @@ export function nasraniHouse(b, x, z, ry) {
   for (let i = 0; i < 5; i++) {
     const vx = 8.4, vz = -2 + i * 2.6;
     b.cyl('wood', 0.07, 0.09, 3.4, vx, 0, vz, { seg: 6 });
-    b.cyl('paint', 0.17, 0.2, 2.9, vx, 0.25, vz, { seg: 7, col: [0.08, 0.2, 0.08] });
-    for (let k = 0; k < 14; k++) b.sphere('paint', 0.13 + (k % 3) * 0.03, vx + Math.sin(k * 2.4) * 0.2, 0.4 + k * 0.2, vz + Math.cos(k * 2.4) * 0.2, { sy: 1.3, seg: 6, rings: 4, col: [0.1 + (k % 2) * 0.04, 0.26 + (k % 3) * 0.05, 0.09] });
+    for (let k = 0; k < 3; k++) b.panel('leaf', 0.95, 3.0, vx, 0.3, vz, k * Math.PI / 3);
     b.circle(vx, vz, 0.2);
   }
   b.yard(15, 0.7, 0, 3).clear(13, 0, 3).mark(12, 8).mark(6, 6, -2.8, 5.9);
@@ -428,12 +427,17 @@ export function compound(b, X, Zf, Zb, rng, gate = 2.2, h = 1.4) {
     for (let i = 0, n = Math.round(len / 3.2); i < n; i++) {
       if (rng() < 0.45) continue;
       const u = (i + rng()) / n, px = x0 + (x1 - x0) * u, pz = z0 + (z1 - z0) * u;
-      const gc = [0.11 + rng() * 0.06, 0.26 + rng() * 0.08, 0.09];
-      b.sphere('paint', 0.45 + rng() * 0.25, px, h, pz, { sx: ax ? 1.5 : 0.8, sy: 0.6, sz: ax ? 0.8 : 1.5, col: gc });
-      b.sphere('paint', 0.4, px + (ax ? 0.3 : 0.32), h - 0.5, pz + (ax ? 0.32 : 0.3), { sx: ax ? 1.1 : 0.35, sy: 1.1, sz: ax ? 0.35 : 1.1, col: gc });
+      creeper(b, px, h, pz, ax ? 0 : Math.PI / 2, 1.2 + rng() * 0.8);
       if (rng() < 0.4) b.sphere('paint', 0.15, px + 0.25, h + 0.22, pz + 0.25, { col: rng() < 0.5 ? [0.9, 0.35, 0.5] : [0.95, 0.8, 0.2] });
     }
   };
   run(-X, Zf, -gate, Zf); run(gate, Zf, X, Zf); run(-X, Zb, -X, Zf); run(X, Zb, X, Zf);
   for (const s of [-1, 1]) { b.box('laterite', 0.7, h + 1.7, 0.7, s * (gate + 0.2), -1, Zf); b.cone('laterite', 0.5, 0.35, s * (gate + 0.2), h + 0.7, Zf, { seg: 4, ry: Math.PI / 4, col: [0.75, 0.7, 0.68] }); b.collider(s * (gate + 0.2), Zf, 0.38, 0.38); }
+}
+
+// a creeper trailing over a wall: sprays of leaves hanging down both faces and standing above the coping
+export function creeper(b, x, h, z, ry = 0, w = 1.6) {
+  const c = Math.cos(ry), s = Math.sin(ry);
+  for (const k of [-1, 1]) b.panel('leaf', w, 1.15, x + s * 0.3 * k, h - 0.95, z + c * 0.3 * k, ry + (k < 0 ? Math.PI : 0));
+  b.panel('leaf', w * 0.9, 0.7, x, h - 0.12, z, ry + 0.5); b.panel('leaf', w * 0.9, 0.7, x, h - 0.12, z, ry - 0.6);
 }

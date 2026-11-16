@@ -10,6 +10,8 @@ import { damp, clamp, lerp, makeRng } from './util.js';
 
 import { bodyGeometry, headScale, B, RIG, R_HEAD, R_TORSO, R_ARM, R_LEG, R_SKIRT, R_HAND, R_FOOT, R_CLOTH } from './body.js';
 import { initMotion, updateMotion, flinch } from './motion.js';
+import { normalFromCanvas } from './texmaps.js';
+import { hairGeo, hairMat, clothMat, feltMat, earGeo, bunGeo, braidGeo, hatGeo, bandGeo, knotGeo, bagGeo, capeGeo, hoodGeo, canopyGeo } from './wear.js';
 
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 function shade(c, k) {
@@ -415,7 +417,46 @@ function grainCanvas() {
   g.putImageData(im, 0, 0);
   return c;
 }
+// green channel = roughness, blue = metalness, laid out like the colour atlas
+function paintFinish(o) {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'); g.scale(0.5, 0.5);
+  const F = (r, m = 0) => { g.fillStyle = `rgb(255,${Math.round(r * 255)},${Math.round(m * 255)})`; };
+  const SKIN = 0.6, CLOTH = 0.93, GOLD = [0.38, 0.8];
+  F(SKIN); g.fillRect(0, 0, 512, 512);
+  // head: hair has a soft sheen, eyes are wet, lips and the bridge of the nose catch a little light
+  if (!o.bald) { F(0.48); g.fillRect(0, 0, 256, 26); g.fillRect(0, 0, 70, 126); g.fillRect(186, 0, 70, 126); }
+  F(0.1); for (const s of [-1, 1]) { g.beginPath(); g.ellipse(128 + s * 15, 72, 6.5, 3.6, 0, 0, 7); g.fill(); }
+  F(0.36); g.beginPath(); g.ellipse(128, 122.5, 10, 4, 0, 0, 7); g.fill();
+  F(0.5); g.beginPath(); g.ellipse(128, 86, 4, 10, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(128, 46, 26, 10, 0, 0, 7); g.fill();
+  // torso
+  const TY = (h) => 192 + (1.49 - h) / 0.69 * 256;
+  if (o.shirt != null) { F(CLOTH); g.fillRect(0, 192, 256, 256); if (o.style === 'blouse') { F(SKIN); g.fillRect(0, TY(1.16), 256, 448 - TY(1.16)); } if (o.style === 'uniform') { F(0.4, 0.85); for (const hh of [1.42, 1.33, 1.24, 1.15, 1.06]) { g.beginPath(); g.arc(128, TY(hh), 3, 0, 7); g.fill(); } F(0.45); g.fillRect(0, TY(1.035), 256, 11); } }
+  else if (o.female) { F(CLOTH); g.fillRect(0, TY(1.47), 256, TY(1.17) - TY(1.47)); }
+  if (o.pendant && o.shirt == null) { F(GOLD[0], GOLD[1]); g.fillRect(123, TY(1.375), 10, TY(1.315) - TY(1.375)); }
+  // arms
+  const AY = (h) => (1.475 - h) / 0.723 * 256;
+  if (o.shirt != null && o.sleeves !== false) { F(CLOTH); g.fillRect(256, 0, 128, AY(o.longSleeves ? 0.93 : (o.style === 'blouse' ? 1.30 : 1.22))); }
+  if (o.bangles) { F(GOLD[0], GOLD[1]); g.fillRect(256, AY(0.955), 128, AY(0.93) - AY(0.955)); }
+  // legs
+  const LY = (h) => (0.96 - h) / 0.875 * 256;
+  if (o.trousers != null) { F(CLOTH); g.fillRect(384, 0, 128, 256); if (o.boots != null) { F(0.42); g.fillRect(384, LY(o.tallBoots ? 0.5 : 0.3), 128, 256); } }
+  // mundu, with its woven gold border
+  F(CLOTH); g.fillRect(256, 256, 256, 192);
+  if (o.kasavu) { F(GOLD[0], GOLD[1]); g.fillRect(256, 448 - 13, 256, 8); g.fillRect(256 + 256 * 0.41 + 2, 266, 7, 182); }
+  // swatches: hand, foot, loose cloth
+  F(SKIN); g.fillRect(0, 448, 64, 64); F(o.boots != null ? 0.42 : 0.7); g.fillRect(64, 448, 64, 64); F(CLOTH); g.fillRect(128, 448, 64, 64); F(GOLD[0], GOLD[1]); g.fillRect(128, 448, 5, 64);
+  return new THREE.CanvasTexture(c);
+}
 const texCache = new Map();
+// the relief map is worked out only when a figure is first seen close to, so loading stays quick
+function addRelief(o, res) {
+  const base = makeTexture(o, res);
+  if (base.userData.relief) return;
+  base.userData.relief = true;
+  const n = normalFromCanvas(base.userData.canvas, 256, 2.2);
+  for (const m of texCache.values()) if (m === base || m.userData.baseKey === base.userData.key) { m.normalMap = n; m.normalScale.set(0.45, 0.45); m.needsUpdate = true; }
+}
 function makeTexture(o, res = 512) {
   const key = JSON.stringify(o) + (res !== 512 ? '@' + res : '');
   if (texCache.has(key)) return texCache.get(key);
@@ -431,7 +472,9 @@ function makeTexture(o, res = 512) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   // a little self-illumination keeps faces readable in shade, as hand-lit game characters were
-  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.1 });
+  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.05 });
+  // relief and finish: a normal map from the painted folds, and a map of how rough or metallic each part is
+  const orm = paintFinish(o); m.roughnessMap = orm; m.metalnessMap = orm; m.roughness = 1; m.metalness = 1;
   m.userData = { canvas: c, seed, key, res };
   texCache.set(key, m);
   return m;
@@ -452,7 +495,7 @@ function faceMaterial(o, expr, open, blink, res = 512) {
   g.restore();
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-  const m = base.clone(); m.map = t; m.emissiveMap = t;
+  const m = base.clone(); m.map = t; m.emissiveMap = t; m.userData = { baseKey: base.userData.key };
   texCache.set(key, m);
   return m;
 }
@@ -514,67 +557,38 @@ export class Human {
     mesh.bind(new THREE.Skeleton(bones));
     initMotion(this);
 
-    // ---- ears, and hair with some body to it
-    const hsc = headScale(o), skinM = AM(shadeN(o.skin, 0.9), 0.8);
-    for (const s of [-1, 1]) { const e = addMesh(head, G_SPH, skinM, s * (0.0757 * hsc - 0.001), 0.1, -0.008, 0.008, 0.029, 0.017); e.rotation.set(-0.18, s * 0.22, 0); }
-    const hat = o.headgear && o.headgear !== 'thorthu';
-    if (!o.bald && !hat) {
-      const hm = AM(o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e), 0.75);
-      const k = hsc, rec = o.receding ? 1 : 0;
-      const cap = addMesh(head, G_HAIR, hm, 0, 0.133, 0.001 - rec * 0.012, 0.0815 * k, 0.096 * k * (fem ? 1.02 : 1), (0.103 - rec * 0.006) * k); cap.rotation.x = -0.5 - rec * 0.3;
-      if (fem) { const back = addMesh(head, G_SPH, hm, 0, 0.1, -0.035, 0.083 * k, 0.09, 0.078); back.castShadow = false; }
-    }
-
-    // ---- rigid accessories on the head (crown of the skull is ~0.15 above the head bone)
-    const hk = headScale(o);
-    const hd = new THREE.Group(); hd.position.set(0, 0.115, 0.004); hd.scale.set(0.89 * hk, 0.95, 0.92 * hk); head.add(hd);
-    const hairM = AM(o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e), 0.7);
-    const gc = o.gearColor;
-    if (o.bun) { addMesh(hd, G_SPH, hairM, 0, -0.02, -0.108, 0.055, 0.058, 0.05); if (o.flowers) addMesh(hd, G_TORUS, AM(0xf3efe2, 0.9), 0, -0.02, -0.112, 0.05, 0.05, 0.03); }
-    if (o.headgear === 'turban') {
-      addMesh(hd, G_SPH, AM(gc ?? 0xb02a22, 0.95), 0, 0.068, -0.008, 0.105, 0.07, 0.112);
-      const t = addMesh(hd, G_TORUS, AM(gc ?? 0xb02a22, 0.95), 0, 0.045, -0.004, 0.082, 0.092, 0.06); t.rotation.x = Math.PI / 2 - 0.12;
-      addMesh(hd, G_SPH, AM(gc ?? 0xb02a22, 0.95), -0.05, -0.06, -0.1, 0.02, 0.07, 0.012);
-    } else if (o.headgear === 'thorthu') {
-      const t = addMesh(hd, G_TORUS, AM(gc ?? 0xe7dfc8, 0.95), 0, 0.045, -0.004, 0.074, 0.086, 0.07); t.rotation.x = Math.PI / 2 - 0.1;
-      addMesh(hd, G_SPH, AM(gc ?? 0xe7dfc8, 0.95), 0, 0.075, -0.008, 0.07, 0.035, 0.08);
-      addMesh(hd, G_SPH, AM(gc ?? 0xe7dfc8, 0.95), 0.06, 0.0, -0.085, 0.018, 0.05, 0.02);
-    } else if (o.headgear === 'cap') {
-      addMesh(hd, G_CYL, AM(gc ?? 0xf0ece0, 0.9), 0, 0.078, -0.006, 0.079, 0.07, 0.09);
-    } else if (o.headgear === 'topi') {
-      addMesh(hd, G_HEMI, AM(gc ?? 0xd8cfb4, 0.9), 0, 0.04, -0.004, 0.092, 0.105, 0.106);
-      const b = addMesh(hd, G_CYL, AM(gc ?? 0xd8cfb4, 0.9), 0, 0.045, 0.006, 0.142, 0.012, 0.16); b.rotation.x = 0.1;
-      addMesh(hd, G_CYL, AM(0x6a5a3a, 0.9), 0, 0.058, -0.004, 0.094, 0.022, 0.108);
-    } else if (o.headgear === 'tophat') {
-      addMesh(hd, G_CYL, AM(gc ?? 0x18161a, 0.5), 0, 0.14, -0.006, 0.078, 0.15, 0.088);
-      addMesh(hd, G_CYL, AM(gc ?? 0x18161a, 0.5), 0, 0.065, -0.006, 0.118, 0.012, 0.13);
-      addMesh(hd, G_CYL, AM(0x3a3440, 0.6), 0, 0.085, -0.006, 0.08, 0.028, 0.09);
-    } else if (o.headgear === 'slouch') {
-      addMesh(hd, G_HEMI, AM(gc ?? 0x4a3d2c, 0.9), 0, 0.05, -0.006, 0.086, 0.085, 0.098);
-      const b = addMesh(hd, G_CYL, AM(gc ?? 0x4a3d2c, 0.9), 0, 0.055, -0.004, 0.15, 0.01, 0.16); b.rotation.z = 0.12;
-    } else if (o.headgear === 'fez') {
-      addMesh(hd, new THREE.CylinderGeometry(0.066, 0.08, 0.1, 14), AM(gc ?? 0x8a1c1c, 0.9), 0, 0.105, -0.006);
-    }
-    if (o.tuft) addMesh(hd, G_SPH, hairM, 0, 0.012, 0.062, 0.03, 0.03, 0.036);            // the Namboothiri's forelock
+    // ---- ears, hair, and what is worn on the head: all shaped surfaces
+    const hsc = headScale(o), skinM = AM(shadeN(o.skin, 0.92), 0.6);
+    for (const s of [-1, 1]) { const e = new THREE.Mesh(earGeo(), skinM); e.position.set(s * (0.0757 * hsc - 0.003), 0.1, -0.008); e.rotation.set(0, -s * 0.3, -s * Math.PI / 2); e.castShadow = true; head.add(e); }
+    const hairC = o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e), hairM = hairMat(hairC);
+    const gear = o.headgear, gc = o.gearColor, hat = gear && gear !== 'thorthu';
+    const put = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+    if (!o.bald) put(head, hairGeo(fem, !!o.receding, hsc, !!hat), hairM);
+    if (o.bun) { const b = put(head, bunGeo(), hairM, 0, 0.1, -0.112 * hsc); b.rotation.x = -1.15; if (o.flowers) { const f = put(head, new THREE.TorusGeometry(0.036, 0.011, 6, 14), AM(0xf3efe2, 0.9), 0, 0.1, -0.118 * hsc); f.rotation.x = 0.42; } }
+    const onHead = (geo, mat) => { const m = put(head, geo, mat, 0, 0, 0.002); m.scale.set(hsc, 1, hsc); return m; };
+    if (gear === 'turban') { const cm = clothMat(gc ?? 0xb02a22, true); onHead(hatGeo('turban'), cm).rotation.x = -0.12; const k = put(head, knotGeo(), cm, -0.05, 0.15, -0.105); k.rotation.set(0.3, 0, 0.2); }
+    else if (gear === 'thorthu') { const cm = clothMat(gc ?? 0xe7dfc8, true); onHead(hatGeo('thorthu'), cm).rotation.x = -0.12; const k = put(head, knotGeo(), cm, 0.05, 0.17, -0.1); k.rotation.set(0.35, 0, -0.25); }
+    else if (gear === 'cap') onHead(hatGeo('cap'), clothMat(gc ?? 0xf0ece0));
+    else if (gear === 'topi') { onHead(hatGeo('topi'), feltMat(gc ?? 0xd8cfb4, 0.85)).scale.z *= 1.12; onHead(bandGeo(0.102, 0.162, 0.022), feltMat(0x6a5a3a, 0.8)); }
+    else if (gear === 'tophat') { onHead(hatGeo('tophat'), feltMat(gc ?? 0x18161a, 0.42)); onHead(bandGeo(0.0815, 0.2, 0.03), feltMat(0x3a3440, 0.5)); }
+    else if (gear === 'slouch') { onHead(hatGeo('slouch'), feltMat(gc ?? 0x4a3d2c, 0.85)).rotation.z = 0.08; onHead(bandGeo(0.0935, 0.178, 0.018), feltMat(0x2a2218, 0.7)); }
+    else if (gear === 'fez') onHead(hatGeo('fez'), feltMat(gc ?? 0x8a1c1c, 0.8));
+    if (o.tuft) { const t = put(head, bunGeo(), hairM, 0, 0.205, 0.066); t.scale.setScalar(0.6); t.rotation.x = 1.2; }            // the Namboothiri's forelock
     if (o.braid) {
       const br = new THREE.Group(); br.position.set(0, 0.3, -0.1); chest.add(br);
-      for (let i = 0; i < 9; i++) addMesh(br, G_SPH, hairM, Math.sin(i * 1.9) * 0.006, -i * 0.052, -0.012 - Math.sin(i * 0.4) * 0.012, 0.026 - i * 0.0012, 0.036, 0.024);
-      addMesh(hd, G_SPH, hairM, 0, -0.06, -0.1, 0.05, 0.06, 0.04);
-      if (o.flowers) for (let i = 0; i < 3; i++) addMesh(br, G_TORUS, AM(0xf6f2e6, 0.9), 0, 0.02 - i * 0.075, -0.018, 0.03, 0.03, 0.022).rotation.x = Math.PI / 2;
+      put(br, braidGeo(), hairM);
+      const kn = put(head, bunGeo(), hairM, 0, 0.07, -0.1 * hsc); kn.rotation.x = -0.6; kn.scale.set(1.1, 1.3, 0.9);
+      if (o.flowers) for (let i = 0; i < 3; i++) put(br, new THREE.TorusGeometry(0.03, 0.01, 6, 12), AM(0xf6f2e6, 0.9), 0, 0.02 - i * 0.075, -0.016).rotation.x = Math.PI / 2;
       this.dangles.push({ obj: br, k: 0.6, x: 0, z: 0, vx: 0, vz: 0 });
     }
-    if (o.bag != null) {
-      addMesh(this.hips, G_BOX, AM(o.bag, 0.95), 0.215, 0.0, 0.02, 0.07, 0.23, 0.2);
-      addMesh(this.hips, G_BOX, AM(shadeN(o.bag, 0.75), 0.95), 0.222, 0.075, 0.02, 0.072, 0.09, 0.205);
-    }
+    if (o.bag != null) put(this.hips, bagGeo(), clothMat(o.bag), 0.225, -0.01, 0.02);
     if (o.cape) {          // the woven palm-leaf rain cape of the monsoon
-      const cp = addMesh(chest, G_CAPE, leafMat(), 0, -0.2, -0.005, 1, 0.98, 1); cp.rotation.x = 0.07;
-      const hood = addMesh(hd, G_HOOD, leafMat(), 0, 0.085, -0.03, 1, 1, 1.12); hood.rotation.x = -0.32;
+      put(chest, capeGeo(), leafMat(), 0, -0.08, -0.005).rotation.x = 0.07;
+      put(head, hoodGeo(), leafMat(), 0, -0.05, -0.02).rotation.x = -0.2;
     }
-    if (o.basketHead) { addMesh(hd, G_BASKET, leafMat(), 0, 0.072, 0, 1); addMesh(hd, G_TORUS, AM(0x8a7a5a, 1), 0, 0.062, 0, 0.07, 0.07, 0.03).rotation.x = Math.PI / 2; }
-    if (o.earrings) for (const s of [-1, 1]) addMesh(hd, G_SPH, AM(0xd9a93a, 0.35, { metalness: 0.5 }), s * 0.081, -0.085, 0.0, 0.009);
-    if (o.necklace) { const n = addMesh(chest, G_TORUS, AM(0xd9a93a, 0.35, { metalness: 0.5 }), 0, 0.205, 0.022, 0.062, 0.062, 0.02); n.rotation.x = Math.PI / 2 - 0.5; }
-
+    if (o.basketHead) put(head, G_BASKET, leafMat(), 0, 0.236, 0);
+    if (o.earrings) for (const s of [-1, 1]) put(head, G_SPH, AM(0xd9a93a, 0.3, { metalness: 0.9 }), s * 0.079, 0.066, -0.006).scale.setScalar(0.009);
+    if (o.necklace) { const n = put(chest, new THREE.TorusGeometry(0.062, 0.006, 6, 20), AM(0xd9a93a, 0.3, { metalness: 0.9 }), 0, 0.205, 0.022); n.rotation.x = Math.PI / 2 - 0.5; }
   }
 
   // where the figure stands in the world this frame (lets the feet plant and the body lean)
@@ -597,7 +611,7 @@ export class Human {
     if (on && !this.umb) {
       const u = this.umb = new THREE.Group();
       const sh = new THREE.Mesh(G_CYL, AM(0x4a3a26, 0.9)); sh.scale.set(0.011, 0.74, 0.011); sh.position.set(0.185, 0.45, 0.22); sh.rotation.set(-0.27, 0, 0.18); u.add(sh);
-      const cn = new THREE.Mesh(G_CANOPY, leafMat()); cn.position.set(0.12, 0.84, 0.12); cn.castShadow = true; u.add(cn);
+      const cn = new THREE.Mesh(canopyGeo(), leafMat()); cn.position.set(0.12, 0.84, 0.12); cn.castShadow = true; u.add(cn);
       const tip = new THREE.Mesh(G_SPH, AM(0x4a3a26, 0.9)); tip.scale.setScalar(0.022); tip.position.set(0.12, 0.95, 0.12); u.add(tip);
       this.chest.add(u);
     }
@@ -610,6 +624,7 @@ export class Human {
     if (this.exprT > 0) { this.exprT -= dt; if (this.exprT <= 0) this.setExpression('neutral'); }
     const t = this.t, mo = this.talking && (Math.sin(t * 17) + Math.sin(t * 7.3)) > 0.15;
     if (mo !== this.mouthOpen) { this.mouthOpen = mo; this.refreshFace(); }
+    if (this.near && !this.relief) { this.relief = true; addRelief(this.look, this.res); }
     updateMotion(this, dt);
   }
 }

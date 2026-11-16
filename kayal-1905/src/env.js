@@ -173,6 +173,15 @@ export class Env {
     this.sky.renderOrder = -10;
     this.sky.onBeforeRender = (r, s, cam) => { this.sky.position.copy(cam.position); this.sky.updateMatrixWorld(); };
     scene.add(this.sky);
+    // image-based light: the sky itself, and the lit ground below the horizon, illuminate and
+    // reflect in every surface — this is what makes roughness and metal read as materials
+    this.pmrem = new THREE.PMREMGenerator(G.renderer);
+    this.envScene = new THREE.Scene();
+    const es = new THREE.Mesh(this.sky.geometry, this.sky.material); es.scale.setScalar(40); es.frustumCulled = false; this.envScene.add(es);
+    this.envGround = new THREE.Mesh(new THREE.SphereGeometry(39, 16, 8, 0, Math.PI * 2, Math.PI * 0.52, Math.PI * 0.48), new THREE.MeshBasicMaterial({ color: 0x2a2416, side: THREE.BackSide, fog: false }));
+    this.envScene.add(this.envGround);
+    this.envKey = -99; this.envRT = null;
+    scene.environmentIntensity = 0.6;
 
     // rain streaks
     {
@@ -265,7 +274,17 @@ export class Env {
     // apply
     this.sunI = sunI; this.hemiI = hemiI;
     this.sun.color.copy(c.sun); this.sun.intensity = sunI;
-    this.hemi.color.copy(c.hemi); this.hemi.intensity = hemiI * (1 + fl * 5);
+    this.hemi.color.copy(c.hemi); this.hemi.intensity = hemiI * 0.6 * (1 + fl * 5);
+    const ek = this.hour * 4 + this.rain * 6;
+    if (Math.abs(ek - this.envKey) > (G.quality === 'low' ? 2 : 0.8)) {
+      this.envKey = ek;
+      const sd = this.skyU.uSunDisc.value; this.skyU.uSunDisc.value = 0;
+      this.envGround.material.color.setRGB(0.3, 0.25, 0.16).multiply(new THREE.Color().copy(c.sun).multiplyScalar(sunI * 0.22).add(new THREE.Color().copy(c.hemi).multiplyScalar(hemiI * 0.35)));
+      const rt = this.pmrem.fromScene(this.envScene, 0.02, 1, 100);
+      this.skyU.uSunDisc.value = sd;
+      if (this.envRT) this.envRT.dispose();
+      this.envRT = rt; this.scene.environment = rt.texture;
+    }
     this.hemi.groundColor.copy(c.hemi).multiplyScalar(0.55).lerp(new THREE.Color(0.2, 0.15, 0.09), 0.35);
     this.scene.fog.color.copy(c.fog);
     this.scene.fog.density = fogD;

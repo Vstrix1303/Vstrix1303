@@ -32,14 +32,14 @@ function box(w, h, d) {
   if (!geoCache.has(k)) geoCache.set(k, new THREE.BoxGeometry(w, h, d));
   return geoCache.get(k);
 }
-function mesh(geo, mat, parent, x = 0, y = 0, z = 0) {
+export function mesh(geo, mat, parent, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
   m.castShadow = true;
   parent.add(m);
   return m;
 }
-function group(parent, x = 0, y = 0, z = 0) {
+export function group(parent, x = 0, y = 0, z = 0) {
   const g = new THREE.Group();
   g.position.set(x, y, z);
   parent.add(g);
@@ -99,285 +99,32 @@ export function makeLantern() {
   return g;
 }
 
-// =========================================================== QUADRUPEDS
-const QUAD = {
-  horse: { bodyY: 1.2, neck: [0, 0, 0.72, 0.82], neckAt: [0.2, 0.6], headRot: 1.0, legU: 0.5, legL: 0.5, legR: 0.062, legX: 0.17, legZ: [0.44, -0.46], hipY: -0.2, tailAt: [0.17, -0.72], top: 0.33, col: 0x5a3320, dark: 0x1c120c },
-  cow: { bodyY: 1.0, neck: [0, 0, 0.4, 1.2], neckAt: [0.12, 0.56], headRot: 0.6, legU: 0.36, legL: 0.36, legR: 0.07, legX: 0.2, legZ: [0.38, -0.42], hipY: -0.22, tailAt: [0.2, -0.64], top: 0.36, col: 0xd8d0c0, dark: 0x4a4038 },
-};
-const coatCache = new Map();
-function coatMaterial(col, dark) {
-  const k = col + '|' + dark;
-  if (coatCache.has(k)) return coatCache.get(k);
-  const c = document.createElement('canvas'); c.width = c.height = 256;
-  const g = c.getContext('2d'), hx = (v) => '#' + v.toString(16).padStart(6, '0');
-  g.fillStyle = hx(col); g.fillRect(0, 0, 256, 256);
-  // body: darker along the spine, paler under the belly, a soft dapple
-  let grd = g.createLinearGradient(0, 0, 256, 0);
-  grd.addColorStop(0, 'rgba(255,240,220,0.16)'); grd.addColorStop(0.3, 'rgba(0,0,0,0.05)'); grd.addColorStop(0.5, 'rgba(0,0,0,0.26)'); grd.addColorStop(0.7, 'rgba(0,0,0,0.05)'); grd.addColorStop(1, 'rgba(255,240,220,0.16)');
-  g.fillStyle = grd; g.fillRect(0, 0, 256, 128);
-  for (let i = 0; i < 160; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(255,235,210,0.05)' : 'rgba(0,0,0,0.06)'; g.beginPath(); g.arc(Math.random() * 256, Math.random() * 256, 3 + Math.random() * 10, 0, 7); g.fill(); }
-  // legs: shade toward the dark points
-  grd = g.createLinearGradient(0, 128, 0, 256);
-  grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, hx(dark));
-  g.fillStyle = grd; g.fillRect(128, 128, 64, 128);
-  g.fillStyle = hx(dark); g.fillRect(192, 128, 64, 128);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.72 });
-  coatCache.set(k, m);
-  return m;
-}
-export class Quadruped {
-  constructor(type = 'horse', o = {}) {
-    const d = QUAD[type], horse = type === 'horse';
-    const colHex = o.color ?? d.col, darkHex = o.dark ?? d.dark;
-    const mat = coatMaterial(colHex, darkHex), dark = M(darkHex, 0.8);
-    this.type = type;
-    this.root = new THREE.Group();
-    const body = this.body = group(this.root, 0, d.bodyY, 0);
-    const add = (parent, sgb, m = mat) => { const ms = new THREE.Mesh(sgb.build(false), m); ms.castShadow = true; parent.add(ms); return ms; };
-    const RB = [0, 0, 256, 128], RN = [0, 128, 128, 256], RL = [128, 128, 192, 256], RH = [192, 128, 256, 256];
-    // ---- barrel: croup, flank, girth, chest
-    const Bd = horse
-      ? [[-0.74, 0.06, 0.13, 0.17], [-0.6, 0.06, 0.26, 0.29], [-0.3, 0.01, 0.3, 0.31], [0.08, -0.02, 0.31, 0.325], [0.4, 0.0, 0.29, 0.335], [0.62, 0.05, 0.22, 0.3], [0.76, 0.08, 0.12, 0.18]]
-      : [[-0.66, 0.04, 0.14, 0.2], [-0.52, 0.04, 0.3, 0.32], [-0.2, -0.03, 0.36, 0.38], [0.12, -0.04, 0.36, 0.38], [0.4, 0.0, 0.31, 0.36], [0.56, 0.04, 0.22, 0.3], [0.66, 0.06, 0.12, 0.2]];
-    let g = new SGB(256);
-    g.loft(Bd.map(([z, cy, rx, ry], i) => ({ c: [0, cy, z], ax: [rx, 0, 0], az: [0, ry, 0], v: i / (Bd.length - 1) })), 14, RB, { capStart: 0.06, capEnd: 0.06 });
-    if (!horse && o.hump) g.loft([[0.26, 0.17], [0.38, 0.15], [0.47, 0.07]].map(([y, r], i) => ({ c: [0, y, 0.3], ax: [r, 0, 0], az: [0, 0, r * 1.25], v: i / 2 })), 10, RB, { capEnd: 0.03 });
-    if (!horse) g.loft([[-0.2, 0.05], [-0.36, 0.09], [-0.44, 0.03]].map(([y, r], i) => ({ c: [0, y, 0.5], ax: [r * 0.5, 0, 0], az: [0, 0, r * 1.6], v: i / 2 })), 8, RB, { capEnd: 0.02 });   // dewlap
-    add(body, g);
-    // ---- neck & head
-    const neck = this.neck = group(body, 0, d.neckAt[0], d.neckAt[1]);
-    neck.rotation.x = d.neck[3];
-    const Nk = horse ? [[-0.14, 0.15, 0.22], [0.2, 0.115, 0.17], [0.5, 0.09, 0.125], [0.72, 0.08, 0.105]] : [[-0.12, 0.17, 0.23], [0.15, 0.14, 0.19], [0.4, 0.12, 0.15]];
-    g = new SGB(256);
-    g.loft(Nk.map(([y, rx, rz], i) => ({ c: [0, y, 0], ax: [rx, 0, 0], az: [0, 0, rz], v: i / (Nk.length - 1) * 0.5 })), 10, RN, {});
-    add(neck, g);
-    const head = this.head = group(neck, 0, d.neck[2] - 0.04, 0);
-    head.rotation.x = d.headRot;
-    const Hd = horse ? [[-0.07, 0.07, 0.085], [0.05, 0.097, 0.118], [0.2, 0.076, 0.096], [0.36, 0.058, 0.07], [0.45, 0.056, 0.062]] : [[-0.06, 0.09, 0.1], [0.06, 0.122, 0.132], [0.2, 0.1, 0.106], [0.31, 0.088, 0.086]];
-    g = new SGB(256);
-    g.loft(Hd.map(([y, rx, rz], i) => ({ c: [0, y, 0.01], ax: [rx, 0, 0], az: [0, 0, rz], v: 0.5 + i / (Hd.length - 1) * 0.5 })), 10, RN, { capStart: 0.03, capEnd: 0.025 });
-    add(head, g);
-    const hl = Hd[Hd.length - 1][0];
-    mesh(sphere(0.012, 6, 4), M(0x0a0806, 0.2), head, -0.085, 0.07, -0.02); mesh(sphere(0.012, 6, 4), M(0x0a0806, 0.2), head, 0.085, 0.07, -0.02);
-    mesh(sphere(0.012, 5, 4), M(0x0a0806, 0.4), head, -0.03, hl, 0.02); mesh(sphere(0.012, 5, 4), M(0x0a0806, 0.4), head, 0.03, hl, 0.02);
-    for (const s of [-1, 1]) {
-      const ear = mesh(new THREE.ConeGeometry(0.035, 0.13, 5), dark, head, s * 0.06, -0.02, -0.09);
-      ear.rotation.x = -0.9; ear.rotation.z = s * -0.3;
-      if (!horse) { const horn = mesh(new THREE.ConeGeometry(0.026, 0.24, 5), M(0x3a3028, 0.5), head, s * 0.1, -0.02, -0.1); horn.rotation.x = -1.3; horn.rotation.z = s * -0.7; }
-    }
-    if (horse) {
-      // mane & forelock
-      g = new SGB(256);
-      g.loft(Nk.map(([y, rx, rz], i) => ({ c: [0, y + 0.03, -rz - 0.025], ax: [0.022, 0, 0], az: [0, 0, 0.075], v: i / 3 })), 6, RH, { capStart: 0.01, capEnd: 0.01 });
-      add(neck, g);
-      mesh(box(0.05, 0.13, 0.08), dark, head, 0, 0.0, -0.1);
-    }
-    // ---- tail
-    const tail = this.tail = group(body, 0, d.tailAt[0], d.tailAt[1]);
-    tail.rotation.x = 0.35;
-    g = new SGB(256);
-    const Tl = horse ? [[0, 0.04], [-0.2, 0.07], [-0.52, 0.078], [-0.8, 0.03]] : [[0, 0.026], [-0.45, 0.02], [-0.56, 0.05], [-0.68, 0.02]];
-    g.loft(Tl.map(([y, r], i) => ({ c: [0, y, 0], ax: [r, 0, 0], az: [0, 0, r], v: i / 3 })), 6, RH, { capStart: 0.01, capEnd: 0.03 });
-    add(tail, g);
-    // ---- legs
-    this.legs = [];
-    for (const z of d.legZ) for (const s of [-1, 1]) {
-      const hind = z < 0, r = d.legR;
-      const hp = group(body, s * d.legX, d.hipY, z);
-      g = new SGB(256);
-      g.loft([[0.1, 1.5, hind ? 2.3 : 1.8], [-d.legU * 0.45, 1.25, hind ? 1.7 : 1.4], [-d.legU, 0.82, 0.9]].map(([y, a, b], i) => ({ c: [0, y, 0], ax: [r * a, 0, 0], az: [0, 0, r * b], v: i / 2 * 0.5 })), 8, RL, { capStart: 0.02 });
-      add(hp, g);
-      const kn = group(hp, 0, -d.legU, 0);
-      g = new SGB(256);
-      g.loft([[0.03, 0.86], [-d.legL * 0.45, 0.6], [-d.legL * 0.84, 0.6], [-d.legL * 0.95, 0.8]].map(([y, a], i) => ({ c: [0, y, 0], ax: [r * a, 0, 0], az: [0, 0, r * a * 1.1], v: 0.5 + i / 3 * 0.5 })), 8, RL, {});
-      add(kn, g);
-      mesh(cyl(r * 0.95, r * 1.12, 0.09, 8), M(0x15100c, 0.5), kn, 0, -d.legL - 0.015, 0.005);
-      this.legs.push({ hp, kn, front: z > 0, side: s });
-    }
-    if (o.saddle) {
-      const top = d.top;
-      mesh(box(0.66, 0.035, 0.84), M(0x7a1f1c, 0.95), body, 0, top - 0.035, -0.02);
-      const sd = mesh(sphere(0.2, 10, 6), M(0x4a2a16, 0.6), body, 0, top + 0.005, -0.02); sd.scale.set(1.15, 0.38, 1.5);
-      mesh(sphere(0.07, 8, 6), M(0x4a2a16, 0.6), body, 0, top + 0.06, 0.26);
-      for (const sx of [-1, 1]) { mesh(box(0.02, 0.44, 0.03), M(0x2a1a10, 0.6), body, sx * 0.3, top - 0.28, 0.02); mesh(box(0.03, 0.04, 0.12), M(0x8a8a8a, 0.4), body, sx * 0.31, top - 0.5, 0.04); }
-      // bridle
-      mesh(box(0.2, 0.02, 0.24), M(0x2a1a10, 0.6), head, 0, 0.08, 0.01); mesh(box(0.17, 0.02, 0.19), M(0x2a1a10, 0.6), head, 0, 0.3, 0.01);
-    }
-    mergeStatic(this.root);
-    this.seatY = d.bodyY + d.top - 0.8;
-    this.baseY = d.bodyY;
-    this.phase = Math.random() * 6; this.t = Math.random() * 10; this.speed = 0;
-    this.graze = !!o.graze;
-  }
-  // Four gaits, each with its own footfall order: the four-beat walk, the
-  // two-beat trot on diagonal pairs, the rocking three-beat canter and the
-  // gallop with all feet off the ground — blended by speed.
-  update(dt) {
-    dt = Math.min(dt, 0.1);
-    this.t += dt;
-    const sp = this.speed, t = this.t, d = QUAD[this.type], horse = this.type === 'horse';
-    const LL = d.legU + d.legL, ss = (a, b, x) => { const u = clamp((x - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); };
-    const wT = ss(1.9, 2.7, sp), wC = ss(5.6, 6.8, sp), wG = ss(8.8, 10.2, sp), mix = (a, b, c, e) => lerp(lerp(lerp(a, b, wT), c, wC), e, wG);
-    const stride = mix(1.25 + 0.25 * sp, 2.0 + 0.2 * sp, 2.6 + 0.15 * sp, 3.2 + 0.2 * sp) * (horse ? 1 : 0.75);
-    const duty = mix(0.66, 0.46, 0.38, 0.28), moving = sp > 0.05;
-    if (moving) this.cyc = ((this.cyc || 0) + sp / stride * dt) % 1;
-    const cyc = this.cyc || 0, go = this.go = damp(this.go || 0, moving ? 1 : 0, 6, dt);
-    // how the body is being ridden: turning, speeding up, pulling up
-    const yaw = this.root.rotation.y, dy = Math.atan2(Math.sin(yaw - (this.pyaw ?? yaw)), Math.cos(yaw - (this.pyaw ?? yaw)));
-    this.turn = damp(this.turn || 0, clamp(dy / dt, -4, 4), 6, dt); this.pyaw = yaw;
-    this.acc = damp(this.acc || 0, clamp((sp - (this.psp ?? sp)) / dt, -12, 12), 5, dt); this.psp = sp;
-    const A = clamp(duty * stride / (2 * LL) * 0.9, 0.15, 0.72);
-    // resting a hind leg when standing about
-    const restSide = Math.sin(t * 0.11 + (this.seed || (this.seed = Math.random() * 9))) > 0 ? 1 : -1, rest = (1 - go) * (this.graze ? 0.5 : 1);
-    for (const l of this.legs) {
-      const off = l.front ? (l.side < 0 ? mix(0.25, 0.5, 0.3, 0.42) : mix(0.75, 1.0, 0.6, 0.55)) : (l.side < 0 ? 0 : mix(0.5, 0.5, 0.3, 0.12));
-      const p = (cyc + off) % 1;
-      let hip, knee;
-      if (p < duty) { const u = p / duty; hip = lerp(-A, A, u); knee = (l.front ? 0.04 : 0.16) * Math.sin(Math.PI * u) + (l.front ? 0 : 0.1 * wC); }
-      else {
-        const v = (p - duty) / (1 - duty), e = v * v * (3 - 2 * v);
-        hip = lerp(A, -A, e) - (l.front ? 0.12 : 0.05) * Math.sin(Math.PI * v) * (0.5 + wT * 0.5);
-        knee = (l.front ? mix(0.75, 1.25, 1.5, 1.6) : mix(0.55, 0.85, 1.1, 1.25)) * Math.sin(Math.PI * Math.pow(v, 0.8));
-      }
-      hip *= go; knee *= go;
-      if (!l.front && l.side === restSide) { hip += -0.1 * rest; knee += 0.34 * rest; }
-      l.hp.rotation.x = damp(l.hp.rotation.x, hip, 22, dt);
-      l.kn.rotation.x = damp(l.kn.rotation.x, knee, 22, dt);
-    }
-    const c2 = Math.cos(cyc * Math.PI * 2), s2 = Math.sin(cyc * Math.PI * 2), c4 = Math.cos(cyc * Math.PI * 4);
-    const breath = Math.sin(t * (1.1 + Math.min(sp, 10) * 0.35)) * 0.006;
-    const bob = go * mix(0.012 * c4, 0.035 * c4, 0.055 * Math.sin((cyc - 0.15) * Math.PI * 2), 0.075 * Math.sin((cyc - 0.15) * Math.PI * 2));
-    this.body.position.y = this.baseY + bob - 0.02 * rest;
-    this.body.scale.set(1 + breath * 1.6, 1 + breath, 1);
-    const rock = go * mix(0, 0.012 * s2, -0.065 * c2, -0.085 * c2);
-    this.body.rotation.x = damp(this.body.rotation.x, rock - clamp(this.acc * 0.012, -0.14, 0.1), 14, dt);
-    this.body.rotation.z = damp(this.body.rotation.z, go * mix(0.022 * s2, 0.008 * s2, 0, 0) + clamp(-this.turn * Math.min(sp, 12) * 0.014, -0.2, 0.2) + 0.03 * rest * restSide, 8, dt);
-    // tail: streams out at speed, swishes at rest, lags through turns
-    const sw = Math.max(0, Math.sin(t * 0.37 + (this.seed || 0)) - 0.55) * 2.2;
-    this.tail.rotation.x = damp(this.tail.rotation.x, 0.3 + 0.35 * wT + 0.55 * wC + 0.25 * wG + bob * 3, 6, dt);
-    this.tail.rotation.z = damp(this.tail.rotation.z, Math.sin(t * 6.5) * 0.45 * sw * (1 - go) + Math.sin(t * 1.3) * 0.12 + clamp(this.turn * 0.25, -0.6, 0.6) + go * 0.1 * s2, 8, dt);
-    // neck and head: nodding at the walk, reaching out at the gallop, tossing now and then
-    let neckT = d.neck[3] + go * mix(0.07 * c4, 0.025 * c4, 0.09 * Math.cos((cyc + 0.1) * Math.PI * 2) + 0.12, 0.11 * Math.cos((cyc + 0.1) * Math.PI * 2) + 0.3) - clamp(this.acc * 0.012, -0.12, 0.2);
-    const toss = Math.max(0, Math.sin(t * 0.23 + (this.seed || 0) * 3) - 0.93) * 14;
-    if (this.graze && sp < 0.05) neckT = d.neck[3] + 1.25 + Math.sin(t * 0.7) * 0.12;
-    else neckT += (1 - go) * (Math.sin(t * 0.31 + (this.seed || 0)) * 0.08 - toss * 0.22 * Math.abs(Math.sin(t * 9)));
-    this.neck.rotation.x = damp(this.neck.rotation.x, neckT, this.graze && sp < 0.05 ? 2.5 : 9, dt);
-    this.neck.rotation.z = damp(this.neck.rotation.z, clamp(-this.turn * 0.18, -0.35, 0.35) + (1 - go) * Math.sin(t * 0.19 + (this.seed || 0) * 2) * 0.12, 4, dt);
-    this.head.rotation.x = damp(this.head.rotation.x, d.headRot + go * mix(0.05 * c4, 0, -0.06 * c2, -0.08 * c2 - 0.12) + toss * 0.1, 8, dt);
-    this.wT = wT; this.wC = wC; this.wG = wG;
-  }
-}
+export { Quadruped, Elephant, Bird } from './animals.js';
 
-// =========================================================== ELEPHANT
-export class Elephant {
-  constructor(o = {}) {
-    const col = M(0x6b6661, 0.95), dark = M(0x57524e, 0.95);
-    this.root = new THREE.Group();
-    const s = o.scale ?? 1;
-    this.root.scale.setScalar(s);
-    const body = this.body = group(this.root, 0, 1.95, 0);
-    mesh(sphere(1, 14, 12), col, body).scale.set(0.86, 0.95, 1.4);
-    const head = this.head = group(body, 0, 0.35, 1.3);
-    mesh(sphere(0.56, 12, 10), col, head).scale.set(0.95, 1.1, 0.95);
-    mesh(sphere(0.3, 8, 6), col, head, -0.2, 0.42, -0.05); mesh(sphere(0.3, 8, 6), col, head, 0.2, 0.42, -0.05);
-    this.ears = [];
-    for (const sd of [-1, 1]) {
-      const eg = group(head, sd * 0.48, 0.12, -0.12);
-      const e = mesh(sphere(0.48, 10, 8), dark, eg, sd * 0.25, -0.05, -0.05); e.scale.set(0.9, 1.05, 0.12);
-      this.ears.push({ g: eg, s: sd });
-      const tusk = mesh(new THREE.ConeGeometry(0.06, 0.75, 6), M(0xe9e2cf, 0.4), head, sd * 0.22, -0.52, 0.42);
-      tusk.rotation.x = 2.2;
-    }
-    this.trunk = [];
-    let parent = group(head, 0, -0.25, 0.42);
-    parent.rotation.x = 0.25;
-    for (let i = 0; i < 7; i++) {
-      const r = 0.2 - i * 0.02;
-      mesh(cyl(r - 0.02, r, 0.3, 8), col, parent, 0, -0.15, 0);
-      this.trunk.push(parent);
-      parent = group(parent, 0, -0.28, 0);
-    }
-    this.legs = [];
-    for (const z of [0.82, -0.85]) for (const sd of [-1, 1]) {
-      const hp = group(body, sd * 0.48, -0.45, z);
-      mesh(cyl(0.25, 0.23, 1.5, 10), col, hp, 0, -0.75, 0);
-      mesh(cyl(0.25, 0.27, 0.1, 10), dark, hp, 0, -1.47, 0);
-      this.legs.push({ hp, front: z > 0, side: sd });
-    }
-    const tail = group(body, 0, 0.3, -1.38); tail.rotation.x = 0.2;
-    mesh(cyl(0.04, 0.02, 1.0, 5), dark, tail, 0, -0.5, 0);
-    if (o.caparison) {
-      const gold = new THREE.MeshStandardMaterial({ color: 0xd9a93a, roughness: 0.35, metalness: 0.5, emissive: 0x4a3008, emissiveIntensity: 0.6 });
-      const np = mesh(box(0.5, 0.9, 0.05), gold, head, 0, 0.1, 0.53); np.rotation.x = -0.28;
-      mesh(box(1.5, 0.05, 1.6), M(0x8a1f1c, 0.95), body, 0, 0.93, 0);
-    }
-    mergeStatic(this.root);
-    this.t = Math.random() * 10; this.phase = 0; this.speed = 0;
-  }
-  update(dt) {
-    this.t += dt; const t = this.t;
-    // an elephant ambles: each side's hind foot then fore foot, the great body rolling over them
-    const go = this.go = damp(this.go || 0, this.speed > 0.05 ? 1 : 0, 3, dt);
-    this.phase += dt * 1.25 * (this.speed > 0.05 ? 1 : 0);
-    const amp = 0.3 * go;
-    for (const l of this.legs) {
-      const ph = this.phase + (l.side > 0 ? 0 : Math.PI) + (l.front ? 1.2 : 0);
-      const sw = Math.sin(ph), lift = Math.max(0, Math.cos(ph));
-      l.hp.rotation.x = damp(l.hp.rotation.x, -sw * amp - lift * 0.08 * go, 8, dt);
-      l.hp.position.y = (l.baseY ?? (l.baseY = l.hp.position.y)) + lift * 0.09 * go;
-    }
-    this.body.position.y = (this.baseBodyY ?? (this.baseBodyY = this.body.position.y)) + Math.cos(this.phase * 2) * 0.03 * go + Math.sin(t * 0.9) * 0.008;
-    this.body.rotation.x = Math.sin(this.phase * 2 + 0.6) * 0.012 * go;
-    this.head.rotation.x = Math.sin(this.phase * 2 + 1.2) * 0.05 * go + Math.sin(t * 0.27) * 0.04;
-    this.trunk.forEach((g, i) => { g.rotation.x = (i === 0 ? 0.25 : 0.06) + Math.sin(t * 0.8 - i * 0.5) * 0.09 + (i > 3 ? 0.18 : 0); g.rotation.z = Math.sin(t * 0.55 - i * 0.4) * 0.08; });
-    for (const e of this.ears) e.g.rotation.y = e.s * (0.25 + Math.max(0, Math.sin(t * 1.9)) * 0.5);
-    this.body.rotation.z = Math.sin(this.phase) * 0.035 * this.go + Math.sin(t * 0.6) * 0.012;
-    this.head.rotation.y = Math.sin(t * 0.33) * 0.12 + Math.sin(this.phase) * 0.04 * this.go;
-  }
-}
-
-// =========================================================== BIRD (egret)
-export class Bird {
-  constructor() {
-    const w = M(0xf4f2ea, 0.8, { side: THREE.DoubleSide });
-    this.root = new THREE.Group();
-    const b = mesh(sphere(0.12, 6, 5), w, this.root); b.scale.set(0.7, 0.7, 2.2);
-    mesh(new THREE.ConeGeometry(0.02, 0.2, 4), M(0xd9a23a, 0.6), this.root, 0, 0, 0.36).rotation.x = Math.PI / 2;
-    this.wings = [];
-    for (const s of [-1, 1]) {
-      const g = group(this.root, s * 0.05, 0.03, 0.02);
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0.16, s * 0.75, 0, 0.02, 0, 0, -0.14, s * 0.75, 0, 0.02, s * 0.6, 0, -0.18, 0, 0, -0.14], 3));
-      geo.computeVertexNormals();
-      const m = new THREE.Mesh(geo, w); g.add(m);
-      this.wings.push({ g, s });
-    }
-    this.t = Math.random() * 10;
-  }
-  update(dt) {
-    this.t += dt;
-    // a few deep beats, then a glide on set wings
-    const burst = Math.sin(this.t * 0.9) > -0.25 ? 1 : 0;
-    this.flap = damp(this.flap ?? 1, burst, 4, dt);
-    const a = Math.sin(this.t * 7.5) * 0.75 * this.flap + 0.12 * (1 - this.flap);
-    for (const w of this.wings) w.g.rotation.z = w.s * a;
-    if (this.body) this.body.position.y = -Math.sin(this.t * 7.5) * 0.03 * this.flap;
-  }
-}
 
 // =========================================================== BOATS
 export function hullGeo(L, B, D, sheer = 0.5) {
-  const g = new GB(), st = 12;
+  // a round-bilged hull: 26 stations, a smooth U section, rails along the gunwales and posts at stem and stern
+  const g = new GB(), st = 26, K = 10, P = [];
+  const sec = (s) => ({ z: (s - 0.5) * L, beam: B * Math.pow(Math.sin(Math.PI * clamp(s * 0.94 + 0.03, 0, 1)), 0.75), up: sheer * Math.pow(Math.abs(s * 2 - 1), 2.4) });
+  const pt = (i, k) => { const { z, beam, up } = sec(i / st), a = -Math.PI / 2 + (k / K) * Math.PI, sn = Math.sin(a); return [beam * Math.sign(sn) * Math.pow(Math.abs(sn), 0.8), up * 0.75 + (D + up * 0.25) * (1 - Math.pow(Math.max(0, Math.cos(a)), 0.7)), z]; };
+  for (let i = 0; i <= st; i++) { P.push([]); for (let k = 0; k <= K; k++) P[i].push(pt(i, k)); }
   const rows = [];
   for (let i = 0; i <= st; i++) {
-    const s = i / st, z = (s - 0.5) * L;
-    const beam = B * Math.pow(Math.sin(Math.PI * clamp(s * 0.94 + 0.03, 0, 1)), 0.75);
-    const up = sheer * Math.pow(Math.abs(s * 2 - 1), 2.4);
-    const pts = [[-beam, D + up], [-beam * 0.72, D * 0.3 + up * 0.8], [0, up * 0.75], [beam * 0.72, D * 0.3 + up * 0.8], [beam, D + up]];
-    rows.push(pts.map(([x, y], k) => g.vert(x, y, z, x === 0 ? 0 : Math.sign(x) * 0.8, -0.6, 0, s * 3, k / 4 * 1.2)));
+    rows.push([]);
+    for (let k = 0; k <= K; k++) {
+      const p = P[i][k], a = P[Math.max(0, i - 1)][k], b = P[Math.min(st, i + 1)][k], c = P[i][Math.max(0, k - 1)], d = P[i][Math.min(K, k + 1)];
+      const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = d[0] - c[0], vy = d[1] - c[1], vz = d[2] - c[2];
+      let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+      if (nx * p[0] + ny * (p[1] - D) < 0) { nx = -nx; ny = -ny; nz = -nz; }
+      rows[i].push(g.vert(p[0], p[1], p[2], nx, ny, nz, (i / st) * 3, (k / K) * 1.2));
+    }
   }
-  for (let i = 0; i < st; i++) for (let k = 0; k < 4; k++) g.quad(rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]);
+  for (let i = 0; i < st; i++) for (let k = 0; k < K; k++) g.quad(rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]);
+  const rr = 0.03 * Math.sqrt(B / 0.62);
+  for (const k of [0, K]) g.tube((t) => { const i = t * st, i0 = Math.min(st - 1, Math.floor(i)), f = i - i0, a = P[i0][k], b = P[i0 + 1][k]; return [lerp(a[0], b[0], f), lerp(a[1], b[1], f) + rr * 0.3, lerp(a[2], b[2], f)]; }, () => rr, st, 6, L / 2, [0.8, 0.72, 0.62], 1);
+  for (const i of [0, st]) { const a = P[i][K / 2], t = P[i][0]; g.tube((u) => [0, lerp(a[1] - 0.02, t[1] + rr * 3.5, u), a[2] + (i ? 1 : -1) * rr * (0.5 + u)], (u) => rr * (1.6 - 0.6 * u), 4, 6, 1, [0.7, 0.62, 0.52], 1, true); }
   return g.build(false);
 }
 
@@ -391,6 +138,7 @@ export function makeVallam(o = {}) {
   root.add(hull);
   const plankM = M(0x6a5540, 0.8);
   for (const z of [-1.9, -0.6, 0.9, 2.0]) mesh(box(B * 1.7, 0.035, 0.2), plankM, root, 0, 0.2, z * L / 6.4);
+  for (let i = -4; i <= 4; i++) { const r = mesh(new THREE.TorusGeometry(B * 0.86, 0.018, 4, 10, Math.PI), plankM, root, 0, D * 0.62, i * L / 11); r.rotation.z = Math.PI; r.scale.set(Math.cos(i / 6.5), 1.0, 1); r.castShadow = false; }
   // inner floor so we never see water through the hull
   const fl = mesh(box(B * 1.2, 0.03, L * 0.8), M(0x3a2c20, 0.9), root, 0, -0.08, 0);
   fl.castShadow = false;
