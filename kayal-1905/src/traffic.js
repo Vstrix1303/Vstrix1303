@@ -74,6 +74,7 @@ class Traveller {
   despawn() { this.active = false; this.root.visible = false; }
   ground() { return groundAt(this.pos.x, this.pos.z, this.pos.y + 0.7); }
   sync() { this.root.position.copy(this.pos); this.root.rotation.y = this.yaw; }
+  shade(d) { const on = d < (G.shadowPeople || 30) + 10; if (this.shadowOn !== on) { this.shadowOn = on; this.root.traverse((m) => { if (m.isMesh) m.castShadow = on; }); } }
   // the end of this road: carry on along one that meets it, or turn back
   arrive() {
     const r = this.r, end = this.s >= r.total ? 1 : 0;
@@ -157,7 +158,7 @@ class Wagon extends Traveller {
     for (const w of this.wheels) w.rotation.x += ds / this.wheelR;
     if (d < 95) {
       for (const q of this.team) { q.speed = this.speed; q.update(dt); }
-      for (const h of this.crew) { h.speed = 0; h.lod = d > 42 ? 1 : 0; h.near = d < 12; h.update(dt); }
+      for (const h of this.crew) { h.speed = 0; h.lod = d > 25 ? 1 : 0; h.near = d < 8; h.tick(dt, d); }
     }
     const pl = G.player;
     if (pl.mode === 'foot' && d < 7) {
@@ -179,7 +180,7 @@ class Horseman extends Traveller {
     this.move(dt, pp, all);
     this.pos.y = damp(this.pos.y, this.ground(), 10, dt);
     this.sync();
-    if (d < 110) { this.q.speed = this.speed; this.q.update(dt); this.h.speed = this.speed; this.h.lod = d > 42 ? 1 : 0; this.h.near = d < 12; this.h.update(dt); }
+    if (d < 110) { this.q.speed = this.speed; this.q.update(dt); this.h.speed = this.speed; this.h.lod = d > 25 ? 1 : 0; this.h.near = d < 8; this.h.tick(dt, d); }
     const pl = G.player;
     if (pl.mode === 'foot' && d < 4) this.push(pl, this.pos.x, this.pos.z, 0.95);
   }
@@ -206,10 +207,10 @@ class Walker extends Traveller {
     this.metT -= dt;
     if (d < 3 && pl.speedNow < 5 && this.metT <= 0 && Math.random() < dt * 0.5) { this.metT = 40; bark(this.name, 'walker'); }
     h.state = this.scareT > 0 ? 'cower' : this.speed > 0.2 ? 'move' : 'idle'; h.speed = this.speed;
-    h.lod = d > 42 ? 1 : 0; h.near = d < 12;
+    h.lod = d > 25 ? 1 : 0; h.near = d < 8;
     h.setWorld(this.pos.x, this.pos.y, this.pos.z, this.yaw);
     if (d < 6.5) { this.gaze.x = pp.x; this.gaze.y = pp.y + 1.55; this.gaze.z = pp.z; h.gaze = this.gaze; } else h.gaze = null;
-    h.update(dt);
+    h.tick(dt, d);
   }
 }
 class CanalBoat extends Traveller {
@@ -230,7 +231,7 @@ class CanalBoat extends Traveller {
     this.move(dt, pp, all);
     this.root.position.set(this.pos.x, 0.03 + Math.sin(this.t * 1.3) * 0.025, this.pos.z);
     this.root.rotation.set(Math.sin(this.t * 0.9) * 0.015, this.yaw, Math.sin(this.t * 1.1) * 0.02, 'YXZ');
-    if (d < 110) { this.h.state = this.speed > 0.3 ? 'paddle' : 'boat'; this.h.lod = d > 42 ? 1 : 0; this.h.update(dt); }
+    if (d < 110) { this.h.state = this.speed > 0.3 ? 'paddle' : 'boat'; this.h.lod = d > 25 ? 1 : 0; this.h.tick(dt, d); }
   }
 }
 
@@ -298,6 +299,6 @@ export function setupTraffic(scene, W, mats) {
       let placed = 0;
       for (const t of list) { if (t.active) continue; if (place(t, pp, jumped)) placed++; if (!jumped && placed) break; }
     }
-    for (const t of list) if (t.active) t.update(dt, pp, list, Math.hypot(t.pos.x - pp.x, t.pos.z - pp.z));
+    for (const t of list) if (t.active) { const d = Math.hypot(t.pos.x - pp.x, t.pos.z - pp.z); t.update(dt, pp, list, d); t.shade(d); }
   });
 }

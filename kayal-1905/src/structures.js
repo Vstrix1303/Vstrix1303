@@ -1,6 +1,7 @@
 // The built world of 1905 Travancore: a backwater village, a temple, a
 // spice port with its Company compound and the hill-top Cutcherry.
 import * as THREE from 'three';
+import { G } from './state.js';
 import { Builder, makeMaterials } from './builder.js';
 import { GB, TRS } from './geo.js';
 import { LOC, getHeight, canalZ, ROADS } from './heightfield.js';
@@ -840,5 +841,14 @@ export function buildStructures(scene) {
   }
 
   const meshes = b.finish(scene, mats);
+  // far tiles are hidden outright (they are a few pixels across, and fogged)
+  const tiles = Object.values(meshes);
+  for (const m of tiles) (G.reflCull || (G.reflCull = [])).push(m);
+  let tt = 0;
+  G.updaters.push((dt) => {
+    tt -= dt; if (tt > 0) return; tt = 0.4;
+    const c = G.camera.position;
+    for (const m of tiles) { const bs = m.boundingSphere; const far = Math.hypot(bs.center.x - c.x, bs.center.z - c.z) - bs.radius > 650; m.userData.far = far; m.visible = !far; }
+  });
   return { yards: b.yards, keepClear: b.keepClear, marks: b.marks, lamps: b.lamps, smokes: b.smokes, bigTrees, mats, meshes };
 }

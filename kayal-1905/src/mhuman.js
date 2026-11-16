@@ -385,11 +385,12 @@ export function buildBody(h, o, key) {
   h.lodGeos = d.lods;
   const mat = clothingMaterial(o, d);
   const mesh = h.mesh = new THREE.SkinnedMesh(d.lods[0], mat);
-  mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+  // culled against a sphere that holds any pose (crouched, riding, fallen) rather than not culled at all
+  mesh.castShadow = true; mesh.receiveShadow = true; mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.85, 0), 1.75);
   h.root.add(mesh);
   h.root.updateMatrixWorld(true);
   mesh.bind(skel);
-  const extra = (geo, mt, shadow = true) => { const sm = new THREE.SkinnedMesh(geo, mt); sm.castShadow = shadow; sm.frustumCulled = false; h.root.add(sm); sm.bind(skel, mesh.bindMatrix); return sm; };
+  const extra = (geo, mt, shadow = true) => { const sm = new THREE.SkinnedMesh(geo, mt); sm.castShadow = shadow; sm.boundingSphere = mesh.boundingSphere; h.root.add(sm); sm.bind(skel, mesh.bindMatrix); return sm; };
   h.eyes = extra(d.eyes, eyeMaterial(), false);
   // the inside of the mouth (MakeHuman's lips are parted, with nothing behind them)
   { const Lm = m.landmarks, mi = new THREE.Mesh(MOUTH_GEO, MOUTH_MAT); mi.position.set(Lm.mouth[0] - B[4][0], Lm.mouth[1] - B[4][1] - 0.003, Lm.mouth[2] - B[4][2] - 0.034); mi.scale.set(0.021, 0.011, 0.016); bs[24].add(mi); }

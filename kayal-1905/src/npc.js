@@ -140,7 +140,7 @@ export class NPC {
     }
     const pl = G.player, pp = pl.worldPos(this._pp || (this._pp = new THREE.Vector3()));
     const dxp = pp.x - this.pos.x, dzp = pp.z - this.pos.z, dp = Math.hypot(dxp, dzp);
-    const vis = dp < 115;
+    const vis = dp < (G.viewPeople || 115);
     if (this.root.visible !== vis) this.root.visible = vis;
     if (!vis && !this.hostile && !this.follow) return;
     this.speed = 0;
@@ -248,10 +248,10 @@ export class NPC {
     }
     if (!this.fixedY) this.pos.y = damp(this.pos.y, groundAt(this.pos.x, this.pos.z, this.pos.y + 0.4), 14, dt);
     this.h.state = state; this.h.speed = this.speed;
-    this.h.lod = dp > 42 ? 1 : 0; this.h.near = dp < 12; this.h.staff = !!this.stick; this.h.grip = !!this.stick;
+    this.h.lod = dp > 25 ? 1 : 0; this.h.near = dp < 8; this.h.staff = !!this.stick; this.h.grip = !!this.stick;
     this.h.setWorld(this.pos.x, this.pos.y, this.pos.z, this.yaw);
     if (dp < 6.5 && !this.ko) { const g = this._gz || (this._gz = { x: 0, y: 0, z: 0 }); g.x = pp.x; g.y = pp.y + 1.55; g.z = pp.z; this.h.gaze = g; } else this.h.gaze = null;
-    this.h.update(dt);
+    this.h.tick(dt, dp);
     this.sync();
   }
   dispose() {

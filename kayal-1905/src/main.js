@@ -51,12 +51,17 @@ async function boot() {
   G.quality = pickQuality(renderer.getContext());
   if (G.integrated) {
     // integrated GPU: keep the look, drop what costs most — multisampling, reflection resolution, grass density
-    for (const k of ['medium', 'high', 'ultra']) QUALITY[k] = { ...QUALITY[k], msaa: 0, reflection: Math.min(QUALITY[k].reflection, 320), grass: Math.round(QUALITY[k].grass * 0.6), shadow: Math.min(QUALITY[k].shadow, 2048) };
+    for (const k of ['medium', 'high', 'ultra']) QUALITY[k] = { ...QUALITY[k], msaa: 0, reflection: Math.min(QUALITY[k].reflection, 256), grass: Math.round(QUALITY[k].grass * 0.55), shadow: Math.min(QUALITY[k].shadow, 1536) };
   }
   const q = QUALITY[G.quality];
+  // how far people are drawn, how far they cast shadows, how often the shadow map is redrawn
+  const light = G.integrated || G.quality === 'low' || G.quality === 'medium';
+  G.viewPeople = G.quality === 'low' ? 60 : G.integrated ? 70 : light ? 85 : 115;
+  G.shadowPeople = G.quality === 'low' ? 18 : light ? 28 : 45;
+  G.shadowEvery = light ? 2 : 1;
   const basePR = () => (G.quality === 'low' ? 0.75 * Math.min(devicePixelRatio || 1, 1) : G.quality === 'medium' ? Math.min(devicePixelRatio || 1, 1) : Math.min(devicePixelRatio || 1, 1.5));
-  let prScale = 1;
-  renderer.setPixelRatio(basePR());
+  let prScale = G.integrated ? 0.85 : 1, stage = 0, frameN = 0;
+  renderer.setPixelRatio(basePR() * prScale);
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -86,6 +91,16 @@ async function boot() {
   const mapUI = G.mapUI = new MapUI();
   const env = G.env, water = G.water;
 
+  // stage 1: no bloom, shadows every 3rd frame · 2: no water reflection, people nearer · 3: shadow casters only close by
+  const base = { view: G.viewPeople, shadowP: G.shadowPeople, every: G.shadowEvery };
+  const degrade = (st) => {
+    if (post.bloom) post.bloom.enabled = st < 1;
+    G.shadowEvery = st >= 1 ? Math.max(3, base.every) : base.every;
+    water.enabled = st < 2 && !!water.wantEnabled;
+    G.viewPeople = st >= 2 ? Math.min(base.view, 65) : base.view;
+    G.shadowPeople = st >= 3 ? Math.min(base.shadowP, 16) : base.shadowP;
+  };
+  G.perf = () => ({ prScale, stage });
   const resize = () => {
     renderer.setPixelRatio(basePR() * prScale);
     renderer.setSize(innerWidth, innerHeight);
@@ -296,11 +311,13 @@ async function boot() {
     u.uHurt.value = Math.max(ui.hurtV, G.started ? smoothstep(45, 5, player.health) * 0.6 : 0);
 
     camera.updateMatrixWorld();
-    renderer.shadowMap.autoUpdate = true;
-    const refl = water.renderReflection(renderer, camera);
-    if (refl) renderer.shadowMap.autoUpdate = false;
+    // the shadow map is drawn from the main camera (so people cast shadows), every frame or every other one
+    frameN++;
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = false;
+    water.renderReflection(renderer, camera);
+    renderer.shadowMap.needsUpdate = frameN % (G.shadowEvery || 1) === 0 || frameN < 3;
     post.render(dt);
-    renderer.shadowMap.autoUpdate = true;
     input.endFrame();
 
     // adaptive resolution keeps slow machines playable
@@ -309,9 +326,15 @@ async function boot() {
       if (fpsT > 2.5) {
         const fps = fpsN / fpsT; fpsT = 0; fpsN = 0;
         const old = prScale;
-        if (fpsEl) fpsEl.textContent = `${Math.round(fps)} fps · ${G.quality}${G.integrated ? ' (integrated GPU)' : ''} · ${Math.round(prScale * 100)}% resolution`;
-        if (fps < 27 && prScale > 0.5) prScale = Math.max(0.5, prScale * 0.85);
-        else if (fps > 56 && prScale < 1) prScale = Math.min(1, prScale * 1.08);
+        if (fpsEl) fpsEl.textContent = `${Math.round(fps)} fps · ${G.quality}${G.integrated ? ' (integrated GPU)' : ''} · ${Math.round(prScale * 100)}% resolution${stage ? ' · effects trimmed ' + stage : ''}`;
+        // aim for at least 40 frames a second: first lower the resolution, then trim the costliest effects
+        if (fps < 41) {
+          if (prScale > 0.6) prScale = Math.max(0.6, prScale * 0.88);
+          else if (stage < 3) degrade(++stage);
+        } else if (fps > 62) {
+          if (stage > 0 && prScale >= 0.75) degrade(--stage);
+          else if (prScale < 1) prScale = Math.min(1, prScale * 1.07);
+        }
         if (old !== prScale) resize();
       }
     }

@@ -5,6 +5,7 @@
 // is weighted to both thighs so it swings with the stride.
 import { TEX } from './textures.js';
 import * as THREE from 'three';
+import { G } from './state.js';
 import { SGB } from './geo.js';
 import { damp, clamp, lerp, makeRng } from './util.js';
 
@@ -572,7 +573,7 @@ export class Human {
     const bones = [hips, spine, chest, neck, head, A.cl, A.sh, A.el, A.hand, A.fing, Ar.cl, Ar.sh, Ar.el, Ar.hand, Ar.fing, Lg.hp, Lg.kn, Lg.ft, Lg.toe, Lr.hp, Lr.kn, Lr.ft, Lr.toe, this.hem];
 
     const mesh = this.mesh = new THREE.SkinnedMesh(bodyGeometry(o), makeTexture(look, this.res));
-    mesh.castShadow = true; mesh.frustumCulled = false;
+    mesh.castShadow = true; mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.85, 0), 1.75);
     this.root.add(mesh);
     this.root.updateMatrixWorld(true);
     mesh.bind(new THREE.Skeleton(bones));
@@ -645,6 +646,26 @@ export class Human {
     }
     if (this.umb) this.umb.visible = !!on;
     this.umbrella = !!on;
+  }
+  // far figures stop casting shadows (the shadow pass is the costliest thing a crowd adds)
+  setShadow(on) {
+    if (this.shadowOn === on) return;
+    this.shadowOn = on;
+    this.root.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) o.castShadow = on; });
+  }
+  // distance-aware update: near figures every frame; far ones a few times a second with the time saved up
+  tick(dt, d) {
+    this.setShadow(d < (G.shadowPeople || 30));
+    // eyes, mouth, jewellery, buttons: their own draw calls, invisible past a few metres
+    if (!this.tiny) { this.tiny = []; this.root.traverse((o) => { if (o.isMesh && !o.isSkinnedMesh && o.geometry) { if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); const sc = o.scale.x * (this.S || 1); if (o.geometry.boundingSphere.radius * sc < 0.07) this.tiny.push(o); } }); if (this.eyes) this.tiny.push(this.eyes); this.tinyOn = true; }
+    const tinyOn = d < 22;
+    if (tinyOn !== this.tinyOn) { this.tinyOn = tinyOn; for (const o of this.tiny) o.visible = tinyOn; }
+    const every = d < 40 ? 1 : d < 70 ? 2 : 4;
+    this._acc = (this._acc || 0) + dt;
+    this._n = ((this._n || 0) + 1) % every;
+    if (this._n && every > 1) return;
+    const step = Math.min(this._acc, 0.2); this._acc = 0;
+    this.update(step);
   }
   hold(obj, right = true) { (this.handAnchor[right ? 1 : 0] || (right ? this.armR : this.armL).hand).add(obj); return obj; }
 

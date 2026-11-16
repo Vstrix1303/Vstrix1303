@@ -47,7 +47,9 @@ class Wanderer {
         }
       }
     }
-    this.o.update(dt);
+    this._acc = (this._acc || 0) + dt; this._n = ((this._n || 0) + 1) % (d < 40 ? 1 : d < 90 ? 2 : 4);
+    if (!this._n) { this.o.update(Math.min(this._acc, 0.2)); this._acc = 0; }
+    if (this.shadowD !== d < (G.shadowPeople || 30)) { this.shadowD = d < (G.shadowPeople || 30); this.o.root.traverse((m) => { if (m.isMesh) m.castShadow = this.shadowD; }); }
     this.sync();
   }
 }
@@ -62,7 +64,7 @@ function buildLamps(scene, lamps) {
   pts.frustumCulled = false; pts.layers.set(1);
   scene.add(pts);
   const strong = lamps.filter((l) => l.light);
-  const n = G.quality === 'low' ? 2 : G.quality === 'medium' ? 4 : 6;
+  const n = G.quality === 'low' ? 2 : G.integrated ? 2 : G.quality === 'medium' ? 4 : 6;
   const pool = [];
   for (let i = 0; i < n; i++) { const pl = new THREE.PointLight(0xffa350, 0, 26, 1.6); scene.add(pl); pool.push(pl); }
   let timer = 0;

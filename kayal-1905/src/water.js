@@ -76,7 +76,7 @@ void main(){
 export class Water {
   constructor(scene, env) {
     const q = QUALITY[G.quality];
-    this.enabled = q.reflection > 0;
+    this.enabled = this.wantEnabled = q.reflection > 0;
     this.scene = scene;
     this.rt = this.enabled ? new THREE.WebGLRenderTarget(q.reflection, q.reflection, { type: THREE.HalfFloatType }) : null;
     this.mirrorCam = new THREE.PerspectiveCamera();
@@ -123,7 +123,7 @@ export class Water {
   }
 
   renderReflection(renderer, camera) {
-    if (!this.enabled) return false;
+    if (!this.enabled) { this.u.uRefl.value = 0; return false; }
     if (!this.waterInView(camera)) { this.u.uRefl.value = 0; return false; }
     this.u.uRefl.value = 1;
     const cam = this.mirrorCam;
@@ -165,7 +165,7 @@ export class Water {
     renderer.render(this.scene, cam);
     renderer.setRenderTarget(prev);
     this.mesh.visible = true;
-    for (let i = 0; i < cull.length; i++) cull[i].visible = true;
+    for (let i = 0; i < cull.length; i++) cull[i].visible = !cull[i].userData.far;
     return true;
   }
 }

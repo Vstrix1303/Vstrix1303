@@ -47,6 +47,7 @@ function baseMaterials(std) {
   };
 }
 
+const TILE = 150;
 export class Builder {
   constructor() {
     this.g = {};
@@ -54,7 +55,9 @@ export class Builder {
     this.ox = 0; this.oy = 0; this.oz = 0; this.ry = 0;
     this.yards = []; this.keepClear = []; this.marks = []; this.lamps = []; this.smokes = [];
   }
-  gb(mat) { return this.g[mat] || (this.g[mat] = new GB()); }
+  // geometry is merged per material *per 150 m tile*, so whatever is off-screen or outside the
+  // shadow camera is skipped instead of the whole world being drawn every pass
+  gb(mat) { const k = mat + '@' + Math.floor(this.ox / TILE) + ',' + Math.floor(this.oz / TILE); return this.g[k] || (this.g[k] = new GB()); }
   place(x, z, ry = 0, y = null) {
     this.ox = x; this.oz = z; this.ry = ry; this.oy = y ?? getHeight(x, z);
     this.m = TRS(x, this.oy, z, 0, ry, 0);
@@ -177,8 +180,10 @@ export class Builder {
   finish(scene, mats) {
     const out = {};
     for (const k in this.g) {
-      const mesh = new THREE.Mesh(this.g[k].build(), mats[k]);
-      mesh.castShadow = k !== 'net' && k !== 'leaf';
+      const mat = k.split('@')[0];
+      const mesh = new THREE.Mesh(this.g[k].build(), mats[mat]);
+      mesh.castShadow = mat !== 'net' && mat !== 'leaf';
+      mesh.boundingSphere = mesh.geometry.boundingSphere;          // world space: the reflection pass culls by it
       mesh.receiveShadow = true;
       mesh.matrixAutoUpdate = false;
       scene.add(mesh);

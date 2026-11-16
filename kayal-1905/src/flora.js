@@ -31,13 +31,15 @@ function foliageMaterial(map, sway, alphaTest = 0.35) {
 }
 
 // ---------------------------------------------------------------- palms
+// a full and a light build of the same plant: same seed, so the light one has the same silhouette
+const twin = (fn, rng, o) => { const seed = (rng() * 1e9) | 0, hi = fn(makeRng(seed), o), lo = fn(makeRng(seed), { ...o, lo: true }); return { ...hi, lo }; };
 function palmGeo(rng, o) {
   const trunk = new GB(), fr = new GB();
   const H = o.height, ld = o.leanDir ?? rng() * TAU, lean = o.lean;
   const lx = Math.cos(ld) * lean, lz = Math.sin(ld) * lean;
   const path = (t) => [lx * t * t, H * t, lz * t * t];
   const tc = o.trunkCol || [1, 1, 1];
-  trunk.tube(path, (t) => o.trunkR * (1 + 0.8 * Math.pow(1 - smoothstep(0, 0.12, t), 2) + 0.35 * smoothstep(0.93, 1, t)) * (1 - 0.32 * t), 12, 9, H / 1.6, tc, 2);
+  trunk.tube(path, (t) => o.trunkR * (1 + 0.8 * Math.pow(1 - smoothstep(0, 0.12, t), 2) + 0.35 * smoothstep(0.93, 1, t)) * (1 - 0.32 * t), o.lo ? 4 : 12, o.lo ? 5 : 9, H / 1.6, tc, 2);
   const T = path(1);
   // crown bulge
   const n = o.fronds;
@@ -47,7 +49,7 @@ function palmGeo(rng, o) {
     const pitch0 = lerp(1.3, -0.45, Math.pow(age, 0.85));
     const L = o.frondLen * (0.82 + rng() * 0.3);
     const droop = lerp(0.8, 1.5, rng());
-    const hw = o.frondW, seg = 8, fold = 0.5;
+    const hw = o.frondW, seg = o.lo ? 3 : 8, fold = 0.5;
     const side = [-Math.sin(az), 0, Math.cos(az)];
     let px = T[0], py = T[1] - 0.1, pz = T[2];
     const shade = 0.72 + 0.28 * (1 - age) + rng() * 0.1;
@@ -80,7 +82,8 @@ function palmGeo(rng, o) {
     for (let i = 0; i < o.nuts; i++) {
       const a = rng() * TAU, r = 0.24 + rng() * 0.1;
       const m = new THREE.Matrix4().makeTranslation(T[0] + Math.cos(a) * r, T[1] - 0.35 - rng() * 0.25, T[2] + Math.sin(a) * r);
-      trunk.add(ico, m, rng() > 0.5 ? [0.55, 0.75, 0.25] : [0.8, 0.62, 0.3], [0.05, 0.05]);
+      const nc = rng() > 0.5 ? [0.55, 0.75, 0.25] : [0.8, 0.62, 0.3];
+      if (!o.lo) trunk.add(ico, m, nc, [0.05, 0.05]);
     }
   }
   // pepper vine wrapped around the trunk
@@ -111,12 +114,12 @@ function treeGeo(rng, o) {
   const H = o.height, R = o.canopy;
   const bend = [(rng() - 0.5) * 1.2, (rng() - 0.5) * 1.2];
   const path = (t) => [bend[0] * t * t, H * t, bend[1] * t * t];
-  trunk.tube(path, (t) => o.trunkR * (1 + 1.2 * Math.pow(1 - smoothstep(0, 0.2, t), 2)) * (1 - 0.42 * t), 9, 9, H / 2.2, [1, 1, 1], 2);
+  trunk.tube(path, (t) => o.trunkR * (1 + 1.2 * Math.pow(1 - smoothstep(0, 0.2, t), 2)) * (1 - 0.42 * t), o.lo ? 4 : 9, o.lo ? 5 : 9, H / 2.2, [1, 1, 1], 2);
   const top = path(1), tufts = [];
   const limb = (s, dir, len, r, depth) => {
     const e = [s[0] + dir[0] * len, s[1] + dir[1] * len, s[2] + dir[2] * len], sag = len * 0.1;
     const p = (t) => [lerp(s[0], e[0], t), lerp(s[1], e[1], t) + Math.sin(t * Math.PI) * sag, lerp(s[2], e[2], t)];
-    trunk.tube(p, (t) => r * (1 - 0.55 * t), depth ? 3 : 5, depth ? 5 : 7, len / 1.5, [1, 1, 1], 1);
+    if (!o.lo || depth < 2) trunk.tube(p, (t) => r * (1 - 0.55 * t), o.lo ? (depth ? 1 : 2) : depth ? 3 : 5, o.lo ? 3 : depth ? 5 : 7, len / 1.5, [1, 1, 1], 1);
     if (depth < 2 && len > R * 0.32) {
       const n = depth === 0 ? 3 : 2;
       for (let i = 0; i < n; i++) {
@@ -186,22 +189,46 @@ function bananaGeo(rng) {
 
 // ---------------------------------------------------------------- instancing
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color();
-export function addInstanced(scene, geo, mat, list, { cast = true, receive = true, chunk = 200 } = {}) {
+// With a light geometry (lo), the chunks draw the light build and a separate pool holds the full build
+// for whatever stands within NEAR metres of the camera; the pool is refilled as the camera moves.
+const LODS = [], NEAR = 65;
+let lodHooked = false, lodX = 1e9, lodZ = 1e9, lodT = 0;
+const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+function updateLods() {
+  const c = G.camera.position;
+  if (Math.hypot(c.x - lodX, c.z - lodZ) < 5) return;
+  lodX = c.x; lodZ = c.z;
+  for (const L of LODS) {
+    let n = 0; const dirty = new Set();
+    for (const it of L.items) {
+      const want = Math.abs(it.x - c.x) < NEAR && Math.abs(it.z - c.z) < NEAR && Math.hypot(it.x - c.x, it.z - c.z) < NEAR && n < L.cap;
+      if (want) { L.near.setMatrixAt(n, it.m); if (it.tint) L.near.setColorAt(n, _c.setRGB(it.tint[0], it.tint[1], it.tint[2])); n++; }
+      if (want !== !!it.inNear) { it.inNear = want; it.im.setMatrixAt(it.i, want ? ZERO : it.m); dirty.add(it.im); }
+    }
+    for (const im of dirty) im.instanceMatrix.needsUpdate = true;
+    L.near.count = n; L.near.instanceMatrix.needsUpdate = true; if (L.near.instanceColor) L.near.instanceColor.needsUpdate = true;
+    L.near.visible = n > 0;
+    if (n) L.near.computeBoundingSphere();
+  }
+}
+export function addInstanced(scene, geo, mat, list, { cast = true, receive = true, chunk = 0, lo = null } = {}) {
+  chunk = chunk || (lo ? 400 : 200);
   const buckets = new Map();
   for (const it of list) {
     const k = Math.floor((it.x + 4000) / chunk) * 1000 + Math.floor((it.z + 4000) / chunk);
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k).push(it);
   }
-  const meshes = [];
+  const meshes = [], items = [];
   for (const arr of buckets.values()) {
-    const im = new THREE.InstancedMesh(geo, mat, arr.length);
+    const im = new THREE.InstancedMesh(lo || geo, mat, arr.length);
     arr.forEach((it, i) => {
       _e.set(it.rx || 0, it.ry || 0, it.rz || 0, 'YXZ');
       _q.setFromEuler(_e);
       const s = it.s ?? 1;
       _m4.compose(_v.set(it.x, it.y, it.z), _q, _s.set(s, it.sy ?? s, s));
       im.setMatrixAt(i, _m4);
+      if (lo) items.push({ x: it.x, z: it.z, m: _m4.clone(), tint: it.tint, im, i });
       if (it.tint) im.setColorAt(i, _c.setRGB(it.tint[0], it.tint[1], it.tint[2]));
     });
     im.instanceMatrix.needsUpdate = true;
@@ -212,6 +239,15 @@ export function addInstanced(scene, geo, mat, list, { cast = true, receive = tru
     scene.add(im);
     meshes.push(im);
     (G.reflCull || (G.reflCull = [])).push(im);
+  }
+  if (lo && items.length) {
+    const cap = Math.min(items.length, 260);
+    const near = new THREE.InstancedMesh(geo, mat, cap);
+    near.count = 0; near.visible = false; near.castShadow = cast; near.receiveShadow = receive; near.matrixAutoUpdate = false;
+    if (items.some((it) => it.tint)) near.setColorAt(0, _c.setRGB(1, 1, 1));
+    scene.add(near);
+    LODS.push({ items, near, cap });
+    if (!lodHooked) { lodHooked = true; G.updaters.push((dt) => { lodT -= dt; if (lodT > 0) return; lodT = 0.25; updateLods(); }); }
   }
   return meshes;
 }
@@ -323,11 +359,11 @@ export function buildFlora(scene, env, keepClear, bigTrees = []) {
 
   // --- coconut palms
   const variants = [
-    palmGeo(rng, { height: 10.5, lean: 1.4, trunkR: 0.2, fronds: 13, frondLen: 4.6, frondW: 0.8, nuts: 3 }),
-    palmGeo(rng, { height: 13.5, lean: 2.6, trunkR: 0.21, fronds: 14, frondLen: 4.9, frondW: 0.82, nuts: 4 }),
-    palmGeo(rng, { height: 8.5, lean: 0.8, trunkR: 0.19, fronds: 12, frondLen: 4.3, frondW: 0.78, nuts: 3 }),
+    twin(palmGeo, rng, { height: 10.5, lean: 1.4, trunkR: 0.2, fronds: 13, frondLen: 4.6, frondW: 0.8, nuts: 3 }),
+    twin(palmGeo, rng, { height: 13.5, lean: 2.6, trunkR: 0.21, fronds: 14, frondLen: 4.9, frondW: 0.82, nuts: 4 }),
+    twin(palmGeo, rng, { height: 8.5, lean: 0.8, trunkR: 0.19, fronds: 12, frondLen: 4.3, frondW: 0.78, nuts: 3 }),
   ];
-  const shoreVar = palmGeo(rng, { height: 11.5, lean: 4.6, leanDir: 0, trunkR: 0.2, fronds: 13, frondLen: 4.7, frondW: 0.8, nuts: 3 });
+  const shoreVar = twin(palmGeo, rng, { height: 11.5, lean: 4.6, leanDir: 0, trunkR: 0.2, fronds: 13, frondLen: 4.7, frondW: 0.8, nuts: 3 });
   const lists = [[], [], []], shoreList = [];
   const palmAt = (x, z, force = false) => {
     const h = getHeight(x, z);
@@ -362,15 +398,15 @@ export function buildFlora(scene, env, keepClear, bigTrees = []) {
   }
   for (let i = 0; i < 70; i++) palmAt(-181 + ((rng() * 9) | 0) * 46.5 + (rng() - 0.5), 231 + rng() * 270, true);
   variants.forEach((v, i) => {
-    addInstanced(scene, v.trunk, palmBark, lists[i]);
-    addInstanced(scene, v.fronds, frondMat, lists[i]);
+    addInstanced(scene, v.trunk, palmBark, lists[i], { lo: v.lo.trunk });
+    addInstanced(scene, v.fronds, frondMat, lists[i], { lo: v.lo.fronds });
   });
-  addInstanced(scene, shoreVar.trunk, palmBark, shoreList);
-  addInstanced(scene, shoreVar.fronds, frondMat, shoreList);
+  addInstanced(scene, shoreVar.trunk, palmBark, shoreList, { lo: shoreVar.lo.trunk });
+  addInstanced(scene, shoreVar.fronds, frondMat, shoreList, { lo: shoreVar.lo.fronds });
 
   // --- pepper garden: areca poles wrapped in vines
   {
-    const vine = palmGeo(rng, { height: 9, lean: 0.3, trunkR: 0.1, fronds: 9, frondLen: 2.1, frondW: 0.45, nuts: 0, vine: true, trunkCol: [0.75, 0.85, 0.7] });
+    const vine = twin(palmGeo, rng, { height: 9, lean: 0.3, trunkR: 0.1, fronds: 9, frondLen: 2.1, frondW: 0.45, nuts: 0, vine: true, trunkCol: [0.75, 0.85, 0.7] });
     const list = [];
     for (let gx = -6; gx <= 6; gx++) for (let gz = -6; gz <= 6; gz++) {
       const x = LOC.pepper.x + gx * 6.2 + (rng() - 0.5) * 1.6, z = LOC.pepper.z + gz * 6.2 + (rng() - 0.5) * 1.6;
@@ -378,19 +414,19 @@ export function buildFlora(scene, env, keepClear, bigTrees = []) {
       list.push({ x, y: getHeight(x, z) - 0.1, z, ry: rng() * TAU, s: 0.85 + rng() * 0.3 });
       addCircle(x, z, 0.2);
     }
-    addInstanced(scene, vine.trunk, palmBark, list);
-    addInstanced(scene, vine.fronds, frondMat, list);
+    addInstanced(scene, vine.trunk, palmBark, list, { lo: vine.lo.trunk });
+    addInstanced(scene, vine.fronds, frondMat, list, { lo: vine.lo.fronds });
   }
 
   // --- broadleaf trees
   // forest trees carry a moderate crown; the shade trees people live under are modelled in full
   const cf = G.quality === 'low' ? 1.3 : G.quality === 'medium' ? 1.9 : 2.5, cn = G.quality === 'low' ? 3 : G.quality === 'medium' ? 5 : 7;
   const tv = [
-    treeGeo(rng, { height: 5.2, canopy: 3.6, trunkR: 0.3, cards: Math.round(30 * cf), tint: [1, 1, 1] }),
-    treeGeo(rng, { height: 9.5, canopy: 4.4, trunkR: 0.36, cards: Math.round(33 * cf), tint: [0.92, 1, 0.9] }),
-    treeGeo(rng, { height: 13, canopy: 5.2, trunkR: 0.45, cards: Math.round(36 * cf), tint: [0.85, 0.95, 0.85], branches: 4 }),
-    treeGeo(rng, { height: 5.6, canopy: 4.0, trunkR: 0.34, cards: Math.round(30 * cn), tint: [1, 1, 1], branches: 4 }),
-    treeGeo(rng, { height: 9.5, canopy: 4.8, trunkR: 0.42, cards: Math.round(34 * cn), tint: [0.92, 1, 0.9], branches: 4 }),
+    twin(treeGeo, rng, { height: 5.2, canopy: 3.6, trunkR: 0.3, cards: Math.round(30 * cf), tint: [1, 1, 1] }),
+    twin(treeGeo, rng, { height: 9.5, canopy: 4.4, trunkR: 0.36, cards: Math.round(33 * cf), tint: [0.92, 1, 0.9] }),
+    twin(treeGeo, rng, { height: 13, canopy: 5.2, trunkR: 0.45, cards: Math.round(36 * cf), tint: [0.85, 0.95, 0.85], branches: 4 }),
+    twin(treeGeo, rng, { height: 5.6, canopy: 4.0, trunkR: 0.34, cards: Math.round(30 * cn), tint: [1, 1, 1], branches: 4 }),
+    twin(treeGeo, rng, { height: 9.5, canopy: 4.8, trunkR: 0.42, cards: Math.round(34 * cn), tint: [0.92, 1, 0.9], branches: 4 }),
   ];
   const tl = [[], [], [], [], []];
   const treeAt = (x, z, vi) => {
@@ -425,8 +461,8 @@ export function buildFlora(scene, env, keepClear, bigTrees = []) {
     addCircle(x, z, 0.5 * s);
   }
   tv.forEach((v, i) => {
-    addInstanced(scene, v.trunk, bark, tl[i]);
-    addInstanced(scene, v.leaves, leafMat, tl[i]);
+    addInstanced(scene, v.trunk, bark, tl[i], { lo: v.lo.trunk });
+    addInstanced(scene, v.leaves, leafMat, tl[i], { lo: v.lo.leaves });
   });
 
   // --- banana plants
