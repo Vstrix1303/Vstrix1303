@@ -7,7 +7,7 @@ export const Input = {
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
       this.keys.add(e.code); this.pressed.add(e.code);
-      if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].includes(e.code)) e.preventDefault();
+      if (['Space', 'ArrowUp', 'ArrowDown', 'Tab', 'F3'].includes(e.code)) e.preventDefault();
     });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());

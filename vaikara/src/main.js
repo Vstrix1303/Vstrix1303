@@ -7,6 +7,7 @@ import { Terrain, terrainMaterial } from './render/terrain.js';
 import { Sky } from './render/sky.js';
 import { Water } from './render/water.js';
 import { Post } from './render/post.js';
+import { Perf, detectGPU } from './render/perf.js';
 import { Vegetation } from './render/vegetation.js';
 import { Settlements } from './render/buildings/settlements.js';
 import { Props } from './render/props.js';
@@ -28,10 +29,10 @@ const params = new URLSearchParams(location.search);
 const status = (t, p) => { $('status').textContent = t; if (p != null) $('bar').firstElementChild.style.width = `${Math.round(p * 100)}%`; };
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-function pickQuality() {
+function pickQuality(fallback = 'high') {
   let q = params.get('q');
   try { q = q || localStorage.getItem('vaikara.quality'); } catch { /* storage blocked */ }
-  if (!QUALITY_PRESETS[q]) q = 'high';
+  if (!QUALITY_PRESETS[q]) q = fallback;
   G.quality = q; G.Q = { ...QUALITY_PRESETS[q] };
   if (params.has('noshadow')) G.Q.shadows = false;
   if (params.has('nocsm')) G.Q.csm = false;
@@ -43,6 +44,10 @@ function pickQuality() {
     b.onclick = () => { try { localStorage.setItem('vaikara.quality', k); } catch { /* ignore */ } location.search = new URLSearchParams({ ...Object.fromEntries(params), q: k }).toString(); };
     box.appendChild(b);
   }
+  const note = document.createElement('div');
+  note.className = 'gpu';
+  note.textContent = G.gpu?.name ? `${G.gpu.integrated ? 'Integrated graphics' : 'Graphics'}: ${G.gpu.name}` : '';
+  box.after(note);
 }
 
 if (params.has('gpudebug') && window.GPUBuffer) { // log who destroys per-object GPU buffers
@@ -67,7 +72,8 @@ if (params.has('gpudebug') && window.GPUBuffer) { // log who destroys per-object
 }
 
 async function boot() {
-  pickQuality();
+  G.gpu = await detectGPU();
+  pickQuality(G.gpu.integrated ? 'laptop' : 'high');
   status('Reading the survey of 1905…', 0.02);
   const world = loadWorld(G.base, (p) => status('Reading the survey of 1905…', 0.02 + p * 0.38));
 
@@ -150,7 +156,7 @@ async function boot() {
   if (params.has('pause')) G.timeScale = 0;
   if (params.get('cam')) {
     const [x, y, z, yaw, pitch] = params.get('cam').split(',').map(Number);
-    fly.enable(true); fly.pos.set(x, y, z); fly.yaw = yaw || 0; fly.pitch = pitch || 0;
+    fly.enable(true); fly.pos.set(x, params.has('camg') ? getHeight(x, z) + y : y, z); fly.yaw = yaw || 0; fly.pitch = pitch || 0;
   }
 
   const lineup = [];
@@ -183,6 +189,20 @@ async function boot() {
   if (params.get('weather')) weather.set(params.get('weather'), true);
   ui.weather = weather;
   const post = new Post(renderer, scene, camera);
+  const perf = new Perf(renderer, scene);
+  // title-screen performance settings
+  {
+    const box = document.createElement('div'); box.id = 'perfOpts';
+    const mk = (label, on, fn) => { const b = document.createElement('button'); b.className = 'btn' + (on ? ' sel' : ''); b.textContent = label; b.onclick = () => { fn(); render(); }; return b; };
+    const render = () => {
+      box.innerHTML = '';
+      box.append(mk(`auto resolution: ${perf.auto ? 'on' : 'off'}`, perf.auto, () => { perf.auto = !perf.auto; if (!perf.auto) { perf.scale = perf.max; perf.apply(); G.lodScale = 1; } perf.save(); }));
+      for (const t of [30, 60]) box.append(mk(`${t} fps`, perf.target === t, () => { perf.target = t; perf.save(); }));
+    };
+    render();
+    $('qual').after(box);
+  }
+  terrain.group.userData.cat = 'terrain';
   G.focus.copy(fly.enabled ? fly.pos : player.pos);
   terrain.buildAll(G.focus);
   try { await renderer.compileAsync(scene, camera); } catch (e) { console.warn(e); }
@@ -224,9 +244,11 @@ async function boot() {
   const clock = new THREE.Timer();
   const _dir = new THREE.Vector3(); let glareS = 0;
   let frames = 0, fpsT = 0, fps = 0;
-  window.__vaikara = { THREE, humans, Input, data: { getHeight, waterLevelAt, W: WD }, G, weather, interact, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
+  window.__vaikara = { perf, THREE, humans, Input, data: { getHeight, waterLevelAt, W: WD }, G, weather, interact, sky, terrain, veg, player, fly, ui, villagers, traffic, frame: 0 };
   renderer.setAnimationLoop(() => {
-    clock.update(); const dt = Math.min(0.05, clock.getDelta());
+    clock.update(); const rawDt = clock.getDelta(), dt = Math.min(0.05, rawDt);
+    perf.frame(rawDt);
+    if (Input.hit('F3')) { $('perf').classList.toggle('hidden'); $('stats').classList.toggle('hidden'); }
     G.dt = dt; G.time += dt; U.time.value = G.time;
     ui.update(dt);
     if (fly.enabled) fly.update(dt); else { player.update(dt); interact.update(); }
@@ -263,6 +285,9 @@ async function boot() {
       let rows = [];
       scene.traverse((o) => { if (o.isMesh && o.visible) { const g = o.geometry; const t = (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); if (t > 2e5) rows.push(`${o.name || o.material?.type || '?'}:${o.isInstancedMesh ? o.count + 'x' : ''}${(t / 1e6).toFixed(2)}M`); } });
       console.info('[vaikara] heavy', rows.join(' | '));
+      const cats = {}; scene.traverseVisible((o) => { if (!o.isMesh) return; const c = o.userData.cat || o.parent?.userData.cat || 'other'; const g = o.geometry; cats[c] = (cats[c] || 0) + (g.index ? g.index.count : g.attributes.position?.count || 0) / 3 * (o.isInstancedMesh ? o.count : 1); });
+      let meshes = 0; scene.traverseVisible((o) => { if (o.isMesh) meshes++; });
+      console.info('[vaikara] cats', JSON.stringify(Object.fromEntries(Object.entries(cats).map(([k, v]) => [k, +(v / 1e6).toFixed(2)]))), 'visibleMeshes', meshes);
     }
     if (fpsT > 0.5) { fps = frames / fpsT; frames = 0; fpsT = 0; ui.stats(fps, renderer.info, villagers.count); }
   });

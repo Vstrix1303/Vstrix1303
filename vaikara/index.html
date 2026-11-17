@@ -46,6 +46,9 @@ body.nohud #hud{opacity:0}
 #help{position:absolute;right:22px;top:20px;font-size:12px;line-height:1.75;background:var(--panel);border:1px solid var(--line);padding:10px 14px;pointer-events:auto}
 #help kbd{display:inline-block;min-width:22px;text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:11px;border:1px solid var(--line);padding:0 4px;margin-right:6px;color:var(--gold)}
 #help.min .full{display:none}
+#perf{position:absolute;left:22px;top:20px;font:11px/1.55 ui-monospace,Menlo,monospace;background:rgba(10,8,6,.7);border:1px solid rgba(239,226,196,.25);padding:8px 10px;white-space:pre;max-width:min(560px,90vw)}
+#perfOpts{margin-top:8px;display:flex;gap:6px;opacity:.85}
+.gpu{margin-top:8px;font-size:12px;opacity:.55;font-style:italic}
 #stats{position:absolute;left:22px;top:20px;font:11px/1.5 ui-monospace,Menlo,monospace;opacity:.7;text-shadow:0 1px 3px #000;white-space:pre}
 #stam{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:180px;height:4px;background:rgba(239,226,196,.15);opacity:0;transition:opacity .5s}
 #stam.on{opacity:1}
@@ -80,6 +83,7 @@ body.fly #crosshair{opacity:1}
   <div id="where"><span id="whereName">Vaikara</span><small id="whereSub">Malabar Coast</small></div>
   <div id="clock"><span id="clockTime">07:12</span><small id="clockHint">[ ] change hour</small></div>
   <div id="stats"></div>
+  <div id="perf" class="hidden"></div>
   <div id="prompt"></div>
   <div id="stam"><i></i></div>
   <div id="crosshair"></div>
@@ -95,7 +99,7 @@ body.fly #crosshair{opacity:1}
       <div><kbd>[ ]</kbd>time of day · <kbd>P</kbd> pause time</div>
       <div><kbd>R</kbd>change the weather</div>
       <div><kbd>E</kbd>board / leave a canoe</div>
-      <div><kbd>G</kbd>graphics preset</div>
+      <div><kbd>G</kbd>graphics preset · <kbd>F3</kbd> performance</div>
       <div><kbd>U</kbd>hide HUD · <kbd>Esc</kbd> release mouse</div>
     </div>
   </div>

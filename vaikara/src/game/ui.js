@@ -140,7 +140,7 @@ export class UI {
     if (Input.hit('KeyP')) G.timeScale = G.timeScale ? 0 : 1 / 40;
     if (Input.hit('KeyR') && this.weather) { this.weather.cycle(); this.toast?.(`Weather: ${this.weather.state}`); }
     if (Input.hit('KeyG')) {
-      const order = ['low', 'medium', 'high', 'ultra'];
+      const order = ['low', 'laptop', 'medium', 'high', 'ultra'];
       const next = order[(order.indexOf(G.quality) + 1) % order.length];
       try { localStorage.setItem('vaikara.quality', next); } catch { /* ignore */ }
       const q = new URLSearchParams(location.search); q.set('q', next); location.search = q.toString();

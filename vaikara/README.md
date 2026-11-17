@@ -46,13 +46,29 @@ WebGPU needs a recent Chrome/Edge (or Safari 26+). Other browsers use the WebGL2
 | `T` | Travel list: all 31 named places |
 | `F` | Free-fly camera (`Space`/`C` up/down, wheel = speed, `Shift` = fast) |
 | `[` `]` | Change the hour · `P` pause/resume time |
-| `G` | Cycle graphics preset (Low / Medium / High / Ultra) |
+| `G` | Cycle graphics preset (Low / Laptop / Medium / High / Ultra) |
+| `F3` | Performance overlay (fps, render scale, LOD level, triangles per category) |
 | `H` | Help · `U` hide HUD |
 
 Running and fast swimming use stamina (the bar at the bottom). The game autosaves every 10 s; the title screen offers **Continue**.
 
 URL options for testing: `?at=vellar_falls` (start at a place), `?hour=18.2`, `?weather=storm`, `?q=ultra`, `?webgl` (force WebGL2),
-`?cam=x,y,z,yaw,pitch` (start in fly-cam), `?board` (start in the nearest canoe).
+`?cam=x,y,z,yaw,pitch` (start in fly-cam; add `&camg` to make `y` a height above the ground), `?board` (start in the nearest canoe),
+`?audit` (log any building or wall whose footing doesn't reach the ground), `?perfsim=40` (pretend every frame takes 40 ms, to test auto resolution).
+
+### Performance
+
+- **Presets**: on first launch the game reads the GPU name. Integrated graphics (Intel UHD/Iris/Xe, AMD Radeon Graphics,
+  Apple) start on **Laptop**, everything else on **High**. Change it on the title screen or with `G` (the choice is remembered).
+- **Auto resolution** (on by default, title screen): if the frame rate stays under the target (60 or 30 fps) the render
+  resolution drops in 10% steps down to 50%. If it's still too slow at 50%, the LOD distances shrink (down to 70%).
+  When there is headroom it climbs back the same way.
+- **Levels of detail (LOD)**: distant things use cheaper versions of themselves.
+  - Trees: full mesh near, a lighter mesh (half the fronds or cards) in the middle distance, and a flat impostor far away. Impostors are grouped in 1 km cells, so the ones behind you are skipped.
+  - Buildings: split into 250 m cells. Small parts (windows, posts, lamps, awnings) are only drawn within ~350 m, and only nearby buildings cast shadows.
+  - Terrain: chunks beyond ~500 m use a cheap material (no texture lookups, hill shadows worked out per vertex).
+  - People: animated every frame within 25 m, 10 times a second beyond that, and capsules beyond 60 m.
+- `F3` shows what the frame costs. Please report its numbers if something runs slowly.
 
 ## What's on the map
 
@@ -100,9 +116,10 @@ houses (two rooms, a cot, a chest, a lamp).
 | Terrain | `src/render/terrain.js` | Chunked LOD (2 m → 32 m) with skirts; 8-layer height-blended PBR splat (real CC0 textures), triplanar cliffs, macro variation, biome tint, wet shorelines; the map is mirrored past its edges so the horizon continues |
 | Water | `src/render/water.js` | Camera-centred radial grid; Gerstner swell in the open sea that dies away in the sheltered lagoon; depth colour, shore foam, whitecaps, sky reflections; a flowing ribbon for the Vellar stream and falls |
 | Sky & light | `src/render/sky.js` | Physical sky with clouds, day/night cycle (sunset over the Arabian Sea), moon, stars, cascaded shadow maps, sky-baked image-based light, distance haze and dawn mist |
+| Performance | `src/render/perf.js` | GPU detection, auto resolution, LOD scaling, `F3` overlay |
 | Post | `src/render/post.js` | GTAO ambient occlusion, bloom, ACES tone mapping, colour grade, vignette, FXAA |
 | Flora | `src/render/trees.js`, `vegetation.js` | Procedural species with wind sway; full meshes near the camera, impostors (rendered from the real trees at load) far away, handed over per instance on the GPU |
-| Buildings | `src/render/buildings/` | A kit of primitives (Kerala hip-and-gable roofs, arcades, domes, towers, stairs) merged into a few static meshes; every landmark has its own builder. Settlements are planned, not scattered: bazaar terraces only near the square, walled compounds every 40–70 m along lanes, fishing huts clustered on the shore facing the water, farmhouses on the paddy edge (~185 buildings in all) |
+| Buildings | `src/render/buildings/` | A kit of primitives (Kerala hip-and-gable roofs, arcades, domes, towers, stairs) merged per 250 m cell and detail level; walls are cut into ≤3 m pieces that each follow the ground, with foundations below; bazaar terraces step with the street; every landmark has its own builder. Settlements are planned, not scattered: bazaar terraces only near the square, walled compounds every 40–70 m along lanes, fishing huts clustered on the shore facing the water, farmhouses on the paddy edge (~185 buildings in all) |
 | Props | `src/render/props.js` | Boats, sailing ships, fishing nets, rocks, cannons, train, logs, elephants, birds |
 | Player | `src/game/player.js`, `interact.js` | Placeholder Xbot mannequin (three.js examples) with idle/walk/run blending, collisions, decks (bridge, jetties, ghat), wading and swimming (sea and the Vellar stream), stamina, canoe paddling |
 | Villagers | `src/game/npcs.js` | Pooled Xbot clones tinted by role; full skinned bodies near, instanced capsules far; routes from the road network |
