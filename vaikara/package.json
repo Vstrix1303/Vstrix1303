@@ -1,0 +1,87 @@
+{
+  "name": "vaikara",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VAIKARA - Malabar Coast, circa 1905. An open-world map built in three.js (WebGPU).",
+  "type": "module",
+  "scripts": {
+    "fetch-assets": "node scripts/fetch-assets.mjs",
+    "bake": "node scripts/bake.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "app": "vite build && electron .",
+    "app:dev": "electron . --dev",
+    "dist": "vite build && electron-builder",
+    "dist:win": "vite build && electron-builder --win",
+    "dist:mac": "vite build && electron-builder --mac",
+    "dist:linux": "vite build && electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^39.8.10",
+    "electron-builder": "^26.18.0",
+    "pngjs": "^7.0.0",
+    "sharp": "^0.35.5",
+    "vite": "^8.3.8",
+    "three": "^0.186.1"
+  },
+  "main": "desktop/main.cjs",
+  "author": "Varun Vattekat",
+  "homepage": "https://github.com/Vstrix1303/Vstrix1303",
+  "build": {
+    "appId": "com.vstrix.vaikara",
+    "productName": "Vaikara",
+    "copyright": "Vaikara — Malabar Coast, 1905",
+    "directories": {
+      "output": "release",
+      "buildResources": "desktop"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "compression": "normal",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "desktop/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Vaikara"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.games",
+      "icon": "desktop/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game",
+      "icon": "desktop/icon.png"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vstrix1303/Vstrix1303.git"
+  }
+}

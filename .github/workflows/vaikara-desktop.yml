@@ -1,0 +1,45 @@
+name: Vaikara desktop builds
+
+# Builds the Vaikara desktop app for Windows, macOS and Linux.
+# Download the installers from the run's "Artifacts" section.
+on:
+  workflow_dispatch:
+  push:
+    paths: ['vaikara/**']
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+          - os: macos-latest
+            target: --mac
+          - os: ubuntu-latest
+            target: --linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: vaikara
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vaikara/package-lock.json
+      - run: npm ci
+      - run: npx vite build
+      - run: npx electron-builder ${{ matrix.target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vaikara-${{ matrix.os }}
+          path: |
+            vaikara/release/*.exe
+            vaikara/release/*.dmg
+            vaikara/release/*.AppImage
+          if-no-files-found: warn
