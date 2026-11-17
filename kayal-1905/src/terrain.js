@@ -248,7 +248,7 @@ export const GLSL_HUV = `vec2 huv(vec2 p){ return (p / ${WORLD.toFixed(1)} + 0.5
 export function buildMapImage(marks = [], S = 512) {
   const c = document.createElement('canvas');
   c.width = c.height = S;
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', { willReadFrequently: true });       // CPU-backed: survives a GPU reset
   const img = g.createImageData(S, S);
   const d = img.data;
   for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {

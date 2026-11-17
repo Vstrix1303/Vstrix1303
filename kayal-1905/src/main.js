@@ -52,6 +52,24 @@ async function boot() {
   }
   G.renderer = renderer;
   G.quality = pickQuality(renderer.getContext());
+  // After a graphics-driver reset the game restarts lighter, one step at a time:
+  // 1 = drawn figures instead of the realistic bodies, 2 = also built-in textures and Low,
+  // 3 = also no screen effects. Shown on F3 and in the pause menu, where it can be reset.
+  const compat = Math.min(3, parseInt(store.get('kayal1905.compat') || '0', 10) || 0);
+  G.compat = compat;
+  if (compat >= 2) G.quality = 'low';
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    if (G.contextLost) return;
+    G.contextLost = true;
+    const next = Math.min(3, compat + 1);
+    store.set('kayal1905.compat', String(next));
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;text-align:center;background:#0b0704;color:#f4e6c0;font:18px Georgia,serif;line-height:1.6;padding:24px';
+    d.innerHTML = '<div>The graphics driver reset.<br>Restarting with lighter graphics (compatibility level ' + next + ' of 3)…<br><span style="font-size:14px;opacity:.7">Your progress is saved. Choose Continue on the title screen.</span></div>';
+    document.body.appendChild(d);
+    setTimeout(() => location.reload(), 2500);
+  }, false);
   if (G.integrated) {
     // integrated GPU: keep the look, drop what costs most — multisampling, reflection resolution, grass density
     for (const k of ['medium', 'high', 'ultra']) QUALITY[k] = { ...QUALITY[k], ao: false, msaa: 0, reflection: Math.min(QUALITY[k].reflection, 256), grass: Math.round(QUALITY[k].grass * 0.55), shadow: Math.min(QUALITY[k].shadow, 2048) };
@@ -80,8 +98,8 @@ async function boot() {
   const audio = G.audio = new AudioSys();
   buildTextures();
   ui.loading(0.02, 'Loading surfaces');
-  await loadRealTextures(renderer, (p) => ui.loading(0.02 + p * 0.08, 'Loading surfaces'));
-  await loadHumans((p) => ui.loading(0.1 + p * 0.04, 'Loading people'));
+  if (compat < 2) await loadRealTextures(renderer, (p) => ui.loading(0.02 + p * 0.08, 'Loading surfaces'));
+  if (compat < 1) await loadHumans((p) => ui.loading(0.1 + p * 0.04, 'Loading people'));
   const player = G.player = new Player(scene, camera);
 
   await nextFrame();
@@ -97,7 +115,13 @@ async function boot() {
     if (safeBtn) safeBtn.textContent = 'Screen effects: ' + (on ? 'Off' : 'On');
     if (why) ui.toast(why, 7);
   };
-  if (store.get('kayal1905.safe') === '1' || params.has('safe')) setSafe(true);
+  if (store.get('kayal1905.safe') === '1' || params.has('safe') || compat >= 3) setSafe(true);
+  const cBtn = $('btnCompat');
+  if (cBtn) {
+    cBtn.style.display = compat ? '' : 'none';
+    cBtn.textContent = `Graphics compatibility: level ${compat} — reset`;
+    cBtn.onclick = () => { store.set('kayal1905.compat', '0'); store.set('kayal1905.safe', '0'); location.reload(); };
+  }
   if (safeBtn) safeBtn.onclick = () => setSafe(!G.safeRender);
   const gl = renderer.getContext(), px = new Uint8Array(4);
   let whiteN = 0, whiteT = 0;
@@ -355,7 +379,7 @@ async function boot() {
       if (fpsT > 2.5) {
         const fps = fpsN / fpsT; fpsT = 0; fpsN = 0;
         const old = prScale;
-        if (fpsEl) fpsEl.textContent = `${Math.round(fps)} fps · ${G.quality}${G.integrated ? ' (integrated GPU)' : ''} · ${Math.round(prScale * 100)}% resolution${stage ? ' · effects trimmed ' + stage : ''}${G.safeRender ? ' · screen effects off' : ''} · ${(G.gpuName || 'unknown GPU').replace(/^ANGLE \(|\)$/g, '').slice(0, 70)}`;
+        if (fpsEl) fpsEl.textContent = `${Math.round(fps)} fps · ${G.quality}${G.integrated ? ' (integrated GPU)' : ''} · ${Math.round(prScale * 100)}% resolution${stage ? ' · effects trimmed ' + stage : ''}${G.safeRender ? ' · screen effects off' : ''}${G.compat ? ' · compatibility ' + G.compat : ''} · ${(G.gpuName || 'unknown GPU').replace(/^ANGLE \(|\)$/g, '').slice(0, 70)}`;
         // aim for at least 40 frames a second: first lower the resolution, then trim the costliest effects
         if (fps < 41) {
           if (prScale > 0.6) prScale = Math.max(0.6, prScale * 0.88);
