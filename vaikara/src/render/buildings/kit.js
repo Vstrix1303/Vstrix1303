@@ -65,6 +65,8 @@ export const PALETTE = {
   laterite: [[1, 1, 1], [1.06, 0.92, 0.86], [0.9, 0.86, 0.84]],
 };
 const WALLS = ['plaster', 'whitewash', 'yplaster', 'mud'], ROOFS = ['roof', 'roofOld', 'thatch'];
+const CELL = 250;
+const DETAIL_MATS = new Set(['window', 'gold', 'lamp', 'iron', 'cloth', 'redcloth', 'bluecloth', 'canopy']);
 
 export class Kit {
   constructor() { this.parts = new Map(); this.tints = null; }
@@ -90,8 +92,16 @@ export class Kit {
     const t = this.tintFor(mat) || [1, 1, 1], n = geo.attributes.position.count, col = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { col[i * 3] = t[0]; col[i * 3 + 1] = t[1]; col[i * 3 + 2] = t[2]; }
     geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    if (!this.parts.has(mat)) this.parts.set(mat, []);
-    this.parts.get(mat).push(geo);
+    // LOD bookkeeping: which 250 m cell, and is it fine detail (windows, posts,
+    // finials, coping, cloth, lamps …) that can disappear with distance
+    geo.computeBoundingBox();
+    const bb = geo.boundingBox, cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2;
+    const dims = [bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z].sort((p, q) => p - q);
+    const detail = this.forceDetail || DETAIL_MATS.has(mat) || dims[2] < 1.6 || (dims[0] < 0.3 && dims[1] < 1.0 && dims[2] < 4.5);
+    const cell = `${Math.floor(cx / CELL)},${Math.floor(cz / CELL)}`;
+    const key = `${typeof mat === 'string' ? mat : mat.uuid}|${cell}|${detail ? 1 : 0}`;
+    if (!this.parts.has(key)) this.parts.set(key, { mat, cell, detail, list: [] });
+    this.parts.get(key).list.push(geo);
   }
 
   // Box with metre-scaled UVs. (x,z) centre, y = bottom.
@@ -104,6 +114,28 @@ export class Kit {
       uvA.setXY(k, uvA.getX(k) * dims[f][0] / tile, uvA.getY(k) * dims[f][1] / tile);
     }
     this.push(mat, g, x, y + h / 2, z, ry);
+  }
+
+  // A wall that follows the ground: split into short pieces, each sitting on its
+  // own footing (lowest ground under it minus a buried foundation), tops stepping
+  // with the slope, optional coping, a collider per piece.
+  groundWall(mat, x0, z0, x1, z1, h, t, { coping = null, piece = 3, foundation = 1.2, tile, collide = true, ground } = {}) {
+    const gh = ground;
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    if (len < 0.05) return;
+    const n = Math.max(1, Math.ceil(len / piece)), ry = Math.atan2(-(z1 - z0), x1 - x0);
+    for (let i = 0; i < n; i++) {
+      const a = i / n, b = (i + 1) / n, m = (a + b) / 2;
+      const xa = x0 + (x1 - x0) * a, za = z0 + (z1 - z0) * a, xb = x0 + (x1 - x0) * b, zb = z0 + (z1 - z0) * b;
+      const xm = (xa + xb) / 2, zm = (za + zb) / 2;
+      const ys = [gh(xa, za), gh(xb, zb), gh(xm, zm)];
+      const lo = Math.min(...ys), top = Math.max(...ys) * 0.35 + ys[2] * 0.65 + h;
+      const pl = len / n + 0.02;
+      this.box(mat, xm, lo - foundation, zm, pl, top - lo + foundation, t, ry, tile);
+      if (coping) this.box(coping, xm, top, zm, pl + 0.06, 0.12, t + 0.18, ry, 2);
+      if (collide && this.colliders) this.colliders.addBox(xm, zm, pl / 2, t / 2 + 0.05, ry, lo - 1, top);
+      void m;
+    }
   }
 
   // Box positioned in a local frame (ox along the building's x axis, oz along z) rotated by ry about (cx,cz).
@@ -211,9 +243,12 @@ export class Kit {
     for (let i = 0; i < steps; i++) this.lbox(mat, cx, cz, ry, ox, y + i * rise - (steps * rise), oz + i * run, w, steps * rise - i * rise + 0.01, run, 1.5);
   }
 
-  build(scene, matSet, { castShadow = true } = {}) {
+  // Merge per cell × material × detail level: each mesh has a tight bounding
+  // sphere (frustum culling works) and settlements.updateLod() hides detail
+  // with distance and lets only nearby shells cast shadows.
+  build(scene, matSet) {
     const meshes = [];
-    for (const [key, list] of this.parts) {
+    for (const { mat: key, cell, detail, list } of this.parts.values()) {
       const mat = typeof key === 'string' ? matSet[key] : key;
       if (!mat) { console.warn('kit: no material', key); continue; }
       for (let i = 0; i < list.length; i += 4000) {
@@ -221,7 +256,10 @@ export class Kit {
         if (!g) continue;
         g.computeBoundingSphere();
         const m = new THREE.Mesh(g, mat);
-        m.castShadow = castShadow; m.receiveShadow = true;
+        const [ci, cj] = cell.split(',').map(Number);
+        m.userData.lod = { detail, x: (ci + 0.5) * CELL, z: (cj + 0.5) * CELL };
+        m.userData.cat = detail ? 'building detail' : 'buildings';
+        m.castShadow = !detail; m.receiveShadow = true;
         m.matrixAutoUpdate = false;
         scene.add(m);
         meshes.push(m);

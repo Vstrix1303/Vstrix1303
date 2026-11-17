@@ -17,11 +17,13 @@ export class Settlements {
   constructor(scene) {
     this.scene = scene;
     this.kit = new Kit();
+    this.kit.colliders = G.colliders;
     this.rnd = makeRng(1905);
     this.beams = [];
     this.lamps = [];
     this.jetties = []; // used by props for boats
     this.counts = { shop: 0, house: 0, hut: 0 };
+    this.auditOn = location.search.includes('audit');
     this.gardens = [];
     this.shopFronts = []; this.shoreSpots = []; this.openShopsAt = []; this.namedJetty = {}; this.ferries = [];
   }
@@ -38,6 +40,13 @@ export class Settlements {
     return { y: mx, drop: mx - mn };
   }
   free(x, z, r) { return !G.colliders.blocked(x, z, r); }
+  // a ground-following wall given in a building's local frame (centre ox,oz; length along x if w ≥ d)
+  localWall(mat, cx, cz, ry, ox, oz, w, d, h, opts = {}) {
+    const c = Math.cos(ry), s = Math.sin(ry), at = (a, b) => [cx + a * c + b * s, cz - a * s + b * c];
+    const [x0, z0] = w >= d ? at(ox - w / 2, oz) : at(ox, oz - d / 2);
+    const [x1, z1] = w >= d ? at(ox + w / 2, oz) : at(ox, oz + d / 2);
+    this.kit.groundWall(mat, x0, z0, x1, z1, h, Math.min(w, d), { ground: getHeight, ...opts });
+  }
   faceRoad(x, z) { const r = nearestRoad(x, z); return r.seg ? Math.atan2(r.px - x, r.pz - z) : this.rnd() * TAU; }
   findLand(x, z, minH = 1, maxR = 400) {
     for (let r = 0; r <= maxR; r += 6) for (let a = 0; a < TAU; a += Math.max(0.2, 6 / Math.max(r, 1))) {
@@ -53,9 +62,10 @@ export class Settlements {
     const k = this.kit, r = this.rnd;
     const ownWash = !k.tints; if (ownWash) k.wash(r);
     const w = o.w || 7 + r() * 3.5, d = o.d || 5.5 + r() * 2;
-    const { y } = this.footY(x, z, w + 2, d + 3, ry);
-    const ph = 0.6;
-    k.lbox('laterite', x, z, ry, 0, y - 2.5, 0.6, w + 1.2, 2.5 + ph, d + 2.6);
+    const { y, drop } = this.footY(x, z, w + 2, d + 3, ry);
+    const ph = 0.6, dep = drop + 1.2;
+    k.lbox('laterite', x, z, ry, 0, y - dep, 0.6, w + 1.2, dep + ph, d + 2.6);
+    this.audit(x, z, drop, dep);
     const wallMat = o.wall || (r() < 0.75 ? 'plaster' : r() < 0.5 ? 'laterite' : 'yplaster');
     const wh = o.h || 3.0;
     if (o.open) this.houseInterior(x, z, ry, w, d, y + ph, wh, wallMat);
@@ -90,8 +100,8 @@ export class Settlements {
     const k = this.kit, r = this.rnd;
     k.wash(r);
     const w = 4 + r() * 1.6, d = 3.4 + r() * 0.8;
-    const { y } = this.footY(x, z, w, d, ry);
-    k.lbox('mud', x, z, ry, 0, y - 1.5, 0, w + 0.4, 1.8, d + 0.4);
+    const { y, drop } = this.footY(x, z, w, d, ry);
+    k.lbox('mud', x, z, ry, 0, y - drop - 1.0, 0, w + 0.4, drop + 1.3, d + 0.4);
     k.lbox('mud', x, z, ry, 0, y + 0.3, 0, w, 2.0, d);
     k.lbox('wood', x, z, ry, 0, y + 0.3, d / 2 + 0.02, 0.9, 1.7, 0.08);
     k.roof(o.roofMat || 'thatch', x, y + 2.3, z, w, d, ry, { over: 0.8, pitch: 1.05, gable: 0.8, flare: 0.1 });
@@ -106,7 +116,7 @@ export class Settlements {
     const floors = o.floors || 2;
     const y = o.y ?? this.footY(x, z, w, d, ry).y;
     const wall = o.wall || (r() < 0.6 ? 'plaster' : r() < 0.5 ? 'yplaster' : 'laterite');
-    k.lbox('laterite', x, z, ry, 0, y - 2.5, 0.4, w + 0.2, 2.8, d + 0.8);
+    { const dep = (o.drop ?? this.footY(x, z, w, d, ry).drop) + 1.5; k.lbox('laterite', x, z, ry, 0, y - dep, 0.4, w + 0.2, dep + 0.3, d + 0.8); }
     // ground floor: back and sides closed, front open shop with dark interior and shutters
     if (o.open) this.shopInterior(x, z, ry, w, d, y, wall);
     else {
@@ -148,8 +158,8 @@ export class Settlements {
 
   godown(x, z, ry, w = 18, d = 9) {
     const k = this.kit;
-    const { y } = this.footY(x, z, w, d, ry);
-    k.lbox('laterite', x, z, ry, 0, y - 2, 0, w + 0.6, 2.4, d + 0.6);
+    const { y, drop } = this.footY(x, z, w, d, ry);
+    k.lbox('laterite', x, z, ry, 0, y - drop - 1.5, 0, w + 0.6, drop + 1.9, d + 0.6);
     k.lbox('laterite', x, z, ry, 0, y + 0.4, 0, w, 4.2, d);
     for (let i = -1; i <= 1; i++) k.lbox('wood', x, z, ry, i * w * 0.3, y + 0.4, d / 2 + 0.02, 2.2, 3, 0.1);
     k.roof('roof', x, y + 4.6, z, w, d, ry, { over: 0.8, pitch: 0.7 });
@@ -158,9 +168,10 @@ export class Settlements {
 
   colonial(x, z, ry, w, d, floors, o = {}) {
     const k = this.kit;
-    const { y } = this.footY(x, z, w, d, ry);
+    const { y, drop } = this.footY(x, z, w + 2, d + 2, ry);
     const fh = o.fh || 4.6, mat = o.mat || 'whitewash';
-    k.lbox('sandstone', x, z, ry, 0, y - 2.5, 0, w + 2, 3.4, d + 2);
+    k.lbox('sandstone', x, z, ry, 0, y - drop - 1.5, 0, w + 2, drop + 2.4, d + 2);
+    this.audit(x, z, drop, drop + 1.5);
     for (let f = 0; f < floors; f++) {
       const fy = y + 0.9 + f * fh;
       // arcaded verandas front and back, closed core behind
@@ -316,62 +327,77 @@ export class Settlements {
     }
   }
 
-  // Terraced bazaar frontage: runs of 3–5 shops under one roof, broken by lanes.
+  // Terraced bazaar frontage: runs of 3–5 shops along the street, broken by lanes.
+  // A run is collected first, then built in sub-terraces that step with the
+  // ground (a shared roof only where neighbours sit within 0.6 m of each other).
   bazaarRow(name, centre, s0, s1, roadHalf = 3.5) {
-    const r = this.rnd;
+    const r = this.rnd, cosBend = Math.cos(10 * Math.PI / 180);
     for (const side of [-1, 1]) {
       let run = null;
-      const flush = () => {
-        if (run) this.kit.tints = run.tints || null;
-        if (run && run.units.length >= 2) {
-          // one continuous roof over the whole run
-          const { units, ry, d, floors, y } = run;
-          const first = units[0], last = units[units.length - 1];
-          const cx = (first.x + last.x) / 2, cz = (first.z + last.z) / 2;
-          const len = units.reduce((t, u) => t + u.w, 0);
-          const c = Math.cos(ry), sn = Math.sin(ry);
-          const roofY = y + (floors > 1 ? 6.75 : 3.75);
-          this.kit.roof(run.roofMat, cx + sn * 0.4, roofY, cz + c * 0.4, len + 0.4, d + 0.8, ry, { over: 0.9, pitch: floors > 1 ? 0.8 : 0.75, gable: 0.8 });
-          this.counts.shop += units.length;
-        } else if (run && run.units.length === 1) {
-          const u = run.units[0];
-          this.kit.roof(run.roofMat, u.x + Math.sin(run.ry) * 0.4, run.y + (run.floors > 1 ? 6.75 : 3.75), u.z + Math.cos(run.ry) * 0.4, u.w + 0.4, run.d + 0.8, run.ry, { over: 0.9, pitch: 0.85 });
-          this.counts.shop += 1;
-        }
-        run = null;
-        this.kit.unwash();
-      };
-      this.walkRoad(name, centre, s0, s1, (x, z, tx, tz, s) => {
+      const close = () => { if (run && run.units.length) this.buildTerrace(run); run = null; };
+      this.walkRoad(name, centre, s0, s1, (x, z, tx, tz) => {
         const w = 6.5 + r() * 3;
         if (!run) {
-          // start a new run: fixed facing, depth, height, finish for the whole terrace
           const d = 9 + r() * 2.5;
-          const off = roadHalf + 1.8 + d / 2;
-          const ry = Math.atan2(tz * side, -tx * side); // face the road
-          run = { units: [], ry, d, off, floors: r() < 0.65 ? 2 : 1, wall: r() < 0.55 ? 'plaster' : r() < 0.5 ? 'yplaster' : 'laterite', roofMat: r() < 0.6 ? 'roof' : 'roofOld', target: 3 + Math.floor(r() * 3), ox: x, oz: z, tx, tz, y: null };
+          run = { units: [], ry: Math.atan2(tz * side, -tx * side), d, off: roadHalf + 1.8 + d / 2, floors: r() < 0.65 ? 2 : 1,
+            wall: r() < 0.55 ? 'plaster' : r() < 0.5 ? 'yplaster' : 'laterite', roofMat: r() < 0.6 ? 'roof' : 'roofOld',
+            target: 3 + Math.floor(r() * 3), ox: x, oz: z, tx, tz, side };
         }
-        // units in a run follow the run's straight line so the roof stays continuous
+        // the street bends: end this terrace rather than let it drift off the frontage
+        if (run.units.length && tx * run.tx + tz * run.tz < cosBend) { close(); return 3; }
         const along = run.units.reduce((t, u) => t + u.w, 0) + w / 2;
         const px = run.ox + run.tx * along, pz = run.oz + run.tz * along;
         const hx = px - run.tz * run.off * side, hz = pz + run.tx * run.off * side;
-        // the run's line drifts from a curving road: stop the run if it does
-        const drift = Math.abs(nearestRoad(hx, hz).d - run.off);
-        const ok = this.siteOK(hx, hz, 1.0, 0.25) && drift < 3 && this.clearOfRoads(hx, hz, run.off - 2.5)
-          && this.free(hx, hz, Math.min(w, run.d) / 2 - 1.2);
-        if (!ok) { flush(); return 4; }
-        if (run.y == null) { run.y = this.footY(hx, hz, w * run.target, run.d, run.ry).y; this.kit.wash(r); run.tints = this.kit.tints; }
-        this.kit.tints = run.tints;
-        const sq = this.squareAt, nearSq = sq && Math.hypot(hx - sq.x, hz - sq.z) < 170;
-        const open = nearSq && (this.openShops || 0) < 12 && r() < 0.6;
-        if (open) this.openShops = (this.openShops || 0) + 1;
-        this.shophouse(hx, hz, run.ry, w, { d: run.d, floors: run.floors, wall: run.wall, y: run.y, roof: false, open });
-        run.units.push({ x: hx, z: hz, w });
-        this.shopFronts.push({ x: hx + Math.sin(run.ry) * (run.d / 2 + 1.4), z: hz + Math.cos(run.ry) * (run.d / 2 + 1.4), ry: run.ry });
-        if (run.units.length >= run.target) { flush(); return w / 2 + 6 + r() * 6; } // lane between terraces
+        const f = this.footY(hx, hz, w, run.d + 1, run.ry);
+        const ok = getHeight(hx, hz) > 1.0 && f.drop < 2.2 && Math.abs(nearestRoad(hx, hz).d - run.off) < 2
+          && this.clearOfRoads(hx, hz, run.off - 2.5) && this.free(hx, hz, Math.min(w, run.d) / 2 - 1.2);
+        if (!ok) { close(); return 4; }
+        run.units.push({ x: hx, z: hz, w, y: f.y, lo: f.y - f.drop });
+        if (run.units.length >= run.target) { close(); return w / 2 + 6 + r() * 6; } // a lane between terraces
         return w;
       });
-      flush();
+      close();
     }
+  }
+
+  buildTerrace(run) {
+    const r = this.rnd, k = this.kit;
+    k.wash(r); const tints = k.tints;
+    // split where the ground steps
+    const groups = [];
+    for (const u of run.units) {
+      const g = groups[groups.length - 1];
+      if (g && Math.abs(u.y - g[g.length - 1].y) <= 0.6) g.push(u); else groups.push([u]);
+    }
+    const c = Math.cos(run.ry), sn = Math.sin(run.ry);
+    for (const g of groups) {
+      const gy = Math.max(...g.map((u) => u.y));
+      for (const u of g) {
+        k.tints = tints;
+        const sq = this.squareAt, nearSq = sq && Math.hypot(u.x - sq.x, u.z - sq.z) < 170;
+        const open = nearSq && (this.openShops || 0) < 12 && r() < 0.6;
+        if (open) this.openShops = (this.openShops || 0) + 1;
+        this.shophouse(u.x, u.z, run.ry, u.w, { d: run.d, floors: run.floors, wall: run.wall, y: gy, drop: gy - u.lo, roof: false, open });
+        this.shopFronts.push({ x: u.x + sn * (run.d / 2 + 1.4), z: u.z + c * (run.d / 2 + 1.4), ry: run.ry });
+        this.audit(u.x, u.z, gy - u.lo + 0.3);
+      }
+      k.tints = tints;
+      const first = g[0], last = g[g.length - 1];
+      const len = g.reduce((t, u) => t + u.w, 0);
+      const roofY = gy + (run.floors > 1 ? 6.75 : 3.75);
+      k.roof(run.roofMat, (first.x + last.x) / 2 + sn * 0.4, roofY, (first.z + last.z) / 2 + c * 0.4, len + 0.4, run.d + 0.8, run.ry,
+        g.length > 1 ? { over: 0.9, pitch: run.floors > 1 ? 0.8 : 0.75, gable: 0.8 } : { over: 0.9, pitch: 0.85 });
+      this.counts.shop += g.length;
+    }
+    k.unwash();
+  }
+
+  // ?audit: count footings that don't reach the ground (plinth depth < drop under the building)
+  audit(x, z, needed, have = 99) {
+    if (!this.auditOn) return;
+    this.auditN = (this.auditN || 0) + 1;
+    if (!this.steep || needed > this.steep[2]) this.steep = [x, z, needed];
+    if (needed > have) { this.auditBad = (this.auditBad || 0) + 1; if ((this.auditBad || 0) < 6) console.warn('[audit] footing short at', x.toFixed(0), z.toFixed(0), needed.toFixed(2), '>', have.toFixed(2)); }
   }
 
   // A Kerala house in its own walled compound, set back from the lane.
@@ -383,20 +409,14 @@ export class Settlements {
     // house sits towards the back of the plot, facing the gate
     const hx = x - s * 2, hz = z - c * 2;
     if (!this.free(hx, hz, Math.max(w, d) / 2 + 2)) return false;
+    if (this.footY(x, z, PW, PD, ry).drop > 2.4 || this.footY(hx, hz, w + 2, d + 3, ry).drop > 1.8) return false; // too steep for a compound
     k.wash(r);
     const tw = P.vaikara_town, open = (this.openHouses || 0) < 8 && Math.hypot(x - tw.x, z - tw.z) < 700;
     if (open) this.openHouses = (this.openHouses || 0) + 1;
     this.house(hx, hz, ry, { w, d, roofMat: o.roofMat || (r() < 0.55 ? 'roof' : 'roofOld'), wall: o.wall, open });
     // low laterite compound wall with a gate gap on the lane side
     const wallH = 1.15, t = 0.45;
-    const seg = (ox, oz, len, along) => {
-      const wx = x + ox * c + oz * s, wz = z - ox * s + oz * c;
-      const gy = getHeight(wx, wz);
-      const rot = along ? ry : ry + Math.PI / 2;
-      k.box('laterite', wx, gy - 0.6, wz, len, wallH + 0.6, t, rot, 1.6);
-      k.box('roofOld', wx, gy + wallH, wz, len + 0.1, 0.12, t + 0.18, rot, 2);
-      G.colliders.addBox(wx, wz, len / 2, t / 2 + 0.05, rot, gy - 1, gy + wallH);
-    };
+    const seg = (ox, oz, len, along) => this.localWall('laterite', x, z, ry, ox, oz, along ? len : t, along ? t : len, wallH, { coping: 'roofOld', tile: 1.6, foundation: 0.8 });
     seg(0, -PD / 2, PW, true);
     seg(-PW / 2, 0, PD, false); seg(PW / 2, 0, PD, false);
     const gate = 3.2, half = (PW - gate) / 2;
@@ -762,10 +782,7 @@ export class Settlements {
     // compound wall
     const S = 64;
     for (const [ox, oz, w, d] of [[0, -S / 2, S, 1.2], [-S / 2, 0, 1.2, S], [S / 2, 0, 1.2, S], [-S / 4 - 4, S / 2, S / 2 - 8, 1.2], [S / 4 + 4, S / 2, S / 2 - 8, 1.2]]) {
-      k.lbox('laterite', p.x, p.z, ry, ox, y - 1.5, oz, w, 4.6, d);
-      k.lbox('roof', p.x, p.z, ry, ox, y + 3.1, oz, w + 0.6, 0.3, d + 0.9);
-      const [qx, qz] = at(ox, oz);
-      this.collide(qx, qz, w, d, ry, y, 4);
+      this.localWall('laterite', p.x, p.z, ry, ox, oz, w, d, 3.1, { coping: 'roof', tile: 1.6 });
     }
     // gopuram over the gate
     const [gx, gz] = at(0, S / 2);
@@ -857,10 +874,7 @@ export class Settlements {
     // garden wall and gate piers
     const R = 70;
     for (const [ox, oz, w, d] of [[0, -R / 2, R, 0.8], [-R / 2, 0, 0.8, R], [R / 2, 0, 0.8, R], [-R / 4 - 4, R / 2, R / 2 - 8, 0.8], [R / 4 + 4, R / 2, R / 2 - 8, 0.8]]) {
-      const qx = p.x + ox * c + oz * s, qz = p.z - ox * s + oz * c;
-      const gy = getHeight(qx, qz);
-      k.box('whitewash', qx, gy - 1, qz, w, 3.2, d, ry);
-      this.collide(qx, qz, w, d, ry, gy, 3);
+      this.localWall('whitewash', p.x, p.z, ry, ox, oz, w, d, 2.2, { coping: 'sandstone' });
     }
     for (const sx of [-1, 1]) {
       const qx = p.x + sx * 4.5 * c + (R / 2) * s, qz = p.z - sx * 4.5 * s + (R / 2) * c, gy = getHeight(qx, qz);
@@ -881,7 +895,7 @@ export class Settlements {
     const r = makeRng(77);
     for (let i = 0; i < 4; i++) {
       const [ax, az] = corners[i], [bx, bz] = corners[(i + 1) % 4];
-      const len = Math.hypot(bx - ax, bz - az), segs = Math.round(len / 8);
+      const len = Math.hypot(bx - ax, bz - az), segs = Math.round(len / 4);
       for (let j = 0; j < segs; j++) {
         if (r() < 0.12) continue;                 // breaches
         if (i === 2 && Math.abs(j - segs / 2) < 1) continue; // gate gap
@@ -891,10 +905,10 @@ export class Settlements {
         const gy = getHeight(wx, wz);
         const h = 7 + r() * 2 - (r() < 0.2 ? 3 + r() * 3 : 0);
         const along = Math.atan2(-(bz - az), bx - ax) + ry;
-        k.box('fortstone', wx, gy - 2, wz, 8.2, h + 2, 3.2, along, 2.6);
+        k.box('fortstone', wx, gy - 2.5, wz, len / segs + 0.15, h + 2.5, 3.2, along, 2.6);
         // crenellations
-        if (h > 6) for (let m = -1; m <= 1; m += 2) k.box('fortstone', wx + Math.cos(along) * m * 2, gy + h, wz - Math.sin(along) * m * 2, 1.6, 1.0, 3.2, along);
-        G.colliders.addBox(wx, wz, 4.1, 1.6, along, gy - 2, gy + h);
+        if (h > 6 && j % 2 === 0) k.box('fortstone', wx, gy + h, wz, 1.6, 1.0, 3.2, along);
+        G.colliders.addBox(wx, wz, len / segs / 2 + 0.05, 1.6, along, gy - 2, gy + h);
       }
       // round bastion at each corner
       const [qx, qz] = at(ax, az);
@@ -1111,10 +1125,25 @@ export class Settlements {
     this.meshes = this.kit.build(this.scene, M);
     Object.assign(this.scene.userData, { jetties: this.jetties, cannons: this.cannons, station: this.station, gardens: this.gardens, shopFronts: this.shopFronts, shoreSpots: this.shoreSpots, openShopsAt: this.openShopsAt, namedJetty: this.namedJetty, ferries: this.ferries });
     console.info('[vaikara] buildings', JSON.stringify(this.counts));
+    if (this.auditOn) console.info('[audit] footings checked', this.auditN || 0, 'short', this.auditBad || 0, 'steepest', this.steep?.map((v) => +v.toFixed(1)).join(','), 'square', this.squareAt && [this.squareAt.x, this.squareAt.z].map((v) => v.toFixed(0)).join(','));
     progress?.(1);
   }
 
+  // building LOD: fine detail only near the camera; shells cast shadows only
+  // within shadow range (everything beyond is still drawn and frustum-culled)
+  updateLod(cam) {
+    const s = G.lodScale ?? 1, detailR = 230 * s + 125, shadowR = (G.Q.shadowFar ?? 800) * 0.7 + 125;
+    for (const m of this.meshes) {
+      const L = m.userData.lod; if (!L) continue;
+      const d = Math.hypot(cam.x - L.x, cam.z - L.z);
+      if (L.detail) m.visible = d < detailR;
+      else { const cs = d < shadowR; if (m.castShadow !== cs) m.castShadow = cs; }
+    }
+  }
+
   update(dt) {
+    this.lodT = (this.lodT || 0) - dt;
+    if (this.lodT <= 0 && G.camera) { this.lodT = 0.25; this.updateLod(G.camera.position); }
     for (const b of this.beams) b.rotation.y += dt * 0.9;
     const n = U.night.value;
     for (const l of this.lamps) l.intensity = n * 900;
