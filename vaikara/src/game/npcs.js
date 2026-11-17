@@ -9,7 +9,8 @@ import { PLACES, placeById as P } from '../world/layout.js';
 import { makeRng } from '../world/noise.js';
 
 const TAU = Math.PI * 2;
-const MAX = 20, RADIUS = 160, FULL = 70, SHADOW = 35;
+const RADIUS = 160, FULL = 60, SHADOW = 25;
+let MAX = 20;
 // clothing washes: white mundu, saffron, indigo, earth, khaki (officials), red
 const ROLES = [
   { name: 'villager', body: 0xece6d6, w: 4 }, { name: 'trader', body: 0xe2d4b6, w: 2 },
@@ -33,6 +34,7 @@ export class Villagers {
   constructor(scene) { this.scene = scene; this.pool = []; this.rnd = makeRng(77); this.timer = 0; }
 
   async load(humans) {
+    MAX = G.Q.npc ?? 20;
     this.clips = {};
     for (const n of ['idle', 'walk']) this.clips[n] = humans.gltf.animations.find((a) => a.name.toLowerCase() === n);
     const roleBag = ROLES.flatMap((r, i) => Array(r.w).fill(i));
@@ -193,7 +195,11 @@ export class Villagers {
       n.blend = THREE.MathUtils.damp(n.blend || 0, moving, 6, dt);
       n.walk.setEffectiveWeight(n.blend); n.idle.setEffectiveWeight(1 - n.blend);
       n.walk.timeScale = (n.speed || 1.2) / 1.25;
-      if (full) n.mixer.update(dt);
+      // animation LOD: every frame up close, 10 Hz further out
+      if (full) {
+        n.animT = (n.animT || 0) + dt;
+        if (dist < SHADOW || n.animT > 0.1) { n.mixer.update(n.animT); n.animT = 0; }
+      }
     }
     void camera; void P;
   }

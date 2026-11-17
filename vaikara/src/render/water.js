@@ -48,8 +48,8 @@ export class Water {
     const info = waterInfoTexture();
 
     // radial grid, dense at the centre
-    const rings = [], segs = 192;
-    for (let r = 0, s = 1.2; r < 26000; r += s, s *= 1.035) rings.push(r);
+    const rings = [], segs = (G.Q.waterRing ?? 1.035) > 1.04 ? 128 : 192;
+    for (let r = 0, s = 1.2, k = G.Q.waterRing ?? 1.035; r < 26000; r += s, s *= k) rings.push(r);
     const pos = [], idx = [];
     for (let i = 0; i < rings.length; i++) for (let k = 0; k < segs; k++) {
       const a = (k / segs) * Math.PI * 2;
@@ -142,7 +142,7 @@ export class Water {
 
     this.mat = m;
     this.mesh = new THREE.Mesh(g, m);
-    this.mesh.frustumCulled = false;
+    this.mesh.frustumCulled = false; this.mesh.userData.cat = 'water';
     this.mesh.renderOrder = 2;
     this.mesh.receiveShadow = true;
     scene.add(this.mesh);

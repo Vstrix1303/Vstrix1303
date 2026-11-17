@@ -173,7 +173,7 @@ export class Props {
     const nz = makeNoise(5);
     const variants = [];
     for (let v = 0; v < 5; v++) {
-      const g = new THREE.IcosahedronGeometry(1, 3);
+      const g = new THREE.IcosahedronGeometry(1, 2);
       const p = g.attributes.position;
       for (let i = 0; i < p.count; i++) {
         const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
@@ -214,7 +214,7 @@ export class Props {
       if (!L.length) return;
       const im = new THREE.InstancedMesh(g, mats[kind], L.length);
       L.forEach((m, i) => im.setMatrixAt(i, m));
-      im.castShadow = true; im.receiveShadow = true;
+      im.castShadow = true; im.receiveShadow = true; im.userData.cat = 'rocks';
       im.computeBoundingSphere();
       this.scene.add(im);
     });

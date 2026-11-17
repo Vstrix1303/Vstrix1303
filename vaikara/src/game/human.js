@@ -433,7 +433,7 @@ export class HumanFactory {
     mesh.position.copy(tpl.position); mesh.quaternion.copy(tpl.quaternion); mesh.scale.copy(tpl.scale);
     mesh.bind(tpl.skeleton, tpl.bindMatrix);
     for (const o of drop) o.parent.remove(o);
-    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false; mesh.userData.cat = 'people';
     root.scale.setScalar(s.height);
     root.userData.spec = s; root.userData.mesh = mesh;
     root.userData.bones = Object.fromEntries(tpl.skeleton.bones.map((b) => [b.name.replace('mixamorig', ''), b]));

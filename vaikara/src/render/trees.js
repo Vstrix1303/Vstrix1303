@@ -202,6 +202,11 @@ function barkMaterial(name, { strength = 0.0015, color = 0xffffff, repeat = 1 } 
 }
 
 // ── Species
+// LITE: build the mid-distance version of a tree. Random draws are identical,
+// so the light tree has exactly the full tree's shape, just fewer parts.
+let LITE = false;
+const segs = (n) => (LITE ? Math.max(3, Math.round(n * 0.55)) : n);
+
 function palm(seed) {
   const rnd = makeRng(seed);
   const mb = new MB(3); // 0 trunk, 1 fronds, 2 coconuts
@@ -215,17 +220,18 @@ function palm(seed) {
     pts.push([Math.cos(la) * off, t * H, Math.sin(la) * off]);
     rad.push((0.24 - t * 0.08) * (i === 0 ? 1.35 : 1) + (i === 1 ? 0.03 : 0));
   }
-  tube(mb, 0, pts, rad, 7, 1.2, () => 0, 2);
+  tube(mb, 0, pts, rad, segs(7), 1.2, () => 0, 2);
   const top = pts[n];
   // crown bulb
-  tube(mb, 0, [[top[0], top[1] - 0.6, top[2]], [top[0], top[1], top[2]], [top[0], top[1] + 0.45, top[2]]], [0.2, 0.28, 0.05], 8, 1, () => 0.05, 2);
+  if (!LITE) tube(mb, 0, [[top[0], top[1] - 0.6, top[2]], [top[0], top[1], top[2]], [top[0], top[1] + 0.45, top[2]]], [0.2, 0.28, 0.05], 8, 1, () => 0.05, 2);
   // fronds: V-section strips arching outwards and drooping
   const nf = 18 + Math.floor(rnd() * 5);
   for (let f = 0; f < nf; f++) {
     const az = (f / nf) * TAU + rnd() * 0.3;
     const up = f % 4 === 0 ? 0.9 : f % 4 === 1 ? 0.4 : f % 4 === 2 ? -0.05 : -0.5;  // young fronds stand up, old ones hang
     const L = 4.6 + rnd() * 1.4;
-    const seg = 8;
+    if (LITE && f % 2 === 1) continue;
+    const seg = LITE ? 4 : 8;
     const dir = [Math.cos(az), Math.sin(az)];
     const base = mb.g[1].p.length / 3;
     for (let s = 0; s <= seg; s++) {
@@ -238,9 +244,10 @@ function palm(seed) {
       const px = -dir[1], pz = dir[0];
       const fl = Math.pow(t, 1.4);
       // left, centre, right (V fold: centre raised)
-      mb.v(1, cx + px * wdt, y - fold, cz + pz * wdt, 0, 1, 0, 0, t, fl);
+      const ww = LITE ? wdt * 1.25 : wdt; // fewer fronds: make each a bit fuller
+      mb.v(1, cx + px * ww, y - fold, cz + pz * ww, 0, 1, 0, 0, t, fl);
       mb.v(1, cx, y + 0.03, cz, 0, 1, 0, 0.5, t, fl);
-      mb.v(1, cx - px * wdt, y - fold, cz - pz * wdt, 0, 1, 0, 1, t, fl);
+      mb.v(1, cx - px * ww, y - fold, cz - pz * ww, 0, 1, 0, 1, t, fl);
     }
     for (let s = 0; s < seg; s++) {
       const a = base + s * 3;
@@ -260,7 +267,7 @@ function palm(seed) {
   for (let c = 0; c < nc; c++) {
     const a = rnd() * TAU, r = 0.32;
     const cx = top[0] + Math.cos(a) * r, cy = top[1] - 0.3 - rnd() * 0.4, cz = top[2] + Math.sin(a) * r;
-    tube(mb, 2, [[cx, cy - 0.15, cz], [cx, cy, cz], [cx, cy + 0.15, cz]], [0.04, 0.15, 0.04], 5, 1, () => 0.05);
+    if (!LITE) tube(mb, 2, [[cx, cy - 0.15, cz], [cx, cy, cz], [cx, cy + 0.15, cz]], [0.04, 0.15, 0.04], 5, 1, () => 0.05);
   }
   return { geo: mb.build(), height: H + 1.5, radius: 5 };
 }
@@ -273,7 +280,7 @@ function broadleaf(seed, opts = {}) {
   const pts = [], rad = [];
   const r0 = opts.r0 || 0.35;
   for (let i = 0; i <= 6; i++) { const t = i / 6; pts.push([(rnd() - 0.5) * 0.4 * t, t * trunkH, (rnd() - 0.5) * 0.4 * t]); rad.push(r0 * (1 - t * 0.35) * (i === 0 ? 1.4 : 1)); }
-  tube(mb, 0, pts, rad, 8, 1.5, () => 0);
+  tube(mb, 0, pts, rad, segs(8), 1.5, () => 0);
   // main limbs
   const limbs = 4 + Math.floor(rnd() * 3);
   const blobs = [];
@@ -283,7 +290,7 @@ function broadleaf(seed, opts = {}) {
     const s = pts[6];
     const e = [s[0] + Math.cos(a) * len * 0.75, s[1] + len * up, s[2] + Math.sin(a) * len * 0.75];
     const m = [(s[0] + e[0]) / 2, (s[1] + e[1]) / 2 + 0.4, (s[2] + e[2]) / 2];
-    tube(mb, 0, [s, m, e], [r0 * 0.55, r0 * 0.35, r0 * 0.12], 6, 1.5, (t) => t * 0.2);
+    tube(mb, 0, [s, m, e], [r0 * 0.55, r0 * 0.35, r0 * 0.12], segs(6), 1.5, (t) => t * 0.2);
     blobs.push(e, m);
   }
   blobs.push([0, H * 0.82, 0]);
@@ -295,11 +302,13 @@ function broadleaf(seed, opts = {}) {
       const cx = b[0] + (rnd() - 0.5) * crownR * 0.9, cy = b[1] + (rnd() - 0.2) * crownR * 0.6, cz = b[2] + (rnd() - 0.5) * crownR * 0.9;
       const s = crownR * (0.75 + rnd() * 0.5);
       const a = rnd() * Math.PI, tilt = (rnd() - 0.5) * 0.9;
+      if (LITE && i % 2 === 1) continue;
       const ux = Math.cos(a), uz = Math.sin(a);
       const base = mb.g[1].p.length / 3;
       const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
       for (const [cu, cv] of corners) {
-        const x = cx + ux * cu * s * 0.5, y = cy + cv * s * 0.5 * Math.cos(tilt), z = cz + uz * cu * s * 0.5 + cv * s * 0.5 * Math.sin(tilt);
+        const sz = LITE ? s * 1.3 : s; // half the cards, each larger
+        const x = cx + ux * cu * sz * 0.5, y = cy + cv * sz * 0.5 * Math.cos(tilt), z = cz + uz * cu * sz * 0.5 + cv * sz * 0.5 * Math.sin(tilt);
         const nx = x - b[0] * 0.6, ny = y - (H * 0.5), nz = z - b[2] * 0.6, ln = Math.hypot(nx, ny, nz) || 1;
         mb.v(1, x, y, z, nx / ln, ny / ln * 0.8 + 0.3, nz / ln, (cu + 1) / 2, (cv + 1) / 2, 0.6 + 0.4 * (cv + 1) / 2);
       }
@@ -317,6 +326,7 @@ function mangrove(seed) {
   const roots = 7 + Math.floor(rnd() * 5);
   for (let r = 0; r < roots; r++) {
     const a = (r / roots) * TAU + rnd() * 0.4, d = 1.4 + rnd() * 1.4;
+    if (LITE && r % 2 === 1) continue;
     tube(mb, 0, [[Math.cos(a) * d, -0.8, Math.sin(a) * d], [Math.cos(a) * d * 0.75, 0.9, Math.sin(a) * d * 0.75], [Math.cos(a) * d * 0.3, 1.8, Math.sin(a) * d * 0.3], [0, 2.2, 0]], [0.06, 0.07, 0.08, 0.1], 5, 1, () => 0);
   }
   const pts = [[0, 2, 0], [0.1, H * 0.6, 0.1], [0, H * 0.8, 0]];
@@ -432,6 +442,19 @@ export function buildFlora() {
   add('teak', [broadleaf(10, { h: 22, trunk: 0.6, crown: 5, r0: 0.45 }), broadleaf(11, { h: 19, trunk: 0.62, crown: 4.5, r0: 0.4 })], [pale, M.teak]);
   add('mangrove', [mangrove(12), mangrove(13)], [bark, M.mangrove]);
   add('banana', [banana(14), banana(15)], [palmBark, M.banana]);
+  // light variants for the mid-distance LOD, built from the same seeds
+  LITE = true;
+  species.palm.lite = [palm(1), palm(2), palm(3), palm(4)];
+  species.broad.lite = [broadleaf(5, { h: 13 }), broadleaf(6, { h: 16, crown: 5 }), broadleaf(7, { h: 10 })];
+  species.broad2.lite = [broadleaf(8, { h: 18, crown: 6, r0: 0.5 }), broadleaf(9, { h: 14 })];
+  species.teak.lite = [broadleaf(10, { h: 22, trunk: 0.6, crown: 5, r0: 0.45 }), broadleaf(11, { h: 19, trunk: 0.62, crown: 4.5, r0: 0.4 })];
+  species.mangrove.lite = [mangrove(12), mangrove(13)];
+  species.banana.lite = [banana(14), banana(15)];
+  LITE = false;
+  for (const k in species) {
+    const tri = (g) => (g.index ? g.index.count : g.attributes.position.count) / 3;
+    species[k].tris = [tri(species[k].variants[0].geo), tri(species[k].lite[0].geo)];
+  }
   return {
     species, tex, M,
     tea: teaBush(42).geo, grass: clump(0.75, 1.1), rice: clump(0.8, 0.7), teaMat: M.tea,

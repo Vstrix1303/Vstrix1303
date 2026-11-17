@@ -5,7 +5,7 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, texture, uniform, vec2, vec3, vec4, float, int, positionWorld, normalWorld, mix, smoothstep, clamp, max, pow,
-  abs, normalize, transformNormalToView, dot, length, exp, sin, attribute, select, Loop, min, cameraPosition,
+  abs, normalize, transformNormalToView, dot, length, exp, sin, attribute, select, Loop, min, cameraPosition, varying,
 } from 'three/tsl';
 import { G, U } from '../state.js';
 import { W, getHeight } from '../world/data.js';
@@ -183,23 +183,6 @@ export async function terrainMaterial() {
   col = mix(col, col.mul(0.22), puddle);
   rough = mix(rough, float(0.0), wet.mul(0.8));
   rough = mix(rough, float(-1.0), puddle); // clamped below → mirror-like puddles
-  // distant terrain shadows: march towards the sun over the heightmap, beyond the shadow maps' reach
-  const info = waterInfoTexture();
-  const farShadow = Fn(() => {
-    const vis = float(1).toVar();
-    const t = float(10).toVar();
-    const sd = normalize(U.sunDir);
-    Loop(18, () => {
-      const q = positionWorld.add(sd.mul(t));
-      const hq = texture(info, vec2(q.x.sub(W.X0).div(WORLD_W), q.z.sub(W.Z0).div(WORLD_H))).r;
-      vis.assign(min(vis, smoothstep(-3.0, t.mul(0.04).add(4.0), q.y.sub(hq))));
-      t.mulAssign(1.38);
-    });
-    return vis;
-  })();
-  const camDist = length(positionWorld.sub(cameraPosition));
-  const farW = smoothstep(G.Q.shadowFar * 0.55, G.Q.shadowFar * 0.95, camDist).mul(smoothstep(-0.05, 0.08, U.sunDir.y));
-  col = col.mul(mix(float(1), float(0.42), float(1).sub(farShadow).mul(farW).mul(float(1).sub(U.cloud.mul(0.8)))));
   // normal: UDN blend in world space (tiles are planar in XZ)
   const nWorld = normalize(vec3(nW.x.add(nrm.x), nW.y, nW.z.add(nrm.y)));
   mat.colorNode = vec4(col, 1);
@@ -207,12 +190,58 @@ export async function terrainMaterial() {
   mat.envMapIntensity = 0.6;
   mat.normalNode = transformNormalToView(nWorld);
   mat.aoNode = mix(float(1), ao, 0.7);
-  return mat;
+
+  // ── far material (chunks beyond ~500 m): one mean colour per layer instead of
+  // texture-array sampling (5 texture reads per pixel instead of ~26), no normal
+  // mapping, and the distant-shadow march evaluated per vertex.
+  const means = layerMeans(albedo);
+  const far = new THREE.MeshStandardNodeMaterial({ roughness: 0.9, metalness: 0 });
+  let fcol = vec3(0), wsum = float(0);
+  for (let i = 0; i < 8; i++) { fcol = fcol.add(vec3(...means[i].map((v, c) => v * TINT[i][c])).mul(weights[i])); wsum = wsum.add(weights[i]); }
+  fcol = fcol.div(max(wsum, 0.001));
+  fcol = fcol.mul(mix(vec3(0.82, 0.86, 0.80), vec3(1.12, 1.08, 1.0), macro)).mul(nz2.r.mul(0.25).add(0.88));
+  fcol = mix(fcol, fcol.mul(vec3(0.62, 1.12, 0.48)).mul(1.05), isPaddy.mul(0.75));
+  fcol = mix(fcol, vec3(0.08, 0.16, 0.04), isTea.mul(0.85));
+  fcol = mix(fcol, fcol.mul(vec3(0.55, 0.68, 0.42)), forestShade.mul(0.8));
+  fcol = fcol.mul(mix(float(1), float(0.55), max(shoreWet, U.rain.mul(0.75))));
+  const info = waterInfoTexture();
+  const farShadow = varying(Fn(() => {
+    const vis = float(1).toVar();
+    const t = float(10).toVar();
+    const sd = normalize(U.sunDir);
+    Loop(18, () => {
+      const q = positionWorld.add(sd.mul(t));
+      const hq = texture(info, vec2(q.x.sub(W.X0).div(WORLD_W), q.z.sub(W.Z0).div(WORLD_H))).level(0).r;
+      vis.assign(min(vis, smoothstep(-3.0, t.mul(0.04).add(4.0), q.y.sub(hq))));
+      t.mulAssign(1.38);
+    });
+    return vis;
+  })());
+  const camDist = length(positionWorld.sub(cameraPosition));
+  const farW = smoothstep(G.Q.shadowFar * 0.55, G.Q.shadowFar * 0.95, camDist).mul(smoothstep(-0.05, 0.08, U.sunDir.y));
+  fcol = fcol.mul(mix(float(1), float(0.42), float(1).sub(farShadow).mul(farW).mul(float(1).sub(U.cloud.mul(0.8)))));
+  far.colorNode = vec4(fcol, 1);
+  far.roughnessNode = mix(float(0.9), float(0.45), U.rain.mul(0.6));
+  far.envMapIntensity = 0.6;
+  return { near: mat, far };
+}
+
+// mean linear colour of each terrain layer (for the far material)
+function layerMeans(arr) {
+  const { data, width, height, depth } = arr.image;
+  const out = [];
+  for (let L = 0; L < depth; L++) {
+    let r = 0, g = 0, b = 0, n = 0;
+    const o = L * width * height * 4;
+    for (let i = 0; i < width * height; i += 97) { r += (data[o + i * 4] / 255) ** 2.2; g += (data[o + i * 4 + 1] / 255) ** 2.2; b += (data[o + i * 4 + 2] / 255) ** 2.2; n++; }
+    out.push([r / n, g / n, b / n]);
+  }
+  return out;
 }
 
 export class Terrain {
-  constructor(scene, material) {
-    this.scene = scene; this.material = material;
+  constructor(scene, mats) {
+    this.scene = scene; this.material = mats.near; this.farMaterial = mats.far;
     CHUNK = CELLS * W.CS;
     this.chunks = new Map();
     this.group = new THREE.Group();
@@ -230,7 +259,7 @@ export class Terrain {
 
   lodFor(c, cam) {
     const dx = Math.max(0, Math.abs(cam.x - c.cx) - CHUNK / 2), dz = Math.max(0, Math.abs(cam.z - c.cz) - CHUNK / 2);
-    const d = Math.hypot(dx, dz, Math.max(0, cam.y - c.cy - 200) * 0.5) / G.Q.terrainLod;
+    const d = Math.hypot(dx, dz, Math.max(0, cam.y - c.cy - 200) * 0.5) / (G.Q.terrainLod * (G.lodScale ?? 1));
     const outside = c.i < 0 || c.j < 0 || c.i >= this.range.i1 - RING + 1 || c.j >= this.range.j1 - RING + 1;
     let l = d < 180 ? 0 : d < 520 ? 1 : d < 1200 ? 2 : d < 2600 ? 3 : 4;
     if (outside) l = Math.max(l, 3);
@@ -239,7 +268,7 @@ export class Terrain {
 
   setLod(c, l) {
     if (!c.meshes[l]) {
-      const m = new THREE.Mesh(buildChunkGeometry(c.i, c.j, LODS[l]), this.material);
+      const m = new THREE.Mesh(buildChunkGeometry(c.i, c.j, LODS[l]), l >= 2 ? this.farMaterial : this.material);
       m.receiveShadow = true; m.castShadow = l >= 1;
       m.matrixAutoUpdate = false; m.updateMatrix();
       c.meshes[l] = m;

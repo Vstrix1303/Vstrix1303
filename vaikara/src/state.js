@@ -2,11 +2,14 @@
 import { uniform, vec3 } from 'three/tsl';
 import * as THREE from 'three/webgpu';
 
+// Presets. pixelRatio is the maximum render scale; auto resolution (perf.js)
+// lowers it when frames run long. lod scales every LOD distance.
 export const QUALITY_PRESETS = {
-  low: { pixelRatio: 0.75, shadows: true, shadowMap: 1024, cascades: 2, shadowFar: 350, ao: false, bloom: false, treeNear: 120, treeFar: 2200, grass: 0.35, terrainLod: 0.6 },
-  medium: { pixelRatio: 1, shadows: true, shadowMap: 2048, cascades: 3, shadowFar: 1000, ao: true, bloom: true, treeNear: 160, treeFar: 3200, grass: 0.6, terrainLod: 0.8 },
-  high: { pixelRatio: 1, shadows: true, shadowMap: 2048, cascades: 4, shadowFar: 1600, ao: true, bloom: true, treeNear: 210, treeFar: 4200, grass: 1, terrainLod: 1 },
-  ultra: { pixelRatio: 1.5, shadows: true, shadowMap: 4096, cascades: 4, shadowFar: 2400, ao: true, bloom: true, treeNear: 280, treeFar: 5200, grass: 1.4, terrainLod: 1.3 },
+  low: { pixelRatio: 0.7, shadows: true, shadowMap: 1024, cascades: 1, shadowFar: 300, ao: false, bloom: false, treeNear: 110, treeFar: 2000, grass: 0.3, terrainLod: 0.6, npc: 10, waterRing: 1.07 },
+  laptop: { pixelRatio: 0.8, shadows: true, shadowMap: 1024, cascades: 1, shadowFar: 380, ao: false, bloom: true, treeNear: 130, treeFar: 2600, grass: 0.45, terrainLod: 0.7, npc: 12, waterRing: 1.06 },
+  medium: { pixelRatio: 1, shadows: true, shadowMap: 2048, cascades: 2, shadowFar: 700, ao: false, bloom: true, treeNear: 160, treeFar: 3200, grass: 0.6, terrainLod: 0.8, npc: 16, waterRing: 1.045 },
+  high: { pixelRatio: 1, shadows: true, shadowMap: 2048, cascades: 3, shadowFar: 1200, ao: true, bloom: true, treeNear: 210, treeFar: 4200, grass: 1, terrainLod: 1, npc: 20, waterRing: 1.035 },
+  ultra: { pixelRatio: 1.5, shadows: true, shadowMap: 4096, cascades: 4, shadowFar: 2400, ao: true, bloom: true, treeNear: 280, treeFar: 5200, grass: 1.4, terrainLod: 1.3, npc: 24, waterRing: 1.03 },
 };
 
 export const G = {
@@ -19,6 +22,7 @@ export const G = {
   player: null,
   focus: new THREE.Vector3(), // what streaming systems centre on (player or free cam)
   colliders: null,
+  lodScale: 1,   // 0.7..1: LOD distances, lowered by auto quality under load
 };
 
 // Global shader uniforms.

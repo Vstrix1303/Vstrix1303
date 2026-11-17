@@ -78,7 +78,12 @@ export class Sky {
     this.sun.shadow.radius = 2;
     this.sun.shadow.camera.near = 1; this.sun.shadow.camera.far = 6000;
     scene.add(this.sun, this.sun.target);
-    if (G.Q.shadows && G.Q.csm !== false) {
+    if (G.Q.shadows && (G.Q.cascades <= 1 || G.Q.csm === false)) {
+      // one plain shadow map following the player: the cheapest option (Low / Laptop)
+      const r = G.Q.shadowFar / 2, cam = this.sun.shadow.camera;
+      cam.left = -r; cam.right = r; cam.top = r; cam.bottom = -r; cam.near = 1; cam.far = 5000; cam.updateProjectionMatrix();
+      this.sun.shadow.bias = -0.0006; this.sun.shadow.normalBias = 0.6;
+    } else if (G.Q.shadows) {
       this.csm = new CSMShadowNode(this.sun, { cascades: G.Q.cascades, maxFar: G.Q.shadowFar, mode: 'practical', lightMargin: 500 });
       this.csm.fade = true;
       this.sun.shadow.shadowNode = this.csm;

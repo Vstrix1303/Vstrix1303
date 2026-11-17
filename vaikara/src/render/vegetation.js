@@ -23,6 +23,9 @@ export class Vegetation {
     this.nearR = uniform(G.Q.treeNear);
     this.palmR = uniform(G.Q.treeNear * (G.quality === 'high' || G.quality === 'ultra' ? 0.68 : 0.55));
     this.farR = uniform(G.Q.treeFar);
+    // full meshes inside r0, light meshes r0..r1 (nearR / palmR), impostors beyond
+    this.r0 = uniform(G.Q.treeNear * 0.42);
+    this.palmR0 = uniform(this.palmR.value * 0.5);
     this.lastFill = new THREE.Vector3(1e9, 0, 0);
     this.lastScatter = new THREE.Vector3(1e9, 0, 0);
   }
@@ -81,27 +84,32 @@ export class Vegetation {
       this.grid.get(key).push(t);
     }
     progress?.(0.6);
-    // ── near meshes: one InstancedMesh per variant
-    this.near = [];
-    const nearCap = { palm: 4000, broad: 5000, broad2: 5000, teak: 3000, mangrove: 6000, banana: 2000 };
+    // ── near meshes: full trees (LOD0) and light trees (LOD1), one InstancedMesh per variant
+    this.near = []; this.mid = [];
+    const fullCap = { palm: 2200, broad: 2200, broad2: 2200, teak: 1500, mangrove: 2500, banana: 1500 };
+    const midCap = { palm: 4500, broad: 5000, broad2: 5000, teak: 3000, mangrove: 6000, banana: 2000 };
+    const midShadow = G.quality === 'high' || G.quality === 'ultra';
+    const makeSet = (S, geos, cap, list, shadow) => geos.map((v) => {
+      const g = v.geo.clone();
+      g.setAttribute('iOrigin', new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3));
+      const m = new THREE.InstancedMesh(g, S.mats.map((mm) => {
+        const c = mm.clone();
+        // NodeMaterial.clone() does not carry these over reliably
+        c.alphaTest = mm.alphaTest; c.side = mm.side; c.map = mm.map; c.envMapIntensity = mm.envMapIntensity;
+        return c;
+      }), cap);
+      hideAll(m);
+      m.userData.cat = 'trees';
+      m.castShadow = shadow; m.receiveShadow = true; m.frustumCulled = false;
+      this.scene.add(m);
+      list.push(m);
+      if (location.search.includes('nonear')) m.visible = false;
+      return m;
+    });
     for (const sp in flora.species) {
       const S = flora.species[sp];
-      S.near = S.variants.map((v) => {
-        const g = v.geo.clone();
-        g.setAttribute('iOrigin', new THREE.InstancedBufferAttribute(new Float32Array(nearCap[sp] * 3), 3));
-        const m = new THREE.InstancedMesh(g, S.mats.map((mm) => {
-          const c = mm.clone();
-          // NodeMaterial.clone() does not carry these over reliably
-          c.alphaTest = mm.alphaTest; c.side = mm.side; c.map = mm.map; c.envMapIntensity = mm.envMapIntensity;
-          return c;
-        }), nearCap[sp]);
-        hideAll(m);
-        m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
-        this.scene.add(m);
-        this.near.push(m);
-        if (location.search.includes('nonear')) m.visible = false;
-        return m;
-      });
+      S.near = makeSet(S, S.variants, fullCap[sp], this.near, true);
+      S.mid = makeSet(S, S.lite, midCap[sp], this.mid, midShadow);
     }
     progress?.(0.7);
     // ── impostors
@@ -175,28 +183,39 @@ export class Vegetation {
         fm.normalNode = transformNormalToView(normalize(vec3(U.sunDir.x.mul(0.55), 0.8, U.sunDir.z.mul(0.55))));
         // collapse impostors inside the near radius and beyond the far radius
         const list = this.trees[sp].filter((t) => t.v === vi);
-        const im = new THREE.InstancedMesh(geo, fm, Math.max(1, list.length));
-        im.count = list.length;
-        list.forEach((t, i) => {
-          _e.set(0, t.rot, 0); _q.setFromEuler(_e); _s.setScalar(t.s); _p.set(t.x, t.y, t.z);
-          im.setMatrixAt(i, _m.compose(_p, _q, _s));
-        });
-        im.instanceMatrix.needsUpdate = true;
-        const org = new Float32Array(Math.max(1, list.length) * 3);
-        list.forEach((t, i) => { org[i * 3] = t.x; org[i * 3 + 1] = t.y; org[i * 3 + 2] = t.z; });
-        geo.setAttribute('iOrigin', new THREE.InstancedBufferAttribute(org, 3));
-        im.castShadow = false; im.receiveShadow = false; im.frustumCulled = false;
-        this.scene.add(im);
-        S.far.push({ mesh: im, list, mat: fm });
-        if (location.search.includes('nofar')) im.visible = false;
+        // one InstancedMesh per 1 km cell: frustum-culled, and thinned with distance
+        const cells = new Map();
+        for (const t of list) { const k = `${Math.floor(t.x / 1000)},${Math.floor(t.z / 1000)}`; if (!cells.has(k)) cells.set(k, []); cells.get(k).push(t); }
+        for (const [k, cl] of cells) {
+          const rr = makeRng(cl.length * 31 + vi * 7 + sp.length);
+          for (let i = cl.length - 1; i > 0; i--) { const j = Math.floor(rr() * (i + 1)); [cl[i], cl[j]] = [cl[j], cl[i]]; }
+          const gc = geo.clone();
+          const org = new Float32Array(cl.length * 3);
+          const im = new THREE.InstancedMesh(gc, fm, cl.length);
+          cl.forEach((t, i) => {
+            _e.set(0, t.rot, 0); _q.setFromEuler(_e); _s.setScalar(t.s); _p.set(t.x, t.y, t.z);
+            im.setMatrixAt(i, _m.compose(_p, _q, _s));
+            org[i * 3] = t.x; org[i * 3 + 1] = t.y; org[i * 3 + 2] = t.z;
+          });
+          gc.setAttribute('iOrigin', new THREE.InstancedBufferAttribute(org, 3));
+          im.instanceMatrix.needsUpdate = true;
+          im.computeBoundingSphere();
+          im.castShadow = false; im.receiveShadow = false; im.frustumCulled = true; im.userData.cat = 'tree impostors';
+          this.scene.add(im);
+          const [ci, cj] = k.split(',').map(Number);
+          S.far.push({ mesh: im, n: cl.length, mat: fm, x: (ci + 0.5) * 1000, z: (cj + 0.5) * 1000 });
+          if (location.search.includes('nofar')) im.visible = false;
+        }
       }
     }
     // distance-gating node, shared: uses the instance's translation column
     for (const sp in species) for (const f of species[sp].far) {
       f.mat.positionNode = farGate(sp === 'palm' ? this.palmR : nearR, farR);
     }
-    for (const sp in species) for (const m of species[sp].near) {
-      for (const mat of m.material) mat.positionNode = nearGate(mat.positionNode, sp === 'palm' ? this.palmR : nearR);
+    for (const sp in species) {
+      const r0 = sp === 'palm' ? this.palmR0 : this.r0, r1 = sp === 'palm' ? this.palmR : nearR;
+      for (const m of species[sp].near) for (const mat of m.material) mat.positionNode = nearGate(mat.positionNode, r0);
+      for (const m of species[sp].mid) for (const mat of m.material) mat.positionNode = midGate(mat.positionNode, r0, r1);
     }
   }
 
@@ -206,6 +225,7 @@ export class Vegetation {
     const mk = (geo, mat, cap, shadow = false) => {
       const m = new THREE.InstancedMesh(geo, mat, cap);
       hideAll(m);
+      m.userData.cat = 'ground cover';
       m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = true;
       this.scene.add(m);
       return m;
@@ -214,7 +234,7 @@ export class Vegetation {
       grass: mk(grass, M.grass, Math.round(22000 * G.Q.grass)),
       rice: mk(rice, M.rice, Math.round(16000 * G.Q.grass)),
       tea: mk(tea, M.tea, Math.round(16000 * G.Q.grass), true),
-      fern: fernGeo ? mk(fernGeo.geometry, fernGeo.material, Math.round(600 * G.Q.grass), false) : null,
+      fern: fernGeo ? mk(fernGeo.geometry, fernGeo.material, Math.round(260 * G.Q.grass), false) : null,
     };
   }
 
@@ -263,7 +283,7 @@ export class Vegetation {
         if (nearestRoad(x, z).d < 2.5) continue;
         if (G.colliders.blocked(x, z, 0.4)) continue;
         const forest = b[1] / 255;
-        if (S.fern && forest > 0.35 && d2 < 35 * 35 && h(gx, gz, 7) < 0.3) put('fern', x, y - 0.05, z, r * 9, 0.9 + h(gx, gz, 8) * 1.1);
+        if (S.fern && forest > 0.35 && d2 < 28 * 28 && h(gx, gz, 7) < 0.3) put('fern', x, y - 0.05, z, r * 9, 0.9 + h(gx, gz, 8) * 1.1);
         else put('grass', x, y - 0.05, z, r * 9, 0.45 + h(gx, gz, 9) * 0.5, 0.35 + h(gx, gz, 10) * 0.6 + (zone === Z.meadow ? 0.35 : 0));
       }
     }
@@ -271,33 +291,61 @@ export class Vegetation {
   }
 
   fillNear(cam) {
-    const R = G.Q.treeNear + 30;
     const { species } = this.flora;
+    const ls = G.lodScale ?? 1;
+    const R1 = G.Q.treeNear * ls + 30;
     const counts = new Map();
-    for (const sp in species) for (const m of species[sp].near) counts.set(m, 0);
-    const i0 = Math.floor((cam.x - R) / 100), i1 = Math.floor((cam.x + R) / 100);
-    const j0 = Math.floor((cam.z - R) / 100), j1 = Math.floor((cam.z + R) / 100);
+    for (const sp in species) for (const m of [...species[sp].near, ...species[sp].mid]) counts.set(m, 0);
+    const i0 = Math.floor((cam.x - R1) / 100), i1 = Math.floor((cam.x + R1) / 100);
+    const j0 = Math.floor((cam.z - R1) / 100), j1 = Math.floor((cam.z + R1) / 100);
+    const put = (m, t) => {
+      const c = counts.get(m);
+      if (c >= m.instanceMatrix.count) return;
+      _e.set(0, t.rot, 0); _q.setFromEuler(_e); _s.setScalar(t.s); _p.set(t.x, t.y, t.z);
+      m.setMatrixAt(c, _m.compose(_p, _q, _s));
+      m.geometry.attributes.iOrigin.setXYZ(c, t.x, t.y, t.z);
+      counts.set(m, c + 1);
+    };
     for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
       const list = this.grid.get(i * 1000 + j);
       if (!list) continue;
       for (const t of list) {
-        if ((t.x - cam.x) ** 2 + (t.z - cam.z) ** 2 > R * R) continue;
-        const m = species[t.sp].near[t.v];
-        const c = counts.get(m);
-        if (c >= m.instanceMatrix.count) continue;
-        _e.set(0, t.rot, 0); _q.setFromEuler(_e); _s.setScalar(t.s); _p.set(t.x, t.y, t.z);
-        m.setMatrixAt(c, _m.compose(_p, _q, _s));
-        m.geometry.attributes.iOrigin.setXYZ(c, t.x, t.y, t.z);
-        counts.set(m, c + 1);
+        const d2 = (t.x - cam.x) ** 2 + (t.z - cam.z) ** 2;
+        if (d2 > R1 * R1) continue;
+        const r0 = (t.sp === 'palm' ? this.palmR0.value : this.r0.value) + 25;
+        if (d2 < r0 * r0) put(species[t.sp].near[t.v], t);
+        const r0in = (t.sp === 'palm' ? this.palmR0.value : this.r0.value) - 25;
+        if (d2 > r0in * r0in || r0in < 0) put(species[t.sp].mid[t.v], t);
       }
     }
-    for (const [m, c] of counts) { m.count = c; m.instanceMatrix.needsUpdate = true; m.geometry.attributes.iOrigin.needsUpdate = true; }
+    for (const [m, c] of counts) {
+      m.count = c; m.instanceMatrix.needsUpdate = true; m.geometry.attributes.iOrigin.needsUpdate = true;
+      m.visible = c > 0 && !location.search.includes('nonear');
+      if (c > 0) { m.computeBoundingSphere(); m.frustumCulled = true; }
+    }
+  }
+
+  // impostor cells: hide beyond the far radius, thin out with distance
+  updateFar(cam) {
+    const far = this.farR.value;
+    for (const sp in this.flora.species) for (const f of this.flora.species[sp].far) {
+      const d = Math.max(0, Math.hypot(cam.x - f.x, cam.z - f.z) - 707);
+      const vis = d < far && !location.search.includes('nofar');
+      f.mesh.visible = vis;
+      if (vis) f.mesh.count = Math.max(1, Math.ceil(f.n * (d < 1200 ? 1 : 1 - 0.65 * Math.min(1, (d - 1200) / Math.max(1, far - 1200)))));
+    }
   }
 
   update(cam) {
     if (!this.trees) return;
     const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-    if (flat(cam, this.lastFill) > 25) { this.fillNear(cam); this.lastFill.copy(cam); }
+    // LOD radii follow the auto-quality scale
+    const ls = G.lodScale ?? 1, pr = G.Q.treeNear * (G.quality === 'high' || G.quality === 'ultra' ? 0.68 : 0.55);
+    this.nearR.value = G.Q.treeNear * ls; this.palmR.value = pr * ls;
+    this.r0.value = G.Q.treeNear * 0.42 * ls; this.palmR0.value = pr * 0.5 * ls;
+    this.farR.value = G.Q.treeFar * (0.6 + 0.4 * ls);
+    if (flat(cam, this.lastFill) > 25 || ls !== this.lastLs) { this.fillNear(cam); this.lastFill.copy(cam); this.lastLs = ls; }
+    if (!this.lastFar || flat(cam, this.lastFar) > 150) { this.updateFar(cam); (this.lastFar ||= new THREE.Vector3()).copy(cam); }
     if (flat(cam, this.lastScatter) > 12) { this.fillScatter(cam); this.lastScatter.copy(cam); }
   }
 }
@@ -308,6 +356,11 @@ function instanceOrigin() {
   return attribute('iOrigin', 'vec3');
 }
 
+function midGate(base, r0, r1) {
+  const o = instanceOrigin();
+  const d = length(o.xz.sub(U.camPos.xz));
+  return (base || positionLocal).mul(step(r0, d).mul(step(d, r1)));
+}
 function farGate(nearR, farR) {
   const o = instanceOrigin();
   const d = length(o.xz.sub(U.camPos.xz));
