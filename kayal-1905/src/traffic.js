@@ -50,7 +50,7 @@ const SAY = {
   scare: ['Aiyo! Is this a road or a racecourse?', 'Slow down! There are children on this road!', 'Ente Deivame — he rides like the Company owns him!'],
 };
 let barkT = 0;
-const bark = (name, set) => { if (barkT > 0 || G.story?.busy || G.ui.subResolve) return; barkT = 9; G.ui.bark(name, SAY[set][(Math.random() * SAY[set].length) | 0], 3.6); };
+const bark = (name, set, preset) => { if (barkT > 0 || G.story?.busy || G.ui.subResolve) return; barkT = 9; G.ui.bark(name, SAY[set][(Math.random() * SAY[set].length) | 0], 3.6, preset); };
 
 // ---------------------------------------------------------------- one traveller
 const WIDE = ['main', 'north', 'hill', 'south', 'quay', 'coast', 'bar', 'estate'];
@@ -115,7 +115,7 @@ class Traveller {
     if (b) {
       target = typeof b === 'object' ? Math.min(target, b.speed * 0.9) : 0;
       this.blockT += dt;
-      if (b === 'player' && this.blockT > 2.2) { bark(this.name, this.kind === 'walker' ? 'walker' : this.kind); this.blockT = -6; }
+      if (b === 'player' && this.blockT > 2.2) { bark(this.name, this.kind === 'walker' ? 'walker' : this.kind, this.h?.preset || this.crew?.[0]?.preset); this.blockT = -6; }
       if (b === 'npc' && this.blockT > 5) { this.ignoreT = 7; this.blockT = 0; }      // a man who will not move: go round him
     } else this.blockT = Math.min(0, this.blockT + dt);
     if (this.scareT > 0) { this.scareT -= dt; target = 0; }
@@ -189,7 +189,7 @@ class Walker extends Traveller {
   constructor(scene, o) {
     super(scene, 'walker', o);
     this.h = new Human(o.look);
-    if (o.headLoad) this.h.headLoad = true;
+    if (o.headLoad) this.h.setHeadLoad(true);
     this.umbrellaOK = !o.headLoad;
     this.root.add(this.h.root);
     this.gaze = { x: 0, y: 0, z: 0 }; this.metT = 0;
@@ -203,9 +203,9 @@ class Walker extends Traveller {
     const h = this.h, pl = G.player;
     if (this.umbrellaOK) { const want = G.env.rain > 0.3; if (want !== !!h.umbrella) { h.setUmbrella(want); h.umb?.traverse((ob) => ob.layers.set(1)); } }
     // a horse at the gallop, close by: flinch from it, and say what you think of it
-    if (d < 3.4 && pl.speedNow > 7 && this.scareT <= 0) { this.scareT = 1.6; h.flinch(pp.x, pp.z, 1.3); bark(this.name, 'scare'); }
+    if (d < 3.4 && pl.speedNow > 7 && this.scareT <= 0) { this.scareT = 1.6; h.flinch(pp.x, pp.z, 1.3); bark(this.name, 'scare', h.preset); }
     this.metT -= dt;
-    if (d < 3 && pl.speedNow < 5 && this.metT <= 0 && Math.random() < dt * 0.5) { this.metT = 40; bark(this.name, 'walker'); }
+    if (d < 3 && pl.speedNow < 5 && this.metT <= 0 && Math.random() < dt * 0.5) { this.metT = 40; bark(this.name, 'walker', h.preset); }
     h.state = this.scareT > 0 ? 'cower' : this.speed > 0.2 ? 'move' : 'idle'; h.speed = this.speed;
     h.lod = d > 25 ? 1 : 0; h.near = d < 8;
     h.setWorld(this.pos.x, this.pos.y, this.pos.z, this.yaw);

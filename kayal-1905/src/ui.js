@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { G } from './state.js';
 import { clamp } from './util.js';
+import { speak, hush } from './voice.js';
 
 const $ = (id) => document.getElementById(id);
 // what Madhavan has in hand (drawn for this game)
@@ -63,7 +64,8 @@ export class UI {
     if (text) { if (this.el.prompt.dataset.t !== text) { this.el.prompt.dataset.t = text; this.el.prompt.innerHTML = `<b>${G.input.isTouch ? 'E' : 'E'}</b> ${text}`; } this.el.prompt.classList.add('on'); }
     else this.el.prompt.classList.remove('on');
   }
-  bark(name, text, dur = 4) {
+  bark(name, text, dur = 4, preset = null) {
+    speak(name, text, name ? 'bark' : 'line', preset);
     this.el.barkName.textContent = name; this.el.barkText.textContent = text;
     this.el.bark.classList.add('on'); this.barkT = dur;
   }
@@ -93,7 +95,8 @@ export class UI {
   setWaypoint(pos) { this.waypoint = pos ? pos.clone() : null; }
 
   // blocking dialogue line; resolves when the player advances
-  say(name, text) {
+  say(name, text, preset = null) {
+    speak(name, text, 'line', preset);
     return new Promise((res) => {
       this.el.bark.classList.remove('on');
       this.el.subs.classList.add('on');
@@ -118,11 +121,12 @@ export class UI {
     if (performance.now() - this.subAt < 250) return true;
     if (this.typing) { clearInterval(this.typing); this.typing = null; this.el.subText.textContent = this.full; this.el.subHint.style.opacity = 1; return true; }
     const r = this.subResolve; this.subResolve = null;
+    hush();
     this.el.subs.classList.remove('on');
     r();
     return true;
   }
-  cancelSay() { clearInterval(this.typing); this.typing = null; this.subResolve = null; this.el.subs.classList.remove('on'); }
+  cancelSay() { hush(); clearInterval(this.typing); this.typing = null; this.subResolve = null; this.el.subs.classList.remove('on'); }
 
   letterbox(on) { document.body.classList.toggle('cine', on); }
   fade(to, dur = 1) {

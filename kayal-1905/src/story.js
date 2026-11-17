@@ -308,7 +308,7 @@ export class Story {
         if (other) { const op = other.pos.clone(); op.scale = other.h?.S || 1; p.setCine(dir.shot(me, op, who === 'M' ? 'a' : 'b')); }
         try {
           if (who === 'M') { const po = p.poseOverride; if (!po && p.mode === 'foot') p.poseOverride = 'talk'; try { await ui.say('Madhavan', text); } finally { p.poseOverride = po; } }
-          else { who.talkT = 6; await ui.say(who.name, text); }
+          else { who.talkT = 6; await ui.say(who.name, text, who.h?.preset); }
         } finally { if (h) h.talking = false; }
         chk();
       }

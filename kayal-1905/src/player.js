@@ -417,9 +417,6 @@ export class Player {
     } else {
       this.cineBlend = 0;
       cam.position.copy(desired);
-      // the camera is carried, not bolted on: it rides the stride and drifts a little
-      if (mode === 'foot' && this.h.moving) cam.position.y += Math.cos(this.h.gait * Math.PI * 4) * 0.012 * (this.h.walkAmp || 0);
-      cam.position.y += Math.sin(G.time * 0.7) * 0.006; cam.position.x += Math.sin(G.time * 0.43) * 0.005;
       if (this.shake > 0) { cam.position.x += (Math.random() - 0.5) * this.shake * 0.12; cam.position.y += (Math.random() - 0.5) * this.shake * 0.12; }
       cam.lookAt(look);
     }

@@ -6,6 +6,7 @@
 // into turns, breathing that quickens with effort, shifting weight, glances,
 // blinks, fidgets, recoil from blows, and cloth that lags behind the body.
 import * as THREE from 'three';
+import { G } from './state.js';
 import { RIG } from './body.js';
 import { groundAt } from './physics.js';
 import { damp, clamp, lerp, smoothstep, angleDiff } from './util.js';
@@ -215,7 +216,7 @@ export function updateMotion(h, dt) {
 
   // ---- things in the hands
   if (h.umbrella && (s === 'idle' || s === 'move' || s === 'talk')) { g.armR = -0.75; g.elR = -1.9; g.armRz = 0.1; g.fingR = 1.3; }
-  if (h.headLoad && (s === 'idle' || s === 'move')) { g.armL = -3.02; g.elL = -0.22; g.armLz = 0.16; g.sway *= 0.4; g.headY = 0; g.fingL = 0.2; g.twist *= 0.3; }
+  if ((h.headLoad || h.preset?.basketHead) && (s === 'idle' || s === 'move')) { const P = G.hlPose || [-3.05, -1.25, -0.1, 0.2];      // the hand on the ring beneath the load g.armL = P[0]; g.elL = P[1]; g.armLz = P[2]; g.wristL = P[3]; g.sway *= 0.4; g.headY = 0; g.fingL = 0.2; g.twist *= 0.3; }
   if (h.carry && (s === 'idle' || s === 'move')) { g.armL = -0.08; g.elL = -0.22; g.armLz = -0.24; g.fingL = 1.3; g.clavL = -0.08; g.sway += 0.03; }
   if (h.grip) g.fingR = 1.3;
   if (h.gripL) g.fingL = 1.3;

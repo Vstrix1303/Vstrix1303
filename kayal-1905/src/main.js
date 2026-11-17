@@ -5,6 +5,7 @@ import { G, QUALITY } from './state.js';
 import { UI, EQUIP } from './ui.js';
 import { setupWheel } from './wheel.js';
 import { setupBlobs } from './blobs.js';
+import { hush } from './voice.js';
 import { Input } from './input.js';
 import { AudioSys } from './audio.js';
 import { Player } from './player.js';
@@ -213,7 +214,7 @@ async function boot() {
     G.paused = v;
     $('pause').classList.toggle('on', v);
     input.enabled = !v;
-    if (v) { input.releaseLock(); $('pauseChapter').textContent = story.tag || ''; }
+    if (v) { input.releaseLock(); $('pauseChapter').textContent = story.tag || ''; hush(); }
     else { input.requestLock(); audio.resume(); }
   };
   $('btnResume').onclick = () => setPaused(false);

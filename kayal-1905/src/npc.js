@@ -47,7 +47,7 @@ export class NPC {
     }
     if (o.cane) this.h.hold(makeCane(o.cane === true ? 0.92 : o.cane));
     if (o.slate) this.h.hold(makeSlate(), false);
-    if (o.headLoad) this.h.headLoad = true;
+    if (o.headLoad) this.h.setHeadLoad(true);
     this.umbrellaOK = !!o.umbrella;
     this.root.traverse((ob) => ob.layers.set(1));
     scene.add(this.root);
@@ -60,7 +60,7 @@ export class NPC {
   }
   speak(text) {
     const l = text || this.lines[this.lineI++ % this.lines.length];
-    G.ui.bark(this.name, l, 4.5);
+    G.ui.bark(this.name, l, 4.5, this.h.preset);
     this.talkT = 4;
   }
   setActive(v) {

@@ -581,6 +581,7 @@ export class Human {
     AH = head; AC = chest; AP = hips;
     }
     const head = AH, chest = AC;
+    this.headAnchor = head;
 
     // ---- ears, hair, and what is worn on the head: all shaped surfaces
     const hsc = headScale(o), skinM = AM(shadeN(o.skin, 0.92), 0.6);
@@ -611,7 +612,8 @@ export class Human {
       put(chest, capeGeo(), leafMat(), 0, -0.08, -0.005).rotation.x = 0.07;
       put(head, hoodGeo(), leafMat(), 0, -0.05, -0.02).rotation.x = -0.2;
     }
-    if (o.basketHead) put(head, G_BASKET, leafMat(), 0, 0.236, 0);
+    this.loadY = bodyKey ? 0.155 : 0.236;           // top of the head, for whatever is carried on it
+    if (o.basketHead) put(head, G_BASKET, leafMat(), 0, this.loadY, 0);
     if (o.earrings) for (const s of [-1, 1]) put(head, G_SPH, AM(0xd9a93a, 0.3, { metalness: 0.9 }), s * 0.079, 0.066, -0.006).scale.setScalar(0.009);
     if (o.necklace) { const n = put(chest, new THREE.TorusGeometry(0.062, 0.006, 6, 20), AM(0xd9a93a, 0.3, { metalness: 0.9 }), 0, 0.205, 0.022); n.rotation.x = Math.PI / 2 - 0.5; }
   }
@@ -646,6 +648,27 @@ export class Human {
     }
     if (this.umb) this.umb.visible = !!on;
     this.umbrella = !!on;
+  }
+  // something carried on the head (the raised left hand steadies it): a clay pot on a cloth ring,
+  // or a basket of produce — whichever suits this person
+  setHeadLoad(on) {
+    this.headLoad = !!on;
+    if (on && !this.loadMesh && !this.preset.basketHead && this.headAnchor) {
+      const g = new THREE.Group(), seed = (this.preset.skin || 0) ^ (this.preset.mundu || 0);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.025, 6, 14), AM(0xd8ccb0, 0.95)); ring.rotation.x = Math.PI / 2; ring.position.y = 0.012; g.add(ring);
+      if (seed % 2) {
+        const prof = [[0.02, 0], [0.11, 0.02], [0.17, 0.09], [0.175, 0.15], [0.14, 0.23], [0.085, 0.27], [0.08, 0.31], [0.1, 0.33]].map(([r, y]) => new THREE.Vector2(r, y));
+        const pot = new THREE.Mesh(new THREE.LatheGeometry(prof, 16), AM(0x9a4a2a, 0.75)); pot.position.y = 0.025; g.add(pot);
+      } else {
+        const b = new THREE.Mesh(G_BASKET, leafMat()); b.position.y = 0.02; g.add(b);
+        const cols = [0x5a3a1c, 0xc9a33a, 0x4a6a2a, 0x5a3a1c, 0xd8b84a];
+        for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, r = i % 2 ? 0.1 : 0.05; const s = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), AM(cols[i % cols.length], 0.8)); s.position.set(Math.cos(a) * r, 0.15 + (i % 3) * 0.02, Math.sin(a) * r); g.add(s); }
+      }
+      g.position.set(0, this.loadY ?? 0.236, 0);
+      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.layers.set(1); } });
+      this.headAnchor.add(g); this.loadMesh = g;
+    }
+    if (this.loadMesh) this.loadMesh.visible = !!on;
   }
   // far figures stop casting shadows (the shadow pass is the costliest thing a crowd adds)
   setShadow(on) {
