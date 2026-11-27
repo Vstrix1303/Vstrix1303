@@ -15,6 +15,29 @@ every texture, model, animation, sound effect and note of music is generated pro
 > **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
+## Version 13 — 1957 buildings and real clothes
+
+- **Buildings:**
+  - The bazaar is two-storey shophouses in colour-washed plaster, with balconies, shuttered windows, tin awnings and
+    folding plank shutters. Some have tiled roofs; others have flat roofs behind parapets dated 1948–1957.
+    Enamel boards advertise beedis, soap, tea and torches.
+  - The party offices and the reading room are plastered blocks with square-column verandahs and stepped parapets
+    carrying their boards. The panchayat is a two-storey office.
+  - Lakshmi Talkies is now an Art Deco picture house: a stepped, finned tower over the entrance, speed-line bands,
+    a concrete marquee and the week's posters in frames.
+- **Clothes are real garments now (desktop app):**
+  - Collared, buttoned shirts with long sleeves or cut to half-sleeve. They are worn out over the mundu, or
+    tucked into belted trousers.
+  - Khaki shorts for the police, a jacket, shirt and tie for officials, and leather shoes.
+  - Women wear a fitted blouse cropped under the bust with a neriyathu draped over the left shoulder
+    (gold-bordered with a kasavu mundu); Nasrani women wear the chatta.
+  - The garments are MakeHuman's free clothes (CC0), fitted to each body and skinned to its skeleton by
+    `tools/mh-build.mjs`, then dyed in the game. The skin they cover is hidden, so nothing pokes through.
+  - Beyond 25 m people switch back to painted clothes, and garments cast no shadow of their own, so crowds cost
+    about what they did before.
+  - Rebuilding the garments: extract the clothes from a MakeHuman 1.1 data folder with
+    `python3 tools/mh-clothes.py <makehuman/data> <dir>`, then run `node tools/mh-build.mjs <makehuman/data> <dir>`.
+
 ## Kerala, 1957 (version 12)
 
 - **The time:** April 1957. Kerala is a year old and has just voted in a communist government, one of the first anywhere to
@@ -23,7 +46,7 @@ every texture, model, animation, sound effect and note of music is generated pro
 - **The village:**
   - Electric poles and wires along the roads, with street bulbs.
   - A bus stand with a timetable.
-  - Lakshmi Talkies, a tent cinema with posters for 1950s Malayalam films.
+  - Lakshmi Talkies, the cinema, with posters for 1950s Malayalam films.
   - A ration shop, a reading room and the panchayat office.
   - It's election season: the C.P.I. and Congress offices fly their flags, slogans are painted on walls,
     and bunting is strung across the bazaar.

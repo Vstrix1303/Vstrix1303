@@ -1,5 +1,5 @@
 // Builds the game's realistic human bodies from MakeHuman's CC0 data.
-//   node tools/mh-build.mjs <path to makehuman/data>
+//   node tools/mh-build.mjs <path to makehuman/data> [clothes dir from tools/mh-clothes.py]
 // For each body preset it blends MakeHuman's macro targets (sex, age, muscle, weight, ancestry),
 // folds MakeHuman's 163-bone skeleton onto the game's 24-bone animation rig, scales the body so its
 // legs match the rig (the walking IK depends on that), makes two lighter versions for distance,
@@ -13,6 +13,26 @@ const DATA = process.argv[2];
 if (!DATA || !fs.existsSync(path.join(DATA, '3dobjs', 'base.obj'))) { console.error('usage: node tools/mh-build.mjs <makehuman/data>'); process.exit(1); }
 const OUT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'assets', 'humans');
 fs.mkdirSync(OUT, { recursive: true });
+const CLDIR = process.argv[3];
+const CLOTHES = {};
+if (CLDIR) for (const g of ['cs01', 'suit', 'shoes', 'fcs01']) CLOTHES[g] = JSON.parse(fs.readFileSync(path.join(CLDIR, g + '.json'), 'utf8'));
+// the garments each body wears, split into upper and lower pieces so a shirt can go over a mundu;
+// bit = the body vertices this piece hides (the shader discards them), tex = its detail texture
+const PIECES = {
+  cs01U: { src: 'cs01', part: 'upper', bit: 1, tex: 'cs01' },                          // long sleeves, tucked into trousers
+  cs01L: { src: 'cs01', part: 'lower', bit: 2, tex: 'cs01' },                          // trousers and belt
+  cs01H: { src: 'cs01', part: 'upper', half: true, bit: 4, tex: 'cs01' },              // sleeves cut above the elbow
+  cs01S: { src: 'cs01', part: 'shorts', bit: 8, tex: 'cs01' },                         // khaki shorts
+  cs01UM: { src: 'cs01', part: 'upper', hem: true, bit: 16, tex: 'cs01' },             // worn out over a mundu
+  cs01HM: { src: 'cs01', part: 'upper', half: true, hem: true, bit: 128, tex: 'cs01' },
+  suit: { src: 'suit', part: 'all', bit: 32, tex: 'suit' },
+  shoes: { src: 'shoes', part: 'all', bit: 64, tex: 'shoes' },
+  // women: the fitted top cropped under the bust is the blouse; worn long over the mundu it is the chatta
+  blouse: { src: 'fcs01', part: 'upper', crop: true, bit: 1, tex: 'fcs01', fem: true },
+  chatta: { src: 'fcs01', part: 'upper', hem: true, bit: 2, tex: 'fcs01', fem: true },
+};
+const DRESSED = { m_young: 1, m_lean: 1, m_heavy: 1, m_old: 1, e_m: 1, e_old: 1, c_m: 1, f_young: 2, f_old: 2, c_f: 2 };
+const SUITED = { m_lean: 1, m_heavy: 1, e_m: 1, e_old: 1 };
 
 // the game's rig (src/body.js): bone order and leg lengths
 const ROLES = ['hips', 'spine', 'chest', 'neck', 'head', 'clavL', 'armL', 'foreL', 'handL', 'fingL', 'clavR', 'armR', 'foreR', 'handR', 'fingR', 'thighL', 'shinL', 'footL', 'toeL', 'thighR', 'shinR', 'footR', 'toeR', 'hem', 'jaw', 'lidL', 'lidR'];
@@ -106,7 +126,7 @@ const sided = (r, x) => (['clav', 'arm', 'fore', 'hand', 'fing', 'thigh', 'shin'
 
 // ---------------------------------------------------------------- one preset
 await MeshoptSimplifier.ready;
-const manifest = { source: 'MakeHuman 1.1 (makehumancommunity.org) — base mesh, targets, skeleton and weights are CC0', roles: ROLES, presets: {} };
+const manifest = { source: 'MakeHuman 1.1 (makehumancommunity.org) — base mesh, targets, skeleton and weights are CC0', roles: ROLES, presets: {}, clothTex: CLDIR ? Object.values(CLOTHES).map((c) => c.tex).filter(Boolean) : [] };
 const unknown = new Set();
 for (const [key, p] of Object.entries(PRESETS)) {
   const pos = morph(p);
@@ -147,6 +167,30 @@ for (const [key, p] of Object.entries(PRESETS)) {
   { const a = jointPos(pos, 'eye.L____head'), b = jointPos(pos, 'eye.R____head'); piv.lidL = a[0] < 0 ? a : b; piv.lidR = a[0] < 0 ? b : a; }
   let bones = ROLES.map((r) => (r === 'hem' ? null : T(piv[r])));
   bones[23] = [bones[0][0], bones[0][1] + RIG_HEM, bones[0][2]];
+
+  // ---- garments: each vertex rides on three base-mesh vertices plus an offset scaled to this body
+  const GF = {};
+  if (DRESSED[key]) for (const [g, C] of Object.entries(CLOTHES)) {
+    if (g === 'suit' && !SUITED[key]) continue;
+    if ((g === 'fcs01') !== (DRESSED[key] === 2)) continue;
+    const sc = (ax, k) => { const q = C.scales[ax]; return q ? Math.abs(pos[q[0] * 3 + k] - pos[q[1] * 3 + k]) / q[2] : 1; };
+    const sx = sc('x', 0), sy = sc('y', 1), sz = sc('z', 2), n = C.refs.length;
+    const gp = new Float64Array(n * 3), gi = new Uint8Array(n * 4), gw = new Uint8Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      const r = C.refs[i], q = [0, 0, 0];
+      for (let k = 0; k < 3; k++) for (let j = 0; j < 3; j++) q[k] += pos[r[j] * 3 + k] * r[3 + j];
+      q[0] += r[6] * sx; q[1] += r[7] * sy; q[2] += r[8] * sz;
+      const t = T(q); gp[i * 3] = t[0]; gp[i * 3 + 1] = t[1]; gp[i * 3 + 2] = t[2];
+      // the skin weights of the three vertices it rides on, blended the same way
+      const m = new Map();
+      for (let j = 0; j < 3; j++) if (r[3 + j] > 0) for (const [bi, w] of acc[r[j]]) m.set(bi, (m.get(bi) || 0) + w * r[3 + j]);
+      const w = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = w.reduce((a, e) => a + e[1], 0) || 1;
+      const b = [0, 0, 0, 0]; w.forEach(([bi, x], k) => { gi[i * 4 + k] = bi; b[k] = Math.round(x / tot * 255); });
+      if (!w.length) { gi[i * 4] = 2; b[0] = 255; }
+      b[0] += 255 - (b[0] + b[1] + b[2] + b[3]); for (let k = 0; k < 4; k++) gw[i * 4 + k] = b[k];
+    }
+    GF[g] = { C, gp, gi, gw };
+  }
 
   // unique (position, uv) pairs → vertices
   const map = new Map(), P = [], UV = [], SKI = [], SKW = [], SRC = [], idx0 = [];
@@ -218,10 +262,19 @@ for (const [key, p] of Object.entries(PRESETS)) {
         accn.addScaledVector(n.set(NRM[k * 3], NRM[k * 3 + 1], NRM[k * 3 + 2]).applyMatrix3(nm[b]), w); }
       P[k * 3] = acc3.x; P[k * 3 + 1] = acc3.y; P[k * 3 + 2] = acc3.z; accn.normalize(); NRM[k * 3] = accn.x; NRM[k * 3 + 1] = accn.y; NRM[k * 3 + 2] = accn.z;
     }
+    for (const F of Object.values(GF)) {
+      const { gp, gi, gw } = F;
+      for (let k = 0; k < gp.length / 3; k++) {
+        acc3.set(0, 0, 0);
+        for (let j = 0; j < 4; j++) { const w = gw[k * 4 + j] / 255; if (!w) continue; acc3.addScaledVector(v.set(gp[k * 3], gp[k * 3 + 1], gp[k * 3 + 2]).applyMatrix4(M[gi[k * 4 + j]]), w); }
+        gp[k * 3] = acc3.x; gp[k * 3 + 1] = acc3.y; gp[k * 3 + 2] = acc3.z;
+      }
+    }
     bones = bones.map((b, i) => (b ? wp(i).toArray() : b));
     // the hands' pivots moved with the arms; re-level the soles on the ground
     let minY2 = 1e9; for (let k = 0; k < N; k++) minY2 = Math.min(minY2, P[k * 3 + 1]);
     for (let k = 0; k < N; k++) P[k * 3 + 1] -= minY2; bones = bones.map((b) => [b[0], b[1] - minY2, b[2]]); lift = minY2;
+    for (const F of Object.values(GF)) for (let k = 1; k < F.gp.length; k += 3) F.gp[k] -= minY2;
   }
 
   // ---- the eyes: MakeHuman's eye mesh rides on helper vertices of the base mesh, so it follows every body shape
@@ -253,16 +306,82 @@ for (const [key, p] of Object.entries(PRESETS)) {
   }
   L.top = top; L.front = front;
 
+  // ---- garment pieces: split each garment into its connected parts, upper or lower by where they sit
+  const pieceOut = {}, cov = new Uint8Array(N), hipY = bones[0][1], kneeY = bones[16][1];
+  for (const [pn, PC] of Object.entries(PIECES)) {
+    const F = GF[PC.src]; if (!F) continue;
+    const { C, gp, gi, gw } = F, nv = gp.length / 3;
+    // connected parts by texture island (shirt and trousers can share vertices at the waist, never UVs)
+    const nt = C.uv.length, par = Int32Array.from({ length: nt }, (_, i) => i), find = (a) => { while (par[a] !== a) a = par[a] = par[par[a]]; return a; };
+    for (const t of C.tris) { const a = find(t[3]), b = find(t[4]); par[b] = a; par[find(t[5])] = a; }
+    const cy = new Map(); for (const t of C.tris) { const r = find(t[3]); const e = cy.get(r) || [0, 0]; for (let j = 0; j < 3; j++) e[0] += gp[t[j] * 3 + 1]; e[1] += 3; cy.set(r, e); }
+    const upperT = (t) => { const e = cy.get(find(t[3])); return e[0] / e[1] > hipY + 0.15; };
+    if (!!PC.fem !== (DRESSED[key] === 2)) continue;
+    const cropY = bones[2][1] + 0.06;
+    const ARM = new Set([6, 7, 8, 9, 11, 12, 13, 14]), elbowY = Math.max(bones[7][1], bones[12][1]) + 0.08, hemY = hipY - 0.01;
+    const sleeveCut = (v) => ARM.has(gi[v * 4]) && gp[v * 3 + 1] < elbowY;
+    const keepTri = (t) => {
+      const ys = [gp[t[0] * 3 + 1], gp[t[1] * 3 + 1], gp[t[2] * 3 + 1]];
+      if (PC.part === 'all') return true;
+      if (PC.part === 'upper') return upperT(t) && !(PC.half && (sleeveCut(t[0]) || sleeveCut(t[1]) || sleeveCut(t[2]))) && !(PC.hem && Math.min(...ys) < hemY) && !(PC.crop && Math.min(...ys) < cropY && !ARM.has(gi[t[0] * 4]));
+      return !upperT(t) && (PC.part !== 'shorts' || Math.min(...ys) > kneeY + 0.07);
+    };
+    const tris = C.tris.filter(keepTri);
+    if (!tris.length) continue;
+    // smooth normals on the garment's own vertices, then unique (vertex, uv) pairs
+    const na = new Float64Array(nv * 3);
+    for (const t of tris) {
+      const [a, b, c] = t, ux = gp[b * 3] - gp[a * 3], uy = gp[b * 3 + 1] - gp[a * 3 + 1], uz = gp[b * 3 + 2] - gp[a * 3 + 2];
+      const vx = gp[c * 3] - gp[a * 3], vy = gp[c * 3 + 1] - gp[a * 3 + 1], vz = gp[c * 3 + 2] - gp[a * 3 + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      for (const q of [a, b, c]) { na[q * 3] += nx; na[q * 3 + 1] += ny; na[q * 3 + 2] += nz; }
+    }
+    const vm = new Map(), GP = [], GN = [], GU = [], GI = [], GW = [], GX = [];
+    const id = (vi, ti) => {
+      const k2 = vi * 65536 + ti; if (vm.has(k2)) return vm.get(k2);
+      const n2 = GP.length / 3; vm.set(k2, n2);
+      GP.push(gp[vi * 3], gp[vi * 3 + 1], gp[vi * 3 + 2]);
+      const l = Math.hypot(na[vi * 3], na[vi * 3 + 1], na[vi * 3 + 2]) || 1; GN.push(na[vi * 3] / l, na[vi * 3 + 1] / l, na[vi * 3 + 2] / l);
+      GU.push(C.uv[ti][0], C.uv[ti][1]); for (let j = 0; j < 4; j++) { GI.push(gi[vi * 4 + j]); GW.push(gw[vi * 4 + j]); }
+      return n2;
+    };
+    for (const t of tris) GX.push(id(t[0], t[3]), id(t[1], t[4]), id(t[2], t[5]));
+    // winding: outward on the torso and legs, as for the body
+    let o2 = 0; for (let v = 0; v < GP.length / 3; v += 7) o2 += Math.sign(GN[v * 3] * GP[v * 3] + GN[v * 3 + 2] * (GP[v * 3 + 2] - bones[0][2]));
+    if (o2 < 0) { for (let i = 0; i < GX.length; i += 3) { const t = GX[i + 1]; GX[i + 1] = GX[i + 2]; GX[i + 2] = t; } for (let i = 0; i < GN.length; i++) GN[i] = -GN[i]; }
+    const gpos = new Float32Array(GP), gidx = new Uint32Array(GX);
+    const simp = (r, e) => MeshoptSimplifier.simplify(gidx, gpos, 3, Math.floor(gidx.length * r / 3) * 3, e, ['LockBorder'])[0];
+    const j0 = simp(0.55, 0.003), j1 = simp(0.2, 0.012);
+    // keep only the vertices the near level uses
+    const used = new Int32Array(GP.length / 3).fill(-1); let nu = 0;
+    for (const i of j0) if (used[i] < 0) used[i] = nu++;
+    for (const i of j1) if (used[i] < 0) used[i] = nu++;
+    const pick = (src, w, T2) => { const o = new T2(nu * w); for (let v = 0; v < used.length; v++) if (used[v] >= 0) for (let k = 0; k < w; k++) o[used[v] * w + k] = src[v * w + k]; return o; };
+    const re = (ix) => { const o = new Uint16Array(ix.length); for (let i = 0; i < ix.length; i++) o[i] = used[ix[i]]; return o; };
+    pieceOut[pn] = { p: pick(GP, 3, Float32Array), n: pick(GN, 3, Float32Array), u: pick(GU, 2, Float32Array), i: pick(GI, 4, Uint8Array), w: pick(GW, 4, Uint8Array), x0: re(j0), x1: re(j1) };
+    // the body under this piece
+    const del = new Set(C.delete);
+    for (let v = 0; v < N; v++) if (del.has(SRC[v])) {
+      const y = P[v * 3 + 1];
+      const armBare = PC.half && ARM.has(SKI[v * 4]) && y < elbowY + 0.02;
+      if (PC.part === 'upper' ? y > (PC.crop ? cropY + 0.03 : PC.hem ? hipY - 0.1 : hipY) && !armBare : PC.part === 'lower' ? y < hipY + 0.12 : PC.part === 'shorts' ? y < hipY + 0.12 && y > kneeY + 0.1 : true) cov[v] |= PC.bit;
+    }
+  }
+
   // write: header json + typed arrays
-  const parts = { eyeP: new Float32Array(eyeP), eyeUV: new Float32Array(eyeUV), eyeI: new Uint16Array(eyeI), pos: pos32, nrm: NRM, uv: new Float32Array(UV), ski: new Uint8Array(SKI), skw: new Uint8Array(SKW), i0: N < 65536 ? new Uint16Array(i0) : i0, i1: N < 65536 ? new Uint16Array(i1) : i1, i2: N < 65536 ? new Uint16Array(i2) : i2 };
+  const parts = { eyeP: new Float32Array(eyeP), eyeUV: new Float32Array(eyeUV), eyeI: new Uint16Array(eyeI), pos: pos32, nrm: NRM, uv: new Float32Array(UV), ski: new Uint8Array(SKI), skw: new Uint8Array(SKW), i0: N < 65536 ? new Uint16Array(i0) : i0, i1: N < 65536 ? new Uint16Array(i1) : i1, i2: N < 65536 ? new Uint16Array(i2) : i2, cov };
+  for (const [pn, q] of Object.entries(pieceOut)) for (const [k, a] of Object.entries(q)) parts[pn + '_' + k] = a;
   const layout = {}; let off = 0; const bufs = [];
   for (const [k, a] of Object.entries(parts)) { const pad = (4 - (off % 4)) % 4; if (pad) { bufs.push(Buffer.alloc(pad)); off += pad; } layout[k] = { off, len: a.length, type: a.constructor.name }; bufs.push(Buffer.from(a.buffer, a.byteOffset, a.byteLength)); off += a.byteLength; }
   fs.writeFileSync(path.join(OUT, key + '.bin'), Buffer.concat(bufs));
-  manifest.presets[key] = { verts: N, tris: [i0.length / 3, i1.length / 3, i2.length / 3], layout, bones, landmarks: L, scale: s * 10 };
+  manifest.presets[key] = { verts: N, tris: [i0.length / 3, i1.length / 3, i2.length / 3], layout, bones, landmarks: L, scale: s * 10,
+    garments: Object.fromEntries(Object.keys(pieceOut).map((pn) => [pn, { bit: PIECES[pn].bit, tex: PIECES[pn].tex, tris: [pieceOut[pn].x0.length / 3, pieceOut[pn].x1.length / 3] }])) };
   console.log(`${key}: ${N} verts, tris ${i0.length / 3} / ${i1.length / 3} / ${i2.length / 3}, scale ${(s).toFixed(4)}, height ${(top).toFixed(3)} m`);
 }
 if (unknown.size) console.log('unmapped bones:', [...unknown].join(' '));
 fs.copyFileSync(path.join(DATA, 'eyes', 'materials', 'brown_eye.png'), path.join(OUT, 'eye.png'));
+for (const g of Object.keys(CLOTHES)) if (CLOTHES[g].tex) fs.copyFileSync(path.join(CLDIR, CLOTHES[g].tex), path.join(OUT, 'cl_' + CLOTHES[g].tex));
+if (CLDIR) manifest.clothes = 'MakeHuman system clothes (CC0): male_casualsuit01, male_elegantsuit01, shoes03, female_casualsuit01 — fitted per body, dyed in game';
 fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 1));
 const mb = fs.readdirSync(OUT).reduce((a, f) => a + fs.statSync(path.join(OUT, f)).size, 0) / 1048576;
 console.log(`wrote ${Object.keys(PRESETS).length} bodies, ${mb.toFixed(1)} MB`);

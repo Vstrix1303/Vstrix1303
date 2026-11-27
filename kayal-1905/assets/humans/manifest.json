@@ -92,6 +92,256 @@
      "off": 792324,
      "len": 8022,
      "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "cs01U_p": {
+     "off": 822888,
+     "len": 7653,
+     "type": "Float32Array"
+    },
+    "cs01U_n": {
+     "off": 853500,
+     "len": 7653,
+     "type": "Float32Array"
+    },
+    "cs01U_u": {
+     "off": 884112,
+     "len": 5102,
+     "type": "Float32Array"
+    },
+    "cs01U_i": {
+     "off": 904520,
+     "len": 10204,
+     "type": "Uint8Array"
+    },
+    "cs01U_w": {
+     "off": 914724,
+     "len": 10204,
+     "type": "Uint8Array"
+    },
+    "cs01U_x0": {
+     "off": 924928,
+     "len": 13218,
+     "type": "Uint16Array"
+    },
+    "cs01U_x1": {
+     "off": 951364,
+     "len": 4806,
+     "type": "Uint16Array"
+    },
+    "cs01L_p": {
+     "off": 960976,
+     "len": 7947,
+     "type": "Float32Array"
+    },
+    "cs01L_n": {
+     "off": 992764,
+     "len": 7947,
+     "type": "Float32Array"
+    },
+    "cs01L_u": {
+     "off": 1024552,
+     "len": 5298,
+     "type": "Float32Array"
+    },
+    "cs01L_i": {
+     "off": 1045744,
+     "len": 10596,
+     "type": "Uint8Array"
+    },
+    "cs01L_w": {
+     "off": 1056340,
+     "len": 10596,
+     "type": "Uint8Array"
+    },
+    "cs01L_x0": {
+     "off": 1066936,
+     "len": 14286,
+     "type": "Uint16Array"
+    },
+    "cs01L_x1": {
+     "off": 1095508,
+     "len": 5196,
+     "type": "Uint16Array"
+    },
+    "cs01H_p": {
+     "off": 1105900,
+     "len": 5280,
+     "type": "Float32Array"
+    },
+    "cs01H_n": {
+     "off": 1127020,
+     "len": 5280,
+     "type": "Float32Array"
+    },
+    "cs01H_u": {
+     "off": 1148140,
+     "len": 3520,
+     "type": "Float32Array"
+    },
+    "cs01H_i": {
+     "off": 1162220,
+     "len": 7040,
+     "type": "Uint8Array"
+    },
+    "cs01H_w": {
+     "off": 1169260,
+     "len": 7040,
+     "type": "Uint8Array"
+    },
+    "cs01H_x0": {
+     "off": 1176300,
+     "len": 8685,
+     "type": "Uint16Array"
+    },
+    "cs01H_x1": {
+     "off": 1193672,
+     "len": 3159,
+     "type": "Uint16Array"
+    },
+    "cs01S_p": {
+     "off": 1199992,
+     "len": 3171,
+     "type": "Float32Array"
+    },
+    "cs01S_n": {
+     "off": 1212676,
+     "len": 3171,
+     "type": "Float32Array"
+    },
+    "cs01S_u": {
+     "off": 1225360,
+     "len": 2114,
+     "type": "Float32Array"
+    },
+    "cs01S_i": {
+     "off": 1233816,
+     "len": 4228,
+     "type": "Uint8Array"
+    },
+    "cs01S_w": {
+     "off": 1238044,
+     "len": 4228,
+     "type": "Uint8Array"
+    },
+    "cs01S_x0": {
+     "off": 1242272,
+     "len": 5430,
+     "type": "Uint16Array"
+    },
+    "cs01S_x1": {
+     "off": 1253132,
+     "len": 1974,
+     "type": "Uint16Array"
+    },
+    "cs01UM_p": {
+     "off": 1257080,
+     "len": 6954,
+     "type": "Float32Array"
+    },
+    "cs01UM_n": {
+     "off": 1284896,
+     "len": 6954,
+     "type": "Float32Array"
+    },
+    "cs01UM_u": {
+     "off": 1312712,
+     "len": 4636,
+     "type": "Float32Array"
+    },
+    "cs01UM_i": {
+     "off": 1331256,
+     "len": 9272,
+     "type": "Uint8Array"
+    },
+    "cs01UM_w": {
+     "off": 1340528,
+     "len": 9272,
+     "type": "Uint8Array"
+    },
+    "cs01UM_x0": {
+     "off": 1349800,
+     "len": 11865,
+     "type": "Uint16Array"
+    },
+    "cs01UM_x1": {
+     "off": 1373532,
+     "len": 4311,
+     "type": "Uint16Array"
+    },
+    "cs01HM_p": {
+     "off": 1382156,
+     "len": 5280,
+     "type": "Float32Array"
+    },
+    "cs01HM_n": {
+     "off": 1403276,
+     "len": 5280,
+     "type": "Float32Array"
+    },
+    "cs01HM_u": {
+     "off": 1424396,
+     "len": 3520,
+     "type": "Float32Array"
+    },
+    "cs01HM_i": {
+     "off": 1438476,
+     "len": 7040,
+     "type": "Uint8Array"
+    },
+    "cs01HM_w": {
+     "off": 1445516,
+     "len": 7040,
+     "type": "Uint8Array"
+    },
+    "cs01HM_x0": {
+     "off": 1452556,
+     "len": 8685,
+     "type": "Uint16Array"
+    },
+    "cs01HM_x1": {
+     "off": 1469928,
+     "len": 3159,
+     "type": "Uint16Array"
+    },
+    "shoes_p": {
+     "off": 1476248,
+     "len": 4689,
+     "type": "Float32Array"
+    },
+    "shoes_n": {
+     "off": 1495004,
+     "len": 4689,
+     "type": "Float32Array"
+    },
+    "shoes_u": {
+     "off": 1513760,
+     "len": 3126,
+     "type": "Float32Array"
+    },
+    "shoes_i": {
+     "off": 1526264,
+     "len": 6252,
+     "type": "Uint8Array"
+    },
+    "shoes_w": {
+     "off": 1532516,
+     "len": 6252,
+     "type": "Uint8Array"
+    },
+    "shoes_x0": {
+     "off": 1538768,
+     "len": 6810,
+     "type": "Uint16Array"
+    },
+    "shoes_x1": {
+     "off": 1552388,
+     "len": 2520,
+     "type": "Uint16Array"
     }
    },
    "bones": [
@@ -260,7 +510,65 @@
     "top": 1.724019014335276,
     "front": 0.22857439608258678
    },
-   "scale": 0.9800964984601377
+   "scale": 0.9800964984601377,
+   "garments": {
+    "cs01U": {
+     "bit": 1,
+     "tex": "cs01",
+     "tris": [
+      4406,
+      1602
+     ]
+    },
+    "cs01L": {
+     "bit": 2,
+     "tex": "cs01",
+     "tris": [
+      4762,
+      1732
+     ]
+    },
+    "cs01H": {
+     "bit": 4,
+     "tex": "cs01",
+     "tris": [
+      2895,
+      1053
+     ]
+    },
+    "cs01S": {
+     "bit": 8,
+     "tex": "cs01",
+     "tris": [
+      1810,
+      658
+     ]
+    },
+    "cs01UM": {
+     "bit": 16,
+     "tex": "cs01",
+     "tris": [
+      3955,
+      1437
+     ]
+    },
+    "cs01HM": {
+     "bit": 128,
+     "tex": "cs01",
+     "tris": [
+      2895,
+      1053
+     ]
+    },
+    "shoes": {
+     "bit": 64,
+     "tex": "shoes",
+     "tris": [
+      2270,
+      840
+     ]
+    }
+   }
   },
   "m_lean": {
    "verts": 14517,
@@ -323,6 +631,291 @@
     "i2": {
      "off": 792324,
      "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "cs01U_p": {
+     "off": 822888,
+     "len": 7641,
+     "type": "Float32Array"
+    },
+    "cs01U_n": {
+     "off": 853452,
+     "len": 7641,
+     "type": "Float32Array"
+    },
+    "cs01U_u": {
+     "off": 884016,
+     "len": 5094,
+     "type": "Float32Array"
+    },
+    "cs01U_i": {
+     "off": 904392,
+     "len": 10188,
+     "type": "Uint8Array"
+    },
+    "cs01U_w": {
+     "off": 914580,
+     "len": 10188,
+     "type": "Uint8Array"
+    },
+    "cs01U_x0": {
+     "off": 924768,
+     "len": 13218,
+     "type": "Uint16Array"
+    },
+    "cs01U_x1": {
+     "off": 951204,
+     "len": 4806,
+     "type": "Uint16Array"
+    },
+    "cs01L_p": {
+     "off": 960816,
+     "len": 7923,
+     "type": "Float32Array"
+    },
+    "cs01L_n": {
+     "off": 992508,
+     "len": 7923,
+     "type": "Float32Array"
+    },
+    "cs01L_u": {
+     "off": 1024200,
+     "len": 5282,
+     "type": "Float32Array"
+    },
+    "cs01L_i": {
+     "off": 1045328,
+     "len": 10564,
+     "type": "Uint8Array"
+    },
+    "cs01L_w": {
+     "off": 1055892,
+     "len": 10564,
+     "type": "Uint8Array"
+    },
+    "cs01L_x0": {
+     "off": 1066456,
+     "len": 14286,
+     "type": "Uint16Array"
+    },
+    "cs01L_x1": {
+     "off": 1095028,
+     "len": 5196,
+     "type": "Uint16Array"
+    },
+    "cs01H_p": {
+     "off": 1105420,
+     "len": 5253,
+     "type": "Float32Array"
+    },
+    "cs01H_n": {
+     "off": 1126432,
+     "len": 5253,
+     "type": "Float32Array"
+    },
+    "cs01H_u": {
+     "off": 1147444,
+     "len": 3502,
+     "type": "Float32Array"
+    },
+    "cs01H_i": {
+     "off": 1161452,
+     "len": 7004,
+     "type": "Uint8Array"
+    },
+    "cs01H_w": {
+     "off": 1168456,
+     "len": 7004,
+     "type": "Uint8Array"
+    },
+    "cs01H_x0": {
+     "off": 1175460,
+     "len": 8682,
+     "type": "Uint16Array"
+    },
+    "cs01H_x1": {
+     "off": 1192824,
+     "len": 3156,
+     "type": "Uint16Array"
+    },
+    "cs01S_p": {
+     "off": 1199136,
+     "len": 3141,
+     "type": "Float32Array"
+    },
+    "cs01S_n": {
+     "off": 1211700,
+     "len": 3141,
+     "type": "Float32Array"
+    },
+    "cs01S_u": {
+     "off": 1224264,
+     "len": 2094,
+     "type": "Float32Array"
+    },
+    "cs01S_i": {
+     "off": 1232640,
+     "len": 4188,
+     "type": "Uint8Array"
+    },
+    "cs01S_w": {
+     "off": 1236828,
+     "len": 4188,
+     "type": "Uint8Array"
+    },
+    "cs01S_x0": {
+     "off": 1241016,
+     "len": 5385,
+     "type": "Uint16Array"
+    },
+    "cs01S_x1": {
+     "off": 1251788,
+     "len": 1959,
+     "type": "Uint16Array"
+    },
+    "cs01UM_p": {
+     "off": 1255708,
+     "len": 6957,
+     "type": "Float32Array"
+    },
+    "cs01UM_n": {
+     "off": 1283536,
+     "len": 6957,
+     "type": "Float32Array"
+    },
+    "cs01UM_u": {
+     "off": 1311364,
+     "len": 4638,
+     "type": "Float32Array"
+    },
+    "cs01UM_i": {
+     "off": 1329916,
+     "len": 9276,
+     "type": "Uint8Array"
+    },
+    "cs01UM_w": {
+     "off": 1339192,
+     "len": 9276,
+     "type": "Uint8Array"
+    },
+    "cs01UM_x0": {
+     "off": 1348468,
+     "len": 11898,
+     "type": "Uint16Array"
+    },
+    "cs01UM_x1": {
+     "off": 1372264,
+     "len": 4326,
+     "type": "Uint16Array"
+    },
+    "cs01HM_p": {
+     "off": 1380916,
+     "len": 5253,
+     "type": "Float32Array"
+    },
+    "cs01HM_n": {
+     "off": 1401928,
+     "len": 5253,
+     "type": "Float32Array"
+    },
+    "cs01HM_u": {
+     "off": 1422940,
+     "len": 3502,
+     "type": "Float32Array"
+    },
+    "cs01HM_i": {
+     "off": 1436948,
+     "len": 7004,
+     "type": "Uint8Array"
+    },
+    "cs01HM_w": {
+     "off": 1443952,
+     "len": 7004,
+     "type": "Uint8Array"
+    },
+    "cs01HM_x0": {
+     "off": 1450956,
+     "len": 8682,
+     "type": "Uint16Array"
+    },
+    "cs01HM_x1": {
+     "off": 1468320,
+     "len": 3156,
+     "type": "Uint16Array"
+    },
+    "suit_p": {
+     "off": 1474632,
+     "len": 14952,
+     "type": "Float32Array"
+    },
+    "suit_n": {
+     "off": 1534440,
+     "len": 14952,
+     "type": "Float32Array"
+    },
+    "suit_u": {
+     "off": 1594248,
+     "len": 9968,
+     "type": "Float32Array"
+    },
+    "suit_i": {
+     "off": 1634120,
+     "len": 19936,
+     "type": "Uint8Array"
+    },
+    "suit_w": {
+     "off": 1654056,
+     "len": 19936,
+     "type": "Uint8Array"
+    },
+    "suit_x0": {
+     "off": 1673992,
+     "len": 24672,
+     "type": "Uint16Array"
+    },
+    "suit_x1": {
+     "off": 1723336,
+     "len": 8970,
+     "type": "Uint16Array"
+    },
+    "shoes_p": {
+     "off": 1741276,
+     "len": 4689,
+     "type": "Float32Array"
+    },
+    "shoes_n": {
+     "off": 1760032,
+     "len": 4689,
+     "type": "Float32Array"
+    },
+    "shoes_u": {
+     "off": 1778788,
+     "len": 3126,
+     "type": "Float32Array"
+    },
+    "shoes_i": {
+     "off": 1791292,
+     "len": 6252,
+     "type": "Uint8Array"
+    },
+    "shoes_w": {
+     "off": 1797544,
+     "len": 6252,
+     "type": "Uint8Array"
+    },
+    "shoes_x0": {
+     "off": 1803796,
+     "len": 6810,
+     "type": "Uint16Array"
+    },
+    "shoes_x1": {
+     "off": 1817416,
+     "len": 2520,
      "type": "Uint16Array"
     }
    },
@@ -492,7 +1085,73 @@
     "top": 1.724021262990426,
     "front": 0.23220019794184485
    },
-   "scale": 0.9819429393737062
+   "scale": 0.9819429393737062,
+   "garments": {
+    "cs01U": {
+     "bit": 1,
+     "tex": "cs01",
+     "tris": [
+      4406,
+      1602
+     ]
+    },
+    "cs01L": {
+     "bit": 2,
+     "tex": "cs01",
+     "tris": [
+      4762,
+      1732
+     ]
+    },
+    "cs01H": {
+     "bit": 4,
+     "tex": "cs01",
+     "tris": [
+      2894,
+      1052
+     ]
+    },
+    "cs01S": {
+     "bit": 8,
+     "tex": "cs01",
+     "tris": [
+      1795,
+      653
+     ]
+    },
+    "cs01UM": {
+     "bit": 16,
+     "tex": "cs01",
+     "tris": [
+      3966,
+      1442
+     ]
+    },
+    "cs01HM": {
+     "bit": 128,
+     "tex": "cs01",
+     "tris": [
+      2894,
+      1052
+     ]
+    },
+    "suit": {
+     "bit": 32,
+     "tex": "suit",
+     "tris": [
+      8224,
+      2990
+     ]
+    },
+    "shoes": {
+     "bit": 64,
+     "tex": "shoes",
+     "tris": [
+      2270,
+      840
+     ]
+    }
+   }
   },
   "m_heavy": {
    "verts": 14517,
@@ -555,6 +1214,291 @@
     "i2": {
      "off": 792324,
      "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "cs01U_p": {
+     "off": 822888,
+     "len": 7641,
+     "type": "Float32Array"
+    },
+    "cs01U_n": {
+     "off": 853452,
+     "len": 7641,
+     "type": "Float32Array"
+    },
+    "cs01U_u": {
+     "off": 884016,
+     "len": 5094,
+     "type": "Float32Array"
+    },
+    "cs01U_i": {
+     "off": 904392,
+     "len": 10188,
+     "type": "Uint8Array"
+    },
+    "cs01U_w": {
+     "off": 914580,
+     "len": 10188,
+     "type": "Uint8Array"
+    },
+    "cs01U_x0": {
+     "off": 924768,
+     "len": 13218,
+     "type": "Uint16Array"
+    },
+    "cs01U_x1": {
+     "off": 951204,
+     "len": 4806,
+     "type": "Uint16Array"
+    },
+    "cs01L_p": {
+     "off": 960816,
+     "len": 7935,
+     "type": "Float32Array"
+    },
+    "cs01L_n": {
+     "off": 992556,
+     "len": 7935,
+     "type": "Float32Array"
+    },
+    "cs01L_u": {
+     "off": 1024296,
+     "len": 5290,
+     "type": "Float32Array"
+    },
+    "cs01L_i": {
+     "off": 1045456,
+     "len": 10580,
+     "type": "Uint8Array"
+    },
+    "cs01L_w": {
+     "off": 1056036,
+     "len": 10580,
+     "type": "Uint8Array"
+    },
+    "cs01L_x0": {
+     "off": 1066616,
+     "len": 14286,
+     "type": "Uint16Array"
+    },
+    "cs01L_x1": {
+     "off": 1095188,
+     "len": 5196,
+     "type": "Uint16Array"
+    },
+    "cs01H_p": {
+     "off": 1105580,
+     "len": 5214,
+     "type": "Float32Array"
+    },
+    "cs01H_n": {
+     "off": 1126436,
+     "len": 5214,
+     "type": "Float32Array"
+    },
+    "cs01H_u": {
+     "off": 1147292,
+     "len": 3476,
+     "type": "Float32Array"
+    },
+    "cs01H_i": {
+     "off": 1161196,
+     "len": 6952,
+     "type": "Uint8Array"
+    },
+    "cs01H_w": {
+     "off": 1168148,
+     "len": 6952,
+     "type": "Uint8Array"
+    },
+    "cs01H_x0": {
+     "off": 1175100,
+     "len": 8625,
+     "type": "Uint16Array"
+    },
+    "cs01H_x1": {
+     "off": 1192352,
+     "len": 3135,
+     "type": "Uint16Array"
+    },
+    "cs01S_p": {
+     "off": 1198624,
+     "len": 3126,
+     "type": "Float32Array"
+    },
+    "cs01S_n": {
+     "off": 1211128,
+     "len": 3126,
+     "type": "Float32Array"
+    },
+    "cs01S_u": {
+     "off": 1223632,
+     "len": 2084,
+     "type": "Float32Array"
+    },
+    "cs01S_i": {
+     "off": 1231968,
+     "len": 4168,
+     "type": "Uint8Array"
+    },
+    "cs01S_w": {
+     "off": 1236136,
+     "len": 4168,
+     "type": "Uint8Array"
+    },
+    "cs01S_x0": {
+     "off": 1240304,
+     "len": 5337,
+     "type": "Uint16Array"
+    },
+    "cs01S_x1": {
+     "off": 1250980,
+     "len": 1941,
+     "type": "Uint16Array"
+    },
+    "cs01UM_p": {
+     "off": 1254864,
+     "len": 7050,
+     "type": "Float32Array"
+    },
+    "cs01UM_n": {
+     "off": 1283064,
+     "len": 7050,
+     "type": "Float32Array"
+    },
+    "cs01UM_u": {
+     "off": 1311264,
+     "len": 4700,
+     "type": "Float32Array"
+    },
+    "cs01UM_i": {
+     "off": 1330064,
+     "len": 9400,
+     "type": "Uint8Array"
+    },
+    "cs01UM_w": {
+     "off": 1339464,
+     "len": 9400,
+     "type": "Uint8Array"
+    },
+    "cs01UM_x0": {
+     "off": 1348864,
+     "len": 12075,
+     "type": "Uint16Array"
+    },
+    "cs01UM_x1": {
+     "off": 1373016,
+     "len": 4389,
+     "type": "Uint16Array"
+    },
+    "cs01HM_p": {
+     "off": 1381796,
+     "len": 5214,
+     "type": "Float32Array"
+    },
+    "cs01HM_n": {
+     "off": 1402652,
+     "len": 5214,
+     "type": "Float32Array"
+    },
+    "cs01HM_u": {
+     "off": 1423508,
+     "len": 3476,
+     "type": "Float32Array"
+    },
+    "cs01HM_i": {
+     "off": 1437412,
+     "len": 6952,
+     "type": "Uint8Array"
+    },
+    "cs01HM_w": {
+     "off": 1444364,
+     "len": 6952,
+     "type": "Uint8Array"
+    },
+    "cs01HM_x0": {
+     "off": 1451316,
+     "len": 8625,
+     "type": "Uint16Array"
+    },
+    "cs01HM_x1": {
+     "off": 1468568,
+     "len": 3135,
+     "type": "Uint16Array"
+    },
+    "suit_p": {
+     "off": 1474840,
+     "len": 14970,
+     "type": "Float32Array"
+    },
+    "suit_n": {
+     "off": 1534720,
+     "len": 14970,
+     "type": "Float32Array"
+    },
+    "suit_u": {
+     "off": 1594600,
+     "len": 9980,
+     "type": "Float32Array"
+    },
+    "suit_i": {
+     "off": 1634520,
+     "len": 19960,
+     "type": "Uint8Array"
+    },
+    "suit_w": {
+     "off": 1654480,
+     "len": 19960,
+     "type": "Uint8Array"
+    },
+    "suit_x0": {
+     "off": 1674440,
+     "len": 24672,
+     "type": "Uint16Array"
+    },
+    "suit_x1": {
+     "off": 1723784,
+     "len": 8970,
+     "type": "Uint16Array"
+    },
+    "shoes_p": {
+     "off": 1741724,
+     "len": 4698,
+     "type": "Float32Array"
+    },
+    "shoes_n": {
+     "off": 1760516,
+     "len": 4698,
+     "type": "Float32Array"
+    },
+    "shoes_u": {
+     "off": 1779308,
+     "len": 3132,
+     "type": "Float32Array"
+    },
+    "shoes_i": {
+     "off": 1791836,
+     "len": 6264,
+     "type": "Uint8Array"
+    },
+    "shoes_w": {
+     "off": 1798100,
+     "len": 6264,
+     "type": "Uint8Array"
+    },
+    "shoes_x0": {
+     "off": 1804364,
+     "len": 6810,
+     "type": "Uint16Array"
+    },
+    "shoes_x1": {
+     "off": 1817984,
+     "len": 2520,
      "type": "Uint16Array"
     }
    },
@@ -724,7 +1668,73 @@
     "top": 1.7291797677691396,
     "front": 0.2360004328977085
    },
-   "scale": 0.9902349673732412
+   "scale": 0.9902349673732412,
+   "garments": {
+    "cs01U": {
+     "bit": 1,
+     "tex": "cs01",
+     "tris": [
+      4406,
+      1602
+     ]
+    },
+    "cs01L": {
+     "bit": 2,
+     "tex": "cs01",
+     "tris": [
+      4762,
+      1732
+     ]
+    },
+    "cs01H": {
+     "bit": 4,
+     "tex": "cs01",
+     "tris": [
+      2875,
+      1045
+     ]
+    },
+    "cs01S": {
+     "bit": 8,
+     "tex": "cs01",
+     "tris": [
+      1779,
+      647
+     ]
+    },
+    "cs01UM": {
+     "bit": 16,
+     "tex": "cs01",
+     "tris": [
+      4025,
+      1463
+     ]
+    },
+    "cs01HM": {
+     "bit": 128,
+     "tex": "cs01",
+     "tris": [
+      2875,
+      1045
+     ]
+    },
+    "suit": {
+     "bit": 32,
+     "tex": "suit",
+     "tris": [
+      8224,
+      2990
+     ]
+    },
+    "shoes": {
+     "bit": 64,
+     "tex": "shoes",
+     "tris": [
+      2270,
+      840
+     ]
+    }
+   }
   },
   "m_old": {
    "verts": 14517,
@@ -787,6 +1797,256 @@
     "i2": {
      "off": 792324,
      "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "cs01U_p": {
+     "off": 822888,
+     "len": 7659,
+     "type": "Float32Array"
+    },
+    "cs01U_n": {
+     "off": 853524,
+     "len": 7659,
+     "type": "Float32Array"
+    },
+    "cs01U_u": {
+     "off": 884160,
+     "len": 5106,
+     "type": "Float32Array"
+    },
+    "cs01U_i": {
+     "off": 904584,
+     "len": 10212,
+     "type": "Uint8Array"
+    },
+    "cs01U_w": {
+     "off": 914796,
+     "len": 10212,
+     "type": "Uint8Array"
+    },
+    "cs01U_x0": {
+     "off": 925008,
+     "len": 13218,
+     "type": "Uint16Array"
+    },
+    "cs01U_x1": {
+     "off": 951444,
+     "len": 4806,
+     "type": "Uint16Array"
+    },
+    "cs01L_p": {
+     "off": 961056,
+     "len": 7947,
+     "type": "Float32Array"
+    },
+    "cs01L_n": {
+     "off": 992844,
+     "len": 7947,
+     "type": "Float32Array"
+    },
+    "cs01L_u": {
+     "off": 1024632,
+     "len": 5298,
+     "type": "Float32Array"
+    },
+    "cs01L_i": {
+     "off": 1045824,
+     "len": 10596,
+     "type": "Uint8Array"
+    },
+    "cs01L_w": {
+     "off": 1056420,
+     "len": 10596,
+     "type": "Uint8Array"
+    },
+    "cs01L_x0": {
+     "off": 1067016,
+     "len": 14286,
+     "type": "Uint16Array"
+    },
+    "cs01L_x1": {
+     "off": 1095588,
+     "len": 5196,
+     "type": "Uint16Array"
+    },
+    "cs01H_p": {
+     "off": 1105980,
+     "len": 5217,
+     "type": "Float32Array"
+    },
+    "cs01H_n": {
+     "off": 1126848,
+     "len": 5217,
+     "type": "Float32Array"
+    },
+    "cs01H_u": {
+     "off": 1147716,
+     "len": 3478,
+     "type": "Float32Array"
+    },
+    "cs01H_i": {
+     "off": 1161628,
+     "len": 6956,
+     "type": "Uint8Array"
+    },
+    "cs01H_w": {
+     "off": 1168584,
+     "len": 6956,
+     "type": "Uint8Array"
+    },
+    "cs01H_x0": {
+     "off": 1175540,
+     "len": 8616,
+     "type": "Uint16Array"
+    },
+    "cs01H_x1": {
+     "off": 1192772,
+     "len": 3132,
+     "type": "Uint16Array"
+    },
+    "cs01S_p": {
+     "off": 1199036,
+     "len": 3078,
+     "type": "Float32Array"
+    },
+    "cs01S_n": {
+     "off": 1211348,
+     "len": 3078,
+     "type": "Float32Array"
+    },
+    "cs01S_u": {
+     "off": 1223660,
+     "len": 2052,
+     "type": "Float32Array"
+    },
+    "cs01S_i": {
+     "off": 1231868,
+     "len": 4104,
+     "type": "Uint8Array"
+    },
+    "cs01S_w": {
+     "off": 1235972,
+     "len": 4104,
+     "type": "Uint8Array"
+    },
+    "cs01S_x0": {
+     "off": 1240076,
+     "len": 5289,
+     "type": "Uint16Array"
+    },
+    "cs01S_x1": {
+     "off": 1250656,
+     "len": 1923,
+     "type": "Uint16Array"
+    },
+    "cs01UM_p": {
+     "off": 1254504,
+     "len": 7083,
+     "type": "Float32Array"
+    },
+    "cs01UM_n": {
+     "off": 1282836,
+     "len": 7083,
+     "type": "Float32Array"
+    },
+    "cs01UM_u": {
+     "off": 1311168,
+     "len": 4722,
+     "type": "Float32Array"
+    },
+    "cs01UM_i": {
+     "off": 1330056,
+     "len": 9444,
+     "type": "Uint8Array"
+    },
+    "cs01UM_w": {
+     "off": 1339500,
+     "len": 9444,
+     "type": "Uint8Array"
+    },
+    "cs01UM_x0": {
+     "off": 1348944,
+     "len": 12102,
+     "type": "Uint16Array"
+    },
+    "cs01UM_x1": {
+     "off": 1373148,
+     "len": 4398,
+     "type": "Uint16Array"
+    },
+    "cs01HM_p": {
+     "off": 1381944,
+     "len": 5217,
+     "type": "Float32Array"
+    },
+    "cs01HM_n": {
+     "off": 1402812,
+     "len": 5217,
+     "type": "Float32Array"
+    },
+    "cs01HM_u": {
+     "off": 1423680,
+     "len": 3478,
+     "type": "Float32Array"
+    },
+    "cs01HM_i": {
+     "off": 1437592,
+     "len": 6956,
+     "type": "Uint8Array"
+    },
+    "cs01HM_w": {
+     "off": 1444548,
+     "len": 6956,
+     "type": "Uint8Array"
+    },
+    "cs01HM_x0": {
+     "off": 1451504,
+     "len": 8616,
+     "type": "Uint16Array"
+    },
+    "cs01HM_x1": {
+     "off": 1468736,
+     "len": 3132,
+     "type": "Uint16Array"
+    },
+    "shoes_p": {
+     "off": 1475000,
+     "len": 4692,
+     "type": "Float32Array"
+    },
+    "shoes_n": {
+     "off": 1493768,
+     "len": 4692,
+     "type": "Float32Array"
+    },
+    "shoes_u": {
+     "off": 1512536,
+     "len": 3128,
+     "type": "Float32Array"
+    },
+    "shoes_i": {
+     "off": 1525048,
+     "len": 6256,
+     "type": "Uint8Array"
+    },
+    "shoes_w": {
+     "off": 1531304,
+     "len": 6256,
+     "type": "Uint8Array"
+    },
+    "shoes_x0": {
+     "off": 1537560,
+     "len": 6810,
+     "type": "Uint16Array"
+    },
+    "shoes_x1": {
+     "off": 1551180,
+     "len": 2472,
      "type": "Uint16Array"
     }
    },
@@ -956,7 +2216,65 @@
     "top": 1.7284036191392134,
     "front": 0.23135149029888263
    },
-   "scale": 0.9952070629276198
+   "scale": 0.9952070629276198,
+   "garments": {
+    "cs01U": {
+     "bit": 1,
+     "tex": "cs01",
+     "tris": [
+      4406,
+      1602
+     ]
+    },
+    "cs01L": {
+     "bit": 2,
+     "tex": "cs01",
+     "tris": [
+      4762,
+      1732
+     ]
+    },
+    "cs01H": {
+     "bit": 4,
+     "tex": "cs01",
+     "tris": [
+      2872,
+      1044
+     ]
+    },
+    "cs01S": {
+     "bit": 8,
+     "tex": "cs01",
+     "tris": [
+      1763,
+      641
+     ]
+    },
+    "cs01UM": {
+     "bit": 16,
+     "tex": "cs01",
+     "tris": [
+      4034,
+      1466
+     ]
+    },
+    "cs01HM": {
+     "bit": 128,
+     "tex": "cs01",
+     "tris": [
+      2872,
+      1044
+     ]
+    },
+    "shoes": {
+     "bit": 64,
+     "tex": "shoes",
+     "tris": [
+      2270,
+      824
+     ]
+    }
+   }
   },
   "f_young": {
    "verts": 14517,
@@ -1019,6 +2337,81 @@
     "i2": {
      "off": 792324,
      "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "blouse_p": {
+     "off": 822888,
+     "len": 1887,
+     "type": "Float32Array"
+    },
+    "blouse_n": {
+     "off": 830436,
+     "len": 1887,
+     "type": "Float32Array"
+    },
+    "blouse_u": {
+     "off": 837984,
+     "len": 1258,
+     "type": "Float32Array"
+    },
+    "blouse_i": {
+     "off": 843016,
+     "len": 2516,
+     "type": "Uint8Array"
+    },
+    "blouse_w": {
+     "off": 845532,
+     "len": 2516,
+     "type": "Uint8Array"
+    },
+    "blouse_x0": {
+     "off": 848048,
+     "len": 2961,
+     "type": "Uint16Array"
+    },
+    "blouse_x1": {
+     "off": 853972,
+     "len": 1197,
+     "type": "Uint16Array"
+    },
+    "chatta_p": {
+     "off": 856368,
+     "len": 2526,
+     "type": "Float32Array"
+    },
+    "chatta_n": {
+     "off": 866472,
+     "len": 2526,
+     "type": "Float32Array"
+    },
+    "chatta_u": {
+     "off": 876576,
+     "len": 1684,
+     "type": "Float32Array"
+    },
+    "chatta_i": {
+     "off": 883312,
+     "len": 3368,
+     "type": "Uint8Array"
+    },
+    "chatta_w": {
+     "off": 886680,
+     "len": 3368,
+     "type": "Uint8Array"
+    },
+    "chatta_x0": {
+     "off": 890048,
+     "len": 4164,
+     "type": "Uint16Array"
+    },
+    "chatta_x1": {
+     "off": 898376,
+     "len": 1512,
      "type": "Uint16Array"
     }
    },
@@ -1188,7 +2581,25 @@
     "top": 1.8073794836737629,
     "front": 0.2440112613312634
    },
-   "scale": 1.134644484273971
+   "scale": 1.134644484273971,
+   "garments": {
+    "blouse": {
+     "bit": 1,
+     "tex": "fcs01",
+     "tris": [
+      987,
+      399
+     ]
+    },
+    "chatta": {
+     "bit": 2,
+     "tex": "fcs01",
+     "tris": [
+      1388,
+      504
+     ]
+    }
+   }
   },
   "f_old": {
    "verts": 14517,
@@ -1251,6 +2662,81 @@
     "i2": {
      "off": 792324,
      "len": 8016,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808356,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "blouse_p": {
+     "off": 822876,
+     "len": 1929,
+     "type": "Float32Array"
+    },
+    "blouse_n": {
+     "off": 830592,
+     "len": 1929,
+     "type": "Float32Array"
+    },
+    "blouse_u": {
+     "off": 838308,
+     "len": 1286,
+     "type": "Float32Array"
+    },
+    "blouse_i": {
+     "off": 843452,
+     "len": 2572,
+     "type": "Uint8Array"
+    },
+    "blouse_w": {
+     "off": 846024,
+     "len": 2572,
+     "type": "Uint8Array"
+    },
+    "blouse_x0": {
+     "off": 848596,
+     "len": 3027,
+     "type": "Uint16Array"
+    },
+    "blouse_x1": {
+     "off": 854652,
+     "len": 1233,
+     "type": "Uint16Array"
+    },
+    "chatta_p": {
+     "off": 857120,
+     "len": 2532,
+     "type": "Float32Array"
+    },
+    "chatta_n": {
+     "off": 867248,
+     "len": 2532,
+     "type": "Float32Array"
+    },
+    "chatta_u": {
+     "off": 877376,
+     "len": 1688,
+     "type": "Float32Array"
+    },
+    "chatta_i": {
+     "off": 884128,
+     "len": 3376,
+     "type": "Uint8Array"
+    },
+    "chatta_w": {
+     "off": 887504,
+     "len": 3376,
+     "type": "Uint8Array"
+    },
+    "chatta_x0": {
+     "off": 890880,
+     "len": 4164,
+     "type": "Uint16Array"
+    },
+    "chatta_x1": {
+     "off": 899208,
+     "len": 1512,
      "type": "Uint16Array"
     }
    },
@@ -1420,7 +2906,25 @@
     "top": 1.8115376195440536,
     "front": 0.26315917846223713
    },
-   "scale": 1.1246637221727416
+   "scale": 1.1246637221727416,
+   "garments": {
+    "blouse": {
+     "bit": 1,
+     "tex": "fcs01",
+     "tris": [
+      1009,
+      411
+     ]
+    },
+    "chatta": {
+     "bit": 2,
+     "tex": "fcs01",
+     "tris": [
+      1388,
+      504
+     ]
+    }
+   }
   },
   "c_m": {
    "verts": 14517,
@@ -1483,6 +2987,256 @@
     "i2": {
      "off": 792324,
      "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "cs01U_p": {
+     "off": 822888,
+     "len": 7635,
+     "type": "Float32Array"
+    },
+    "cs01U_n": {
+     "off": 853428,
+     "len": 7635,
+     "type": "Float32Array"
+    },
+    "cs01U_u": {
+     "off": 883968,
+     "len": 5090,
+     "type": "Float32Array"
+    },
+    "cs01U_i": {
+     "off": 904328,
+     "len": 10180,
+     "type": "Uint8Array"
+    },
+    "cs01U_w": {
+     "off": 914508,
+     "len": 10180,
+     "type": "Uint8Array"
+    },
+    "cs01U_x0": {
+     "off": 924688,
+     "len": 13218,
+     "type": "Uint16Array"
+    },
+    "cs01U_x1": {
+     "off": 951124,
+     "len": 4806,
+     "type": "Uint16Array"
+    },
+    "cs01L_p": {
+     "off": 960736,
+     "len": 7947,
+     "type": "Float32Array"
+    },
+    "cs01L_n": {
+     "off": 992524,
+     "len": 7947,
+     "type": "Float32Array"
+    },
+    "cs01L_u": {
+     "off": 1024312,
+     "len": 5298,
+     "type": "Float32Array"
+    },
+    "cs01L_i": {
+     "off": 1045504,
+     "len": 10596,
+     "type": "Uint8Array"
+    },
+    "cs01L_w": {
+     "off": 1056100,
+     "len": 10596,
+     "type": "Uint8Array"
+    },
+    "cs01L_x0": {
+     "off": 1066696,
+     "len": 14286,
+     "type": "Uint16Array"
+    },
+    "cs01L_x1": {
+     "off": 1095268,
+     "len": 5196,
+     "type": "Uint16Array"
+    },
+    "cs01H_p": {
+     "off": 1105660,
+     "len": 5241,
+     "type": "Float32Array"
+    },
+    "cs01H_n": {
+     "off": 1126624,
+     "len": 5241,
+     "type": "Float32Array"
+    },
+    "cs01H_u": {
+     "off": 1147588,
+     "len": 3494,
+     "type": "Float32Array"
+    },
+    "cs01H_i": {
+     "off": 1161564,
+     "len": 6988,
+     "type": "Uint8Array"
+    },
+    "cs01H_w": {
+     "off": 1168552,
+     "len": 6988,
+     "type": "Uint8Array"
+    },
+    "cs01H_x0": {
+     "off": 1175540,
+     "len": 8673,
+     "type": "Uint16Array"
+    },
+    "cs01H_x1": {
+     "off": 1192888,
+     "len": 3153,
+     "type": "Uint16Array"
+    },
+    "cs01S_p": {
+     "off": 1199196,
+     "len": 3018,
+     "type": "Float32Array"
+    },
+    "cs01S_n": {
+     "off": 1211268,
+     "len": 3018,
+     "type": "Float32Array"
+    },
+    "cs01S_u": {
+     "off": 1223340,
+     "len": 2012,
+     "type": "Float32Array"
+    },
+    "cs01S_i": {
+     "off": 1231388,
+     "len": 4024,
+     "type": "Uint8Array"
+    },
+    "cs01S_w": {
+     "off": 1235412,
+     "len": 4024,
+     "type": "Uint8Array"
+    },
+    "cs01S_x0": {
+     "off": 1239436,
+     "len": 5160,
+     "type": "Uint16Array"
+    },
+    "cs01S_x1": {
+     "off": 1249756,
+     "len": 1872,
+     "type": "Uint16Array"
+    },
+    "cs01UM_p": {
+     "off": 1253500,
+     "len": 7134,
+     "type": "Float32Array"
+    },
+    "cs01UM_n": {
+     "off": 1282036,
+     "len": 7134,
+     "type": "Float32Array"
+    },
+    "cs01UM_u": {
+     "off": 1310572,
+     "len": 4756,
+     "type": "Float32Array"
+    },
+    "cs01UM_i": {
+     "off": 1329596,
+     "len": 9512,
+     "type": "Uint8Array"
+    },
+    "cs01UM_w": {
+     "off": 1339108,
+     "len": 9512,
+     "type": "Uint8Array"
+    },
+    "cs01UM_x0": {
+     "off": 1348620,
+     "len": 12270,
+     "type": "Uint16Array"
+    },
+    "cs01UM_x1": {
+     "off": 1373160,
+     "len": 4458,
+     "type": "Uint16Array"
+    },
+    "cs01HM_p": {
+     "off": 1382076,
+     "len": 5241,
+     "type": "Float32Array"
+    },
+    "cs01HM_n": {
+     "off": 1403040,
+     "len": 5241,
+     "type": "Float32Array"
+    },
+    "cs01HM_u": {
+     "off": 1424004,
+     "len": 3494,
+     "type": "Float32Array"
+    },
+    "cs01HM_i": {
+     "off": 1437980,
+     "len": 6988,
+     "type": "Uint8Array"
+    },
+    "cs01HM_w": {
+     "off": 1444968,
+     "len": 6988,
+     "type": "Uint8Array"
+    },
+    "cs01HM_x0": {
+     "off": 1451956,
+     "len": 8673,
+     "type": "Uint16Array"
+    },
+    "cs01HM_x1": {
+     "off": 1469304,
+     "len": 3153,
+     "type": "Uint16Array"
+    },
+    "shoes_p": {
+     "off": 1475612,
+     "len": 4692,
+     "type": "Float32Array"
+    },
+    "shoes_n": {
+     "off": 1494380,
+     "len": 4692,
+     "type": "Float32Array"
+    },
+    "shoes_u": {
+     "off": 1513148,
+     "len": 3128,
+     "type": "Float32Array"
+    },
+    "shoes_i": {
+     "off": 1525660,
+     "len": 6256,
+     "type": "Uint8Array"
+    },
+    "shoes_w": {
+     "off": 1531916,
+     "len": 6256,
+     "type": "Uint8Array"
+    },
+    "shoes_x0": {
+     "off": 1538172,
+     "len": 6810,
+     "type": "Uint16Array"
+    },
+    "shoes_x1": {
+     "off": 1551792,
+     "len": 2664,
      "type": "Uint16Array"
     }
    },
@@ -1652,7 +3406,65 @@
     "top": 1.8012495261836359,
     "front": 0.2784616619919558
    },
-   "scale": 1.4757345346739674
+   "scale": 1.4757345346739674,
+   "garments": {
+    "cs01U": {
+     "bit": 1,
+     "tex": "cs01",
+     "tris": [
+      4406,
+      1602
+     ]
+    },
+    "cs01L": {
+     "bit": 2,
+     "tex": "cs01",
+     "tris": [
+      4762,
+      1732
+     ]
+    },
+    "cs01H": {
+     "bit": 4,
+     "tex": "cs01",
+     "tris": [
+      2891,
+      1051
+     ]
+    },
+    "cs01S": {
+     "bit": 8,
+     "tex": "cs01",
+     "tris": [
+      1720,
+      624
+     ]
+    },
+    "cs01UM": {
+     "bit": 16,
+     "tex": "cs01",
+     "tris": [
+      4090,
+      1486
+     ]
+    },
+    "cs01HM": {
+     "bit": 128,
+     "tex": "cs01",
+     "tris": [
+      2891,
+      1051
+     ]
+    },
+    "shoes": {
+     "bit": 64,
+     "tex": "shoes",
+     "tris": [
+      2270,
+      888
+     ]
+    }
+   }
   },
   "c_f": {
    "verts": 14517,
@@ -1715,6 +3527,81 @@
     "i2": {
      "off": 792324,
      "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "blouse_p": {
+     "off": 822888,
+     "len": 2076,
+     "type": "Float32Array"
+    },
+    "blouse_n": {
+     "off": 831192,
+     "len": 2076,
+     "type": "Float32Array"
+    },
+    "blouse_u": {
+     "off": 839496,
+     "len": 1384,
+     "type": "Float32Array"
+    },
+    "blouse_i": {
+     "off": 845032,
+     "len": 2768,
+     "type": "Uint8Array"
+    },
+    "blouse_w": {
+     "off": 847800,
+     "len": 2768,
+     "type": "Uint8Array"
+    },
+    "blouse_x0": {
+     "off": 850568,
+     "len": 3309,
+     "type": "Uint16Array"
+    },
+    "blouse_x1": {
+     "off": 857188,
+     "len": 1275,
+     "type": "Uint16Array"
+    },
+    "chatta_p": {
+     "off": 859740,
+     "len": 2574,
+     "type": "Float32Array"
+    },
+    "chatta_n": {
+     "off": 870036,
+     "len": 2574,
+     "type": "Float32Array"
+    },
+    "chatta_u": {
+     "off": 880332,
+     "len": 1716,
+     "type": "Float32Array"
+    },
+    "chatta_i": {
+     "off": 887196,
+     "len": 3432,
+     "type": "Uint8Array"
+    },
+    "chatta_w": {
+     "off": 890628,
+     "len": 3432,
+     "type": "Uint8Array"
+    },
+    "chatta_x0": {
+     "off": 894060,
+     "len": 4230,
+     "type": "Uint16Array"
+    },
+    "chatta_x1": {
+     "off": 902520,
+     "len": 1512,
      "type": "Uint16Array"
     }
    },
@@ -1884,7 +3771,25 @@
     "top": 1.829154219796126,
     "front": 0.2521624527477466
    },
-   "scale": 1.6037195855131559
+   "scale": 1.6037195855131559,
+   "garments": {
+    "blouse": {
+     "bit": 1,
+     "tex": "fcs01",
+     "tris": [
+      1103,
+      425
+     ]
+    },
+    "chatta": {
+     "bit": 2,
+     "tex": "fcs01",
+     "tris": [
+      1410,
+      504
+     ]
+    }
+   }
   },
   "e_m": {
    "verts": 14517,
@@ -1947,6 +3852,291 @@
     "i2": {
      "off": 792324,
      "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "cs01U_p": {
+     "off": 822888,
+     "len": 7644,
+     "type": "Float32Array"
+    },
+    "cs01U_n": {
+     "off": 853464,
+     "len": 7644,
+     "type": "Float32Array"
+    },
+    "cs01U_u": {
+     "off": 884040,
+     "len": 5096,
+     "type": "Float32Array"
+    },
+    "cs01U_i": {
+     "off": 904424,
+     "len": 10192,
+     "type": "Uint8Array"
+    },
+    "cs01U_w": {
+     "off": 914616,
+     "len": 10192,
+     "type": "Uint8Array"
+    },
+    "cs01U_x0": {
+     "off": 924808,
+     "len": 13218,
+     "type": "Uint16Array"
+    },
+    "cs01U_x1": {
+     "off": 951244,
+     "len": 4806,
+     "type": "Uint16Array"
+    },
+    "cs01L_p": {
+     "off": 960856,
+     "len": 7953,
+     "type": "Float32Array"
+    },
+    "cs01L_n": {
+     "off": 992668,
+     "len": 7953,
+     "type": "Float32Array"
+    },
+    "cs01L_u": {
+     "off": 1024480,
+     "len": 5302,
+     "type": "Float32Array"
+    },
+    "cs01L_i": {
+     "off": 1045688,
+     "len": 10604,
+     "type": "Uint8Array"
+    },
+    "cs01L_w": {
+     "off": 1056292,
+     "len": 10604,
+     "type": "Uint8Array"
+    },
+    "cs01L_x0": {
+     "off": 1066896,
+     "len": 14286,
+     "type": "Uint16Array"
+    },
+    "cs01L_x1": {
+     "off": 1095468,
+     "len": 5196,
+     "type": "Uint16Array"
+    },
+    "cs01H_p": {
+     "off": 1105860,
+     "len": 5253,
+     "type": "Float32Array"
+    },
+    "cs01H_n": {
+     "off": 1126872,
+     "len": 5253,
+     "type": "Float32Array"
+    },
+    "cs01H_u": {
+     "off": 1147884,
+     "len": 3502,
+     "type": "Float32Array"
+    },
+    "cs01H_i": {
+     "off": 1161892,
+     "len": 7004,
+     "type": "Uint8Array"
+    },
+    "cs01H_w": {
+     "off": 1168896,
+     "len": 7004,
+     "type": "Uint8Array"
+    },
+    "cs01H_x0": {
+     "off": 1175900,
+     "len": 8667,
+     "type": "Uint16Array"
+    },
+    "cs01H_x1": {
+     "off": 1193236,
+     "len": 3147,
+     "type": "Uint16Array"
+    },
+    "cs01S_p": {
+     "off": 1199532,
+     "len": 3120,
+     "type": "Float32Array"
+    },
+    "cs01S_n": {
+     "off": 1212012,
+     "len": 3120,
+     "type": "Float32Array"
+    },
+    "cs01S_u": {
+     "off": 1224492,
+     "len": 2080,
+     "type": "Float32Array"
+    },
+    "cs01S_i": {
+     "off": 1232812,
+     "len": 4160,
+     "type": "Uint8Array"
+    },
+    "cs01S_w": {
+     "off": 1236972,
+     "len": 4160,
+     "type": "Uint8Array"
+    },
+    "cs01S_x0": {
+     "off": 1241132,
+     "len": 5355,
+     "type": "Uint16Array"
+    },
+    "cs01S_x1": {
+     "off": 1251844,
+     "len": 1947,
+     "type": "Uint16Array"
+    },
+    "cs01UM_p": {
+     "off": 1255740,
+     "len": 7038,
+     "type": "Float32Array"
+    },
+    "cs01UM_n": {
+     "off": 1283892,
+     "len": 7038,
+     "type": "Float32Array"
+    },
+    "cs01UM_u": {
+     "off": 1312044,
+     "len": 4692,
+     "type": "Float32Array"
+    },
+    "cs01UM_i": {
+     "off": 1330812,
+     "len": 9384,
+     "type": "Uint8Array"
+    },
+    "cs01UM_w": {
+     "off": 1340196,
+     "len": 9384,
+     "type": "Uint8Array"
+    },
+    "cs01UM_x0": {
+     "off": 1349580,
+     "len": 12069,
+     "type": "Uint16Array"
+    },
+    "cs01UM_x1": {
+     "off": 1373720,
+     "len": 4389,
+     "type": "Uint16Array"
+    },
+    "cs01HM_p": {
+     "off": 1382500,
+     "len": 5253,
+     "type": "Float32Array"
+    },
+    "cs01HM_n": {
+     "off": 1403512,
+     "len": 5253,
+     "type": "Float32Array"
+    },
+    "cs01HM_u": {
+     "off": 1424524,
+     "len": 3502,
+     "type": "Float32Array"
+    },
+    "cs01HM_i": {
+     "off": 1438532,
+     "len": 7004,
+     "type": "Uint8Array"
+    },
+    "cs01HM_w": {
+     "off": 1445536,
+     "len": 7004,
+     "type": "Uint8Array"
+    },
+    "cs01HM_x0": {
+     "off": 1452540,
+     "len": 8667,
+     "type": "Uint16Array"
+    },
+    "cs01HM_x1": {
+     "off": 1469876,
+     "len": 3147,
+     "type": "Uint16Array"
+    },
+    "suit_p": {
+     "off": 1476172,
+     "len": 14922,
+     "type": "Float32Array"
+    },
+    "suit_n": {
+     "off": 1535860,
+     "len": 14922,
+     "type": "Float32Array"
+    },
+    "suit_u": {
+     "off": 1595548,
+     "len": 9948,
+     "type": "Float32Array"
+    },
+    "suit_i": {
+     "off": 1635340,
+     "len": 19896,
+     "type": "Uint8Array"
+    },
+    "suit_w": {
+     "off": 1655236,
+     "len": 19896,
+     "type": "Uint8Array"
+    },
+    "suit_x0": {
+     "off": 1675132,
+     "len": 24672,
+     "type": "Uint16Array"
+    },
+    "suit_x1": {
+     "off": 1724476,
+     "len": 8970,
+     "type": "Uint16Array"
+    },
+    "shoes_p": {
+     "off": 1742416,
+     "len": 4695,
+     "type": "Float32Array"
+    },
+    "shoes_n": {
+     "off": 1761196,
+     "len": 4695,
+     "type": "Float32Array"
+    },
+    "shoes_u": {
+     "off": 1779976,
+     "len": 3130,
+     "type": "Float32Array"
+    },
+    "shoes_i": {
+     "off": 1792496,
+     "len": 6260,
+     "type": "Uint8Array"
+    },
+    "shoes_w": {
+     "off": 1798756,
+     "len": 6260,
+     "type": "Uint8Array"
+    },
+    "shoes_x0": {
+     "off": 1805016,
+     "len": 6810,
+     "type": "Uint16Array"
+    },
+    "shoes_x1": {
+     "off": 1818636,
+     "len": 2508,
      "type": "Uint16Array"
     }
    },
@@ -2116,7 +4306,73 @@
     "top": 1.7212119581782206,
     "front": 0.235089664851216
    },
-   "scale": 0.985651308325015
+   "scale": 0.985651308325015,
+   "garments": {
+    "cs01U": {
+     "bit": 1,
+     "tex": "cs01",
+     "tris": [
+      4406,
+      1602
+     ]
+    },
+    "cs01L": {
+     "bit": 2,
+     "tex": "cs01",
+     "tris": [
+      4762,
+      1732
+     ]
+    },
+    "cs01H": {
+     "bit": 4,
+     "tex": "cs01",
+     "tris": [
+      2889,
+      1049
+     ]
+    },
+    "cs01S": {
+     "bit": 8,
+     "tex": "cs01",
+     "tris": [
+      1785,
+      649
+     ]
+    },
+    "cs01UM": {
+     "bit": 16,
+     "tex": "cs01",
+     "tris": [
+      4023,
+      1463
+     ]
+    },
+    "cs01HM": {
+     "bit": 128,
+     "tex": "cs01",
+     "tris": [
+      2889,
+      1049
+     ]
+    },
+    "suit": {
+     "bit": 32,
+     "tex": "suit",
+     "tris": [
+      8224,
+      2990
+     ]
+    },
+    "shoes": {
+     "bit": 64,
+     "tex": "shoes",
+     "tris": [
+      2270,
+      836
+     ]
+    }
+   }
   },
   "e_old": {
    "verts": 14517,
@@ -2179,6 +4435,291 @@
     "i2": {
      "off": 792324,
      "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "cs01U_p": {
+     "off": 822888,
+     "len": 7641,
+     "type": "Float32Array"
+    },
+    "cs01U_n": {
+     "off": 853452,
+     "len": 7641,
+     "type": "Float32Array"
+    },
+    "cs01U_u": {
+     "off": 884016,
+     "len": 5094,
+     "type": "Float32Array"
+    },
+    "cs01U_i": {
+     "off": 904392,
+     "len": 10188,
+     "type": "Uint8Array"
+    },
+    "cs01U_w": {
+     "off": 914580,
+     "len": 10188,
+     "type": "Uint8Array"
+    },
+    "cs01U_x0": {
+     "off": 924768,
+     "len": 13218,
+     "type": "Uint16Array"
+    },
+    "cs01U_x1": {
+     "off": 951204,
+     "len": 4806,
+     "type": "Uint16Array"
+    },
+    "cs01L_p": {
+     "off": 960816,
+     "len": 7944,
+     "type": "Float32Array"
+    },
+    "cs01L_n": {
+     "off": 992592,
+     "len": 7944,
+     "type": "Float32Array"
+    },
+    "cs01L_u": {
+     "off": 1024368,
+     "len": 5296,
+     "type": "Float32Array"
+    },
+    "cs01L_i": {
+     "off": 1045552,
+     "len": 10592,
+     "type": "Uint8Array"
+    },
+    "cs01L_w": {
+     "off": 1056144,
+     "len": 10592,
+     "type": "Uint8Array"
+    },
+    "cs01L_x0": {
+     "off": 1066736,
+     "len": 14286,
+     "type": "Uint16Array"
+    },
+    "cs01L_x1": {
+     "off": 1095308,
+     "len": 5196,
+     "type": "Uint16Array"
+    },
+    "cs01H_p": {
+     "off": 1105700,
+     "len": 5223,
+     "type": "Float32Array"
+    },
+    "cs01H_n": {
+     "off": 1126592,
+     "len": 5223,
+     "type": "Float32Array"
+    },
+    "cs01H_u": {
+     "off": 1147484,
+     "len": 3482,
+     "type": "Float32Array"
+    },
+    "cs01H_i": {
+     "off": 1161412,
+     "len": 6964,
+     "type": "Uint8Array"
+    },
+    "cs01H_w": {
+     "off": 1168376,
+     "len": 6964,
+     "type": "Uint8Array"
+    },
+    "cs01H_x0": {
+     "off": 1175340,
+     "len": 8604,
+     "type": "Uint16Array"
+    },
+    "cs01H_x1": {
+     "off": 1192548,
+     "len": 3126,
+     "type": "Uint16Array"
+    },
+    "cs01S_p": {
+     "off": 1198800,
+     "len": 3093,
+     "type": "Float32Array"
+    },
+    "cs01S_n": {
+     "off": 1211172,
+     "len": 3093,
+     "type": "Float32Array"
+    },
+    "cs01S_u": {
+     "off": 1223544,
+     "len": 2062,
+     "type": "Float32Array"
+    },
+    "cs01S_i": {
+     "off": 1231792,
+     "len": 4124,
+     "type": "Uint8Array"
+    },
+    "cs01S_w": {
+     "off": 1235916,
+     "len": 4124,
+     "type": "Uint8Array"
+    },
+    "cs01S_x0": {
+     "off": 1240040,
+     "len": 5301,
+     "type": "Uint16Array"
+    },
+    "cs01S_x1": {
+     "off": 1250644,
+     "len": 1923,
+     "type": "Uint16Array"
+    },
+    "cs01UM_p": {
+     "off": 1254492,
+     "len": 7119,
+     "type": "Float32Array"
+    },
+    "cs01UM_n": {
+     "off": 1282968,
+     "len": 7119,
+     "type": "Float32Array"
+    },
+    "cs01UM_u": {
+     "off": 1311444,
+     "len": 4746,
+     "type": "Float32Array"
+    },
+    "cs01UM_i": {
+     "off": 1330428,
+     "len": 9492,
+     "type": "Uint8Array"
+    },
+    "cs01UM_w": {
+     "off": 1339920,
+     "len": 9492,
+     "type": "Uint8Array"
+    },
+    "cs01UM_x0": {
+     "off": 1349412,
+     "len": 12213,
+     "type": "Uint16Array"
+    },
+    "cs01UM_x1": {
+     "off": 1373840,
+     "len": 4443,
+     "type": "Uint16Array"
+    },
+    "cs01HM_p": {
+     "off": 1382728,
+     "len": 5223,
+     "type": "Float32Array"
+    },
+    "cs01HM_n": {
+     "off": 1403620,
+     "len": 5223,
+     "type": "Float32Array"
+    },
+    "cs01HM_u": {
+     "off": 1424512,
+     "len": 3482,
+     "type": "Float32Array"
+    },
+    "cs01HM_i": {
+     "off": 1438440,
+     "len": 6964,
+     "type": "Uint8Array"
+    },
+    "cs01HM_w": {
+     "off": 1445404,
+     "len": 6964,
+     "type": "Uint8Array"
+    },
+    "cs01HM_x0": {
+     "off": 1452368,
+     "len": 8604,
+     "type": "Uint16Array"
+    },
+    "cs01HM_x1": {
+     "off": 1469576,
+     "len": 3126,
+     "type": "Uint16Array"
+    },
+    "suit_p": {
+     "off": 1475828,
+     "len": 14958,
+     "type": "Float32Array"
+    },
+    "suit_n": {
+     "off": 1535660,
+     "len": 14958,
+     "type": "Float32Array"
+    },
+    "suit_u": {
+     "off": 1595492,
+     "len": 9972,
+     "type": "Float32Array"
+    },
+    "suit_i": {
+     "off": 1635380,
+     "len": 19944,
+     "type": "Uint8Array"
+    },
+    "suit_w": {
+     "off": 1655324,
+     "len": 19944,
+     "type": "Uint8Array"
+    },
+    "suit_x0": {
+     "off": 1675268,
+     "len": 24672,
+     "type": "Uint16Array"
+    },
+    "suit_x1": {
+     "off": 1724612,
+     "len": 8970,
+     "type": "Uint16Array"
+    },
+    "shoes_p": {
+     "off": 1742552,
+     "len": 4704,
+     "type": "Float32Array"
+    },
+    "shoes_n": {
+     "off": 1761368,
+     "len": 4704,
+     "type": "Float32Array"
+    },
+    "shoes_u": {
+     "off": 1780184,
+     "len": 3136,
+     "type": "Float32Array"
+    },
+    "shoes_i": {
+     "off": 1792728,
+     "len": 6272,
+     "type": "Uint8Array"
+    },
+    "shoes_w": {
+     "off": 1799000,
+     "len": 6272,
+     "type": "Uint8Array"
+    },
+    "shoes_x0": {
+     "off": 1805272,
+     "len": 6810,
+     "type": "Uint16Array"
+    },
+    "shoes_x1": {
+     "off": 1818892,
+     "len": 2490,
      "type": "Uint16Array"
     }
    },
@@ -2348,7 +4889,80 @@
     "top": 1.7292544504720544,
     "front": 0.24151516715692614
    },
-   "scale": 0.9969666342907169
+   "scale": 0.9969666342907169,
+   "garments": {
+    "cs01U": {
+     "bit": 1,
+     "tex": "cs01",
+     "tris": [
+      4406,
+      1602
+     ]
+    },
+    "cs01L": {
+     "bit": 2,
+     "tex": "cs01",
+     "tris": [
+      4762,
+      1732
+     ]
+    },
+    "cs01H": {
+     "bit": 4,
+     "tex": "cs01",
+     "tris": [
+      2868,
+      1042
+     ]
+    },
+    "cs01S": {
+     "bit": 8,
+     "tex": "cs01",
+     "tris": [
+      1767,
+      641
+     ]
+    },
+    "cs01UM": {
+     "bit": 16,
+     "tex": "cs01",
+     "tris": [
+      4071,
+      1481
+     ]
+    },
+    "cs01HM": {
+     "bit": 128,
+     "tex": "cs01",
+     "tris": [
+      2868,
+      1042
+     ]
+    },
+    "suit": {
+     "bit": 32,
+     "tex": "suit",
+     "tris": [
+      8224,
+      2990
+     ]
+    },
+    "shoes": {
+     "bit": 64,
+     "tex": "shoes",
+     "tris": [
+      2270,
+      830
+     ]
+    }
+   }
   }
- }
+ },
+ "clothTex": [
+  "cs01.png",
+  "suit.png",
+  "shoes.png",
+  "fcs01.png"
+ ],
+ "clothes": "MakeHuman system clothes (CC0): male_casualsuit01, male_elegantsuit01, shoes03, female_casualsuit01 — fitted per body, dyed in game"
 }

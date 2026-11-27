@@ -37,6 +37,8 @@ function bodyData(key) {
     position: new THREE.BufferAttribute(pos, 3), normal: new THREE.BufferAttribute(nrm, 3), uv: new THREE.BufferAttribute(A('uv'), 2),
     skinIndex: new THREE.BufferAttribute(ski, 4), skinWeight: new THREE.BufferAttribute(skw, 4, true),
   };
+  // which garment pieces hide each vertex (bit per piece); the clothing shader discards what is covered
+  attrs.cov = new THREE.BufferAttribute(L.cov ? new Float32Array(A('cov')) : new Float32Array(pos.length / 3), 1);
   const lods = ['i0', 'i1', 'i2'].map((n) => {
     const g = new THREE.BufferGeometry();
     for (const k in attrs) g.setAttribute(k, attrs[k]);
@@ -50,7 +52,17 @@ function bodyData(key) {
   eg.setIndex(new THREE.BufferAttribute(A('eyeI'), 1)); eg.computeVertexNormals();
   eg.setAttribute('skinIndex', new THREE.BufferAttribute(new Uint8Array(en * 4).fill(0).map((_, i) => (i % 4 === 0 ? 4 : 0)), 4));
   eg.setAttribute('skinWeight', new THREE.BufferAttribute(new Uint8Array(en * 4).map((_, i) => (i % 4 === 0 ? 255 : 0)), 4, true));
-  const d = { m, pos, nrm, ski, skw, i0: A('i0'), attrs, lods, eyes: eg, hair: new Map(), skirts: new Map() };
+  // garment pieces fitted to this body by tools/mh-build.mjs, two levels of detail each
+  const garments = {};
+  for (const pn in m.garments || {}) {
+    const ga = { position: new THREE.BufferAttribute(A(pn + '_p'), 3), normal: new THREE.BufferAttribute(A(pn + '_n'), 3), uv: new THREE.BufferAttribute(A(pn + '_u'), 2),
+      skinIndex: new THREE.BufferAttribute(A(pn + '_i'), 4), skinWeight: new THREE.BufferAttribute(A(pn + '_w'), 4, true) };
+    garments[pn] = ['_x0', '_x1'].map((x) => {
+      const g = new THREE.BufferGeometry(); for (const k in ga) g.setAttribute(k, ga[k]);
+      g.setIndex(new THREE.BufferAttribute(A(pn + x), 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.2); return g;
+    });
+  }
+  const d = { m, pos, nrm, ski, skw, i0: A('i0'), attrs, lods, eyes: eg, hair: new Map(), skirts: new Map(), garments };
   shared.set(key, d);
   return d;
 }
@@ -124,7 +136,7 @@ function skirtGeometry(d, long, shirtOver) {
     if (y < hipY - 0.1) e = [Math.max(e[0], widest[0]), Math.max(e[1], widest[1] * 0.95), Math.max(e[2], widest[2] * 0.95)];
     widest = [Math.max(widest[0], e[0]), Math.max(widest[1], e[1]), Math.max(widest[2], e[2])];
     // cloth hangs loose below the hips, so a thigh brought forward stays inside it
-    const pad = i === 0 ? 0.006 : i === 1 ? 0.016 + (shirtOver ? 0.01 : 0) : 0.034;
+    const pad = i === 0 ? (shirtOver === 2 ? 0.003 : 0.006) : i === 1 ? (shirtOver === 2 ? 0.007 : 0.016 + (shirtOver ? 0.01 : 0)) : 0.034;   // 2: a cloth shirt hangs over it
     const t = (waist - y) / (waist - hemY);
     const wt = clamp((hipY - y) / 0.25, 0, 1), ws = long ? clamp((kneeY + 0.05 - y) / 0.25, 0, 1) : 0, wh = clamp((t - 0.35) / 0.65, 0, 1) * (long ? 0.3 : 0.22);
     return {
@@ -317,15 +329,17 @@ export function clothingMaterial(o, d) {
     uEyeL: { value: new THREE.Vector3(...Lm.eyeL) }, uEyeR: { value: new THREE.Vector3(...Lm.eyeR) }, uMouth: { value: new THREE.Vector3(...Lm.mouth) },
     uY: { value: new THREE.Vector4(B[0][1] + 0.085, B[16][1], B[17][1], B[3][1]) },
     uY2: { value: new THREE.Vector4(B[7][1], B[8][1], B[2][1] + 0.13, hem) },
+    uCov: { value: 0 },
   };
   const mat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 1, envMapIntensity: 0.8 });
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vRest; varying vec3 vRestN; flat varying float vPart;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position; vRestN = normal; vPart = skinIndex.x;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vRest; varying vec3 vRestN; flat varying float vPart; attribute float cov; uniform float uCov; varying float vHide;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position; vRestN = normal; vPart = skinIndex.x; vHide = (int(cov + 0.5) & int(uCov + 0.5)) != 0 ? 1.0 : 0.0;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + CLOTHE_GLSL)
+      .replace('#include <common>', '#include <common>\nvarying float vHide;\n' + CLOTHE_GLSL)
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vHide > 0.5) discard;')
       .replace('#include <map_fragment>', 'float cR, cM; diffuseColor.rgb = clothe(cR, cM);')
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = cR;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = cM;');
@@ -333,6 +347,110 @@ export function clothingMaterial(o, d) {
   mat.customProgramCacheKey = () => 'kayal-human';
   mat.userData.U = U;
   return mat;
+}
+
+// the neriyathu: a length of cloth over the left shoulder, across the breast to the right hip in
+// front and down the back behind — a shell lifted off the body, its edges trimmed per pixel
+const NERI_GLSL = /* glsl */`
+  float nDiag = vNR.x + (vNR.y - uNC.x) * 0.45, nBack = step(vNR.z, uNC.z - 0.01);
+  float nIn = nBack > 0.5 ? step(-0.16, vNR.x) * step(vNR.x, -0.03) * step(uNW, vNR.y)
+                          : step(-0.05, nDiag) * step(nDiag, 0.12) * step(uNW, vNR.y);
+  if (nIn < 0.5 || vNR.y > uNC.y + 0.05) discard;
+  float nEdge = nBack > 0.5 ? min(vNR.x + 0.16, -0.03 - vNR.x) : min(nDiag + 0.05, 0.12 - nDiag);`;
+function neriGeometry(d) {
+  if (d.neri) return d.neri;
+  const { pos, nrm, ski, skw, i0, m } = d, B = m.bones, chestY = B[2][1] + 0.13, neckY = B[3][1], cz = B[2][2];
+  const TORSO = new Set([0, 1, 2, 3, 5, 10]);
+  const near = (v) => {
+    if (!TORSO.has(ski[v * 4])) return false;
+    const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+    if (y > neckY + 0.08 || y < B[0][1] + 0.06) return false;
+    if (z < cz + 0.01) return x > -0.2 && x < 0.01;
+    const dg = x + (y - chestY) * 0.45; return dg > -0.09 && dg < 0.16;
+  };
+  const idx = [], remap = new Map(), P = [], N = [], SI = [], SW = [], R = [];
+  const add = (v) => {
+    if (remap.has(v)) return remap.get(v);
+    const n = P.length / 3; remap.set(v, n);
+    const off = 0.026;
+    P.push(pos[v * 3] + nrm[v * 3] * off, pos[v * 3 + 1] + nrm[v * 3 + 1] * off, pos[v * 3 + 2] + nrm[v * 3 + 2] * off);
+    N.push(nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]); R.push(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]);
+    for (let j = 0; j < 4; j++) { SI.push(ski[v * 4 + j]); SW.push(skw[v * 4 + j]); }
+    return n;
+  };
+  for (let i = 0; i < i0.length; i += 3) if (near(i0[i]) && near(i0[i + 1]) && near(i0[i + 2])) idx.push(add(i0[i]), add(i0[i + 1]), add(i0[i + 2]));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  g.setAttribute('rest', new THREE.Float32BufferAttribute(R, 3));
+  g.setAttribute('skinIndex', new THREE.Uint8BufferAttribute(SI, 4)); g.setAttribute('skinWeight', new THREE.Uint8BufferAttribute(SW, 4, true));
+  g.setIndex(idx); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1.2, 0), 0.5);
+  return (d.neri = g);
+}
+const neriMats = new Map();
+function neriMaterial(d, c, gold) {
+  const B = d.m.bones, key = [d.m.verts, B[2][1], c, gold].join('|');
+  if (neriMats.has(key)) return neriMats.get(key);
+  const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, side: THREE.DoubleSide });
+  const U = { uNC: { value: new THREE.Vector3(B[2][1] + 0.13, B[3][1], B[2][2]) }, uNG: { value: gold ? 1 : 0 }, uNW: { value: B[0][1] + 0.1 } };
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 rest; varying vec3 vNR;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvNR = rest;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vNR; uniform vec3 uNC; uniform float uNG, uNW;')
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + NERI_GLSL)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        diffuseColor.rgb *= 0.93 + 0.07 * sin(nDiag * 900.0);
+        if (uNG > 0.5 && nEdge < 0.012) diffuseColor.rgb = vec3(0.8, 0.62, 0.24);`)
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nif (uNG > 0.5 && nEdge < 0.012) metalnessFactor = 0.7;');
+  };
+  m.customProgramCacheKey = () => 'kayal-neri';
+  neriMats.set(key, m);
+  return m;
+}
+
+// ---------------------------------------------------------------- garments
+// Which of the fitted MakeHuman pieces this outfit wears. The shirt over a mundu is the shirt alone;
+// trousers come with their belt; coats with trousers are the full suit. What has no mesh (kurta,
+// blouse, banian, chatta, uniforms with Sam Browne belts drawn on, boots and puttees) stays painted.
+function choosePieces(o, d) {
+  const G = d.garments, out = [];
+  if (!Object.keys(G).length) return out;
+  if (o.female) {
+    if (o.shirt != null && o.style === 'blouse' && G.blouse) out.push(['blouse', o.shirt]);
+    else if (o.shirt != null && o.style === 'chatta' && G.chatta) out.push(['chatta', o.shirt]);
+    return out;
+  }
+  const coat = o.style === 'jacket' || o.style === 'frock';
+  const trousers = o.trousers != null && !o.shorts;
+  if (coat && trousers && G.suit) { out.push(['suit', o.shirt, o.waistcoat != null ? 0xeeeae0 : 0xeeeae0, o.tie ?? 0x3a2a48]); }
+  else {
+    // over a mundu the shirt is worn out, its hem short of the mundu's waist; with trousers it is tucked in
+    if (o.shirt != null && o.sleeves !== false && (!o.style || o.style === 'uniform')) out.push([(o.longSleeves ? 'cs01U' : 'cs01H') + (o.trousers == null ? 'M' : ''), o.shirt]);
+    if (trousers && G.cs01L) out.push(['cs01L', o.trousers]);
+    else if (o.trousers != null && o.shorts && G.cs01S) out.push(['cs01S', o.trousers]);
+  }
+  if (o.boots != null && !o.tallBoots && o.puttees == null && o.trousers != null && !o.shorts && G.shoes) out.push(['shoes', o.boots]);
+  return out.filter((q) => G[q[0]]);
+}
+const garMats = new Map();
+function garmentMaterial(tex, c1, c2, c3, dirty) {
+  const key = [tex, c1, c2, c3, dirty].join('|');
+  if (garMats.has(key)) return garMats.get(key);
+  const t = HUMANS.clothTex?.[tex] || null;
+  const m = new THREE.MeshStandardMaterial({ color: c1 ?? 0xeeeeee, map: t, roughness: tex === 'shoes' ? 0.45 : 0.88, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.7 });
+  const U = { uC2: { value: col(c2, 0xeeeae0) }, uC3: { value: col(c3, 0x3a2a48) }, uDirt: { value: dirty ? 1 : 0 } };
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, U);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uC2, uC3; uniform float uDirt;')
+      .replace('#include <map_fragment>', `#ifdef USE_MAP
+        vec4 gT = texture2D(map, vMapUv); float gd = gT.r / 0.75;
+        vec3 gc = diffuseColor.rgb;
+        gc = mix(gc, uC2, gT.g); gc = mix(gc, uC3, gT.b);
+        diffuseColor.rgb = gc * gd * (1.0 - uDirt * 0.18 * (1.0 - gd));
+      #endif`);
+  };
+  m.customProgramCacheKey = () => 'kayal-garment';
+  garMats.set(key, m);
+  return m;
 }
 
 const MOUTH_GEO = new THREE.SphereGeometry(1, 12, 8), MOUTH_MAT = new THREE.MeshStandardMaterial({ color: 0x2a0f0c, roughness: 0.7 });
@@ -395,11 +513,28 @@ export function buildBody(h, o, key) {
   // the inside of the mouth (MakeHuman's lips are parted, with nothing behind them)
   { const Lm = m.landmarks, mi = new THREE.Mesh(MOUTH_GEO, MOUTH_MAT); mi.position.set(Lm.mouth[0] - B[4][0], Lm.mouth[1] - B[4][1] - 0.003, Lm.mouth[2] - B[4][2] - 0.034); mi.scale.set(0.021, 0.011, 0.016); bs[24].add(mi); }
   const hat = o.headgear && o.headgear !== 'thorthu';
+  const pieces = choosePieces(o, d);
   if (!o.bald) h.hairMesh = extra(hairGeometry(d, o.female || o.longHair ? 'long' : o.receding ? 'receding' : 'short'), hairMaterial(o, d));
   if (o.trousers == null && o.mundu != null) {
     // the mundu's own cloth, painted by the same atlas the old figures used
-    h.skirt = extra(skirtGeometry(d, !!o.munduLong, o.shirt != null && o.style !== 'blouse'), h.skirtMaterial);
+    const over = pieces.some((q) => q[0].endsWith('M')) ? 2 : o.shirt != null && o.style !== 'blouse' ? 1 : 0;
+    h.skirt = extra(skirtGeometry(d, !!o.munduLong, over), h.skirtMaterial);
   }
+  // garments: fitted pieces over the body, the skin they cover discarded, the painted version turned off
+  h.garments = [];
+  let bits = 0;
+  for (const [pn, c1, c2, c3] of pieces) {
+    const info = m.garments[pn], gm = extra(d.garments[pn][0], garmentMaterial(info.tex, c1, c2, c3, o.dirty));
+    gm.userData.lods = d.garments[pn]; gm.receiveShadow = true; gm.castShadow = false; h.garments.push(gm); bits |= info.bit;
+    if (pn.startsWith('cs01U') || pn.startsWith('cs01H') || pn === 'suit' || pn === 'blouse' || pn === 'chatta') mat.userData.U.uF1.value.x = 0;
+    if (pn === 'cs01L' || pn === 'cs01S' || pn === 'suit') mat.userData.U.uF2.value.x = 0;
+    if (pn === 'shoes') mat.userData.U.uF2.value.y = 0;
+  }
+  if (pieces.some((q) => q[0] === 'blouse') && o.neriyathu != null) { const nm = extra(neriGeometry(d), neriMaterial(d, o.neriyathu, o.kasavu), false); h.garments.push(nm); nm.userData.lods = [nm.geometry, nm.geometry]; }
+  // far away the painted clothes stand in for the meshes: what they were before the meshes turned them off
+  const U = mat.userData.U;
+  h.garPaint = h.garments.length ? { on: [U.uF1.value.x, U.uF2.value.x, U.uF2.value.y, bits], off: [o.shirt != null ? 1 : 0, o.trousers != null ? (o.shorts ? 2 : 1) : 0, o.boots != null ? (o.tallBoots ? 2 : 1) : 0, 0] } : null;
+  U.uCov.value = bits;
   h.mh = { key, mat, d, hat };
   return bs;
 }
@@ -426,7 +561,11 @@ export function legacyAnchors(h, o, RIG) {
 export function updateFace(h, dt) {
   if (!h.mh) return;
   const want = h.heroLOD ? 0 : h.near ? 0 : h.lod ? 2 : 1;
-  if (h.lodIdx !== want) { h.lodIdx = want; h.mesh.geometry = h.lodGeos[want]; }
+  if (h.lodIdx !== want) {
+    h.lodIdx = want; h.mesh.geometry = h.lodGeos[want];
+    for (const g of h.garments || []) { g.geometry = g.userData.lods[want ? 1 : 0]; g.visible = want < 2; }
+    if (h.garPaint) { const v = want < 2 ? h.garPaint.on : h.garPaint.off, U = h.mh.mat.userData.U; U.uF1.value.x = v[0]; U.uF2.value.x = v[1]; U.uF2.value.y = v[2]; U.uCov.value = v[3]; }
+  }
   const t = h.t, ex = h.expr;
   const talk = h.talking ? 0.05 + 0.09 * Math.max(0, (Math.sin(t * 17) + Math.sin(t * 7.3)) * 0.5) : 0;
   const jaw = Math.max(talk, ex === 'laughing' ? 0.16 : ex === 'grieving' ? 0.05 : 0);

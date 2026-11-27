@@ -38,7 +38,7 @@ export function realMaterial(slot, o = {}) {
 }
 
 // Realistic human bodies (MakeHuman, CC0) — desktop app only; otherwise the drawn figures are used.
-export const HUMANS = { ready: false, presets: {}, data: {}, eyeTex: null };
+export const HUMANS = { ready: false, presets: {}, data: {}, eyeTex: null, clothTex: {} };
 export async function loadHumans(onProgress) {
   if (location.protocol === 'file:') return false;
   let man;
@@ -48,6 +48,9 @@ export async function loadHumans(onProgress) {
     let done = 0;
     await Promise.all(keys.map(async (k) => { const r = await fetch(`assets/humans/${k}.bin`); if (!r.ok) throw new Error(k); HUMANS.data[k] = await r.arrayBuffer(); onProgress?.(++done / keys.length); }));
     HUMANS.eyeTex = await new THREE.TextureLoader().loadAsync('assets/humans/eye.png').catch(() => null);
+    // the clothes' detail maps (folds, seams, weave; dyed in the shader): data, not colour
+    HUMANS.clothTex = {};
+    await Promise.all((man.clothTex || []).map(async (f) => { const t = await new THREE.TextureLoader().loadAsync('assets/humans/cl_' + f).catch(() => null); if (t) { t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; HUMANS.clothTex[f.replace('.png', '')] = t; } }));
   } catch (e) { console.warn('realistic people unavailable', e); return false; }
   HUMANS.presets = man.presets; HUMANS.ready = true;
   return true;

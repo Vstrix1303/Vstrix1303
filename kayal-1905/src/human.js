@@ -674,7 +674,7 @@ export class Human {
   setShadow(on) {
     if (this.shadowOn === on) return;
     this.shadowOn = on;
-    this.root.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) o.castShadow = on; });
+    this.root.traverse((o) => { if ((o.isMesh || o.isSkinnedMesh) && !this.garments?.includes(o)) o.castShadow = on; });   // the body casts the clothes' shadow
   }
   // distance-aware update: near figures every frame; far ones a few times a second with the time saved up
   tick(dt, d) {
