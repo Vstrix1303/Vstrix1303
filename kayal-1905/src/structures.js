@@ -893,18 +893,17 @@ export function buildStructures(scene) {
   const tiles = Object.values(meshes);
   for (const m of tiles) (G.reflCull || (G.reflCull = [])).push(m);
   let tt = 0;
-  G.updaters.push((dt) => {
-    tt -= dt; if (tt > 0) return; tt = 0.25;
+  G.cullTiles = () => {
     const c = G.camera.position;
     // big pieces go at the edge of the fog; small detail (props, furniture, trim) much sooner
     const farD = G.quality === 'low' ? 420 : G.quality === 'medium' || G.integrated ? 520 : 650;
-    // small-detail culling is held off (1e9) until its distance check is verified; set G.detailDist to try it
-    const smallD = G.detailDist || 1e9;
+    const smallD = G.detailDist || (G.quality === 'low' ? 45 : G.quality === 'medium' || G.integrated ? 62 : 90);
     for (const m of tiles) {
       const bs = m.boundingSphere, d = Math.hypot(bs.center.x - c.x, bs.center.z - c.z) - bs.radius;
       const far = d > (m.userData.small ? smallD : farD); m.userData.far = far; m.visible = !far;
       if (m.userData.small) m.castShadow = d < 25;
     }
-  });
+  };
+  G.updaters.push((dt) => { tt -= dt; if (tt > 0) return; tt = 0.25; G.cullTiles(); });
   return { yards: b.yards, keepClear: b.keepClear, marks: b.marks, lamps: b.lamps, smokes: b.smokes, bigTrees, mats, meshes };
 }
