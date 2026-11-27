@@ -7,7 +7,7 @@ import { GB, TRS } from './geo.js';
 import { LOC, getHeight, canalZ, ROADS } from './heightfield.js';
 import { pointInBox } from './physics.js';
 import { makeRng, TAU } from './util.js';
-import { house, kettu, spiceHouse, nasraniHouse, wall, P, olakkuda, barrel, toolbox, castNet, poles, compound, creeper } from './houses.js';
+import { house, kettu, spiceHouse, nasraniHouse, wall, hall, F, P, olakkuda, barrel, toolbox, castNet, poles, compound, creeper } from './houses.js';
 import { buildVillage } from './village.js';
 import { buildEra57 } from './era57.js';
 import { roadDist } from './heightfield.js';
@@ -386,6 +386,7 @@ export function buildStructures(scene) {
     b.cyl('brass', 0.1, 0.34, 0.9, 0, 9.0, -5, { seg: 8, col: BRASS }); b.sphere('brass', 0.24, 0, 9.5, -5, { col: BRASS });
     for (let i = 0; i < 3; i++) b.box('stone', 2.4, 0.3, 0.45, 0, 0.6 - i * 0.3, -1.1 + i * 0.45);
     b.collider(0, -5, 3.7, 3.7);
+    SPOTS.sreekovil = b.world(0, 0, -0.9);
     // namaskara mandapam
     b.box('stone', 4.6, 1.6, 4.6, 0, -1.2, 4.6);
     for (const sx of [-1.8, 1.8]) for (const sz of [-1.8, 1.8]) b.cyl('stone', 0.2, 0.24, 2.5, sx, 0.4, 4.6 + sz, { seg: 8 });
@@ -485,25 +486,43 @@ export function buildStructures(scene) {
     {
       b.place(-342, -372, -Math.PI / 2);
       b.box('laterite', 12, 2.2, 9, 0, -1.5, 0);
-      b.box('wall', 9, 3.2, 6.5, 0, 0.7, 0);
+      hall(b, 0, 0, 9, 6.5, 0.7, 3.2, { doors: [{ side: 'front', w: 1.4, h: 2.3, col: DOOR }], win: { front: 2, back: 0, left: 1, right: 1 }, floor: [0.86, 0.84, 0.78], dado: [0.32, 0.5, 0.4] });
+      b.platform(0, 0, 6, 4.5, 0.7);
       b.roofHip('roof', 12.6, 9.6, 2.4, 6, 0, 3.6, 0);
       b.box('wall', 5.5, 1.6, 3.6, 0, 5.0, 0);
       b.roofGable('roof', 7.4, 5.4, 2.2, 0, 6.4, 0, 0, 'wood');
-      for (let i = 0; i < 5; i++) b.cyl('wood', 0.13, 0.16, 2.9, -5 + i * 2.5, 0.7, 4.0, { seg: 8 });
-      b.box('wood', 1.3, 2.2, 0.14, 0, 0.7, 3.27, { col: DOOR });
-      b.collider(0, 0, 6, 4.5); b.yard(11, 0.7).clear(9).mark(12, 9);
+      for (let i = 0; i < 5; i++) { b.cyl('wood', 0.13, 0.16, 2.9, -5 + i * 2.5, 0.7, 4.0, { seg: 8 }); b.circle(-5 + i * 2.5, 4.0, 0.16); }
+      for (let i = 0; i < 3; i++) b.box('stone', 2.4, 0.24, 0.45, 0, 0.46 - i * 0.24, 4.75 + i * 0.45);
+      // inside: rows of prayer mats toward the west wall, the mimbar's steps, a clock and hanging lamps
+      for (let r = 0; r < 4; r++) for (let i = 0; i < 5; i++) F.mat(b, -3.2 + i * 1.6, 0.73, -1.6 + r * 1.2, 1.2, 0.9, r % 2 ? [0.55, 0.18, 0.14] : [0.2, 0.36, 0.26]);
+      for (let i = 0; i < 3; i++) b.box('wood', 0.9, 0.3 + i * 0.3, 0.5 - 0.0, -4.0, 0.73, -2.2 + i * 0.5, { col: [0.36, 0.24, 0.16] });
+      b.collider(-4, -1.7, 0.45, 0.8, 0, 2);
+      b.box('wood', 0.36, 0.36, 0.06, 0, 2.6, -3.1, { col: [0.3, 0.2, 0.12] }); b.cyl('paint', 0.14, 0.14, 0.02, 0, 2.78, -3.06, { seg: 12, rx: Math.PI / 2, col: [0.95, 0.92, 0.84] });
+      for (const lx of [-2, 2]) b.lamp(lx, 3.0, 0, 0.9, 0);
+      b.yard(11, 0.7).clear(9).mark(12, 9);
     }
     // church of the Nasranis: whitewashed gabled façade
     {
       b.place(-452, -420, 0);
       b.box('laterite', 9, 2, 15, 0, -1.5, 0);
-      b.box('wall', 8, 4.6, 14, 0, 0.5, 0);
+      hall(b, 0, -0.15, 8, 13.7, 0.5, 4.6, { skip: ['front'], doors: [{ side: 'back', w: 1.0, h: 2.1, col: DOOR }], win: { back: 0, left: 4, right: 4 }, winH: 1.8, sill: 1.2, floor: [0.78, 0.74, 0.66], dado: null });
+      b.platform(0, 0, 4.5, 7.5, 0.5);
       b.roofGable('roof', 15, 9.4, 3.0, 0, 5.0, 0, Math.PI / 2, 'wall');
-      b.box('wall', 8.6, 7.6, 0.6, 0, 0.5, 7.2);
+      // the façade, with its doorway open
+      b.box('wall', 3.5, 7.6, 0.6, -2.55, 0.5, 7.2); b.box('wall', 3.5, 7.6, 0.6, 2.55, 0.5, 7.2); b.box('wall', 1.6, 4.9, 0.6, 0, 3.2, 7.2);
+      b.collider(-2.55, 7.2, 1.75, 0.3); b.collider(2.55, 7.2, 1.75, 0.3);
+      for (const sx of [-1, 1]) b.box('wood', 0.8, 2.6, 0.06, sx * 1.15, 0.5, 6.85, { col: DOOR });
+      // inside: pews in two blocks, the altar on its step, a crucifix, candles
+      for (let r = 0; r < 6; r++) for (const sx of [-1, 1]) { F.bench(b, sx * 2.0, 0.52, -3.4 + r * 1.5, 2.6); b.box('plank', 2.6, 0.5, 0.05, sx * 2.0, 0.95, -3.4 + r * 1.5 - 0.2, { tile: 1 }); b.collider(sx * 2.0, -3.4 + r * 1.5, 1.3, 0.25, 0, 1.2); }
+      b.box('stone', 7.4, 0.25, 2.4, 0, 0.5, -5.7, { col: [0.82, 0.78, 0.7] }); b.platform(0, -5.7, 3.7, 1.2, 0.75);
+      b.box('wall', 2.2, 1.0, 0.8, 0, 0.75, -6.2, { col: [0.95, 0.93, 0.88] }); b.box('paint', 2.3, 0.04, 0.9, 0, 1.75, -6.2, { col: [0.96, 0.95, 0.9] });
+      b.collider(0, -6.2, 1.1, 0.4, 0, 1.8);
+      b.box('wood', 0.12, 1.6, 0.08, 0, 2.6, -6.68, { col: [0.3, 0.2, 0.12] }); b.box('wood', 0.8, 0.12, 0.08, 0, 3.6, -6.68, { col: [0.3, 0.2, 0.12] });
+      for (const sx of [-0.8, 0.8]) { b.cyl('brass', 0.03, 0.05, 0.4, sx, 1.77, -6.2, { seg: 6, col: BRASS }); b.lamp(sx, 2.25, -6.2, 0.5, sx > 0 ? 1 : 0); }
       b.box('wall', 4.4, 2.0, 0.6, 0, 8.1, 7.2); b.box('wall', 2, 1.2, 0.6, 0, 10.1, 7.2);
       b.box('wood', 0.16, 1.5, 0.16, 0, 11.3, 7.2); b.box('wood', 0.8, 0.16, 0.16, 0, 12.2, 7.2);
-      b.box('wood', 1.6, 2.6, 0.14, 0, 0.5, 7.55, { col: DOOR });
-      b.collider(0, 0, 4.5, 7.5); b.yard(12, 0.6).clear(10).mark(9, 15);
+      for (let i = 0; i < 3; i++) b.box('stone', 2.6, 0.2, 0.42, 0, 0.3 - i * 0.2, 7.7 + i * 0.42);
+      b.yard(12, 0.6).clear(10).mark(9, 15);
     }
     nasraniHouse(b, -474, -424, 0.2);
     // Chinese fishing nets along the shore
@@ -528,21 +547,29 @@ export function buildStructures(scene) {
     b.box('wood', 8.0, 0.18, 0.18, 0, 3.3, -27); b.sign(1, 4.4, 1.1, 0, 4.1, -27.12, Math.PI);
     // godown (warehouse) along the west wall
     b.box('laterite', 10.6, 2, 31, -20, -1.5, 0);
-    b.box('laterite', 10, 4.2, 30, -20, 0.4, 0);
+    hall(b, -20, 0, 10, 30, 0.5, 4.0, { mat: 'laterite', doors: [{ side: 'right', at: -8, w: 3.0, h: 3.0, col: DOOR }, { side: 'right', at: 8, w: 3.0, h: 3.0, col: DOOR }], win: { front: 0, back: 0, left: 4, right: 2 }, winH: 0.7, sill: 2.4, floor: [0.5, 0.42, 0.36], ceilCol: [0.5, 0.42, 0.34] });
     b.roofGable('roof', 32, 12.6, 3.4, -20, 4.5, 0, Math.PI / 2, 'laterite');
-    for (const sz of [-8, 8]) b.box('wood', 0.16, 3.0, 3.2, -14.95, 0.4, sz, { col: DOOR });
-    b.collider(-20, 0, 5.3, 15.5);
+    // inside: the co-operative's coir — bales of yarn, coils of rope, sacks of husk, a weighing scale and the clerk's desk
+    for (let i = 0; i < 6; i++) { const z = -13 + i * 2.6; if (Math.abs(Math.abs(z) - 8) < 2) continue; for (let k = 0; k < 2; k++) b.box('thatch', 2.2, 0.9, 1.2, -22.6, 0.52 + k * 0.92, z, { col: [0.72, 0.56, 0.34] }); b.collider(-22.6, z, 1.15, 0.65, 0, 2.4); }
+    for (let i = 0; i < 5; i++) b.cyl('thatch', 0.45, 0.45, 0.35, -17.4, 0.52 + i * 0.36, -13 + (i % 2) * 0.2, { seg: 12, col: [0.66, 0.5, 0.3] });
+    b.circle(-17.4, -13, 0.5);
+    F.sacks(b, -24, 0.5, 11, 6); F.desk(b, -18.2, 0.5, 2.0, -Math.PI / 2); F.chair(b, -17.4, 0.5, 2.0, -Math.PI / 2);
+    b.box('wood', 0.1, 1.6, 0.1, -21, 0.5, 4.5, { col: [0.3, 0.22, 0.16] }); b.box('wood', 1.2, 0.06, 0.06, -21, 2.05, 4.5, { col: [0.3, 0.22, 0.16] }); for (const sx of [-0.55, 0.55]) b.cyl('brass', 0.22, 0.18, 0.04, -21 + sx, 1.4, 4.5, { seg: 10, col: BRASS });
     b.lamp(-14.6, 3.6, 0, 1.2, 1);
     // agent's bungalow & counting house (faces north to the gate)
     b.box('laterite', 15, 2.2, 12, 12, -1.5, 10);
-    b.box('wall', 11, 3.4, 8, 12, 0.7, 10);
+    hall(b, 12, 10, 11, 8, 0.7, 3.2, { doors: [{ side: 'back', w: 1.3, h: 2.3, col: [0.3, 0.42, 0.3] }], win: { back: 2, front: 2, left: 1, right: 1 }, shutter: [0.3, 0.42, 0.3] });
+    b.platform(12, 10, 7.5, 6, 0.7);
     b.roofHip('roof', 16, 13, 3.0, 6, 12, 3.9, 10);
-    for (let i = 0; i <= 5; i++) { b.cyl('wall', 0.17, 0.2, 3.1, 5 + i * 2.8, 0.7, 4.5, { seg: 10 }); b.cyl('wall', 0.17, 0.2, 3.1, 5 + i * 2.8, 0.7, 15.5, { seg: 10 }); }
-    for (const sz of [8, 12]) { b.cyl('wall', 0.17, 0.2, 3.1, 5, 0.7, sz, { seg: 10 }); b.cyl('wall', 0.17, 0.2, 3.1, 19, 0.7, sz, { seg: 10 }); }
-    b.box('wood', 1.3, 2.3, 0.14, 12, 0.7, 5.95, { col: [0.3, 0.42, 0.3] });
-    for (const sx of [8.5, 15.5]) b.box('wood', 1.1, 1.4, 0.1, sx, 1.5, 5.96, { col: [0.3, 0.42, 0.3] });
+    for (let i = 0; i <= 5; i++) { b.cyl('wall', 0.17, 0.2, 3.1, 5 + i * 2.8, 0.7, 4.5, { seg: 10 }); b.cyl('wall', 0.17, 0.2, 3.1, 5 + i * 2.8, 0.7, 15.5, { seg: 10 }); b.circle(5 + i * 2.8, 4.5, 0.2); b.circle(5 + i * 2.8, 15.5, 0.2); }
+    for (const sz of [8, 12]) { b.cyl('wall', 0.17, 0.2, 3.1, 5, 0.7, sz, { seg: 10 }); b.cyl('wall', 0.17, 0.2, 3.1, 19, 0.7, sz, { seg: 10 }); b.circle(5, sz, 0.2); b.circle(19, sz, 0.2); }
     for (let i = 0; i < 3; i++) b.box('stone', 2.6, 0.24, 0.5, 12, 0.46 - i * 0.23, 3.9 - i * 0.5);
-    b.collider(12, 10, 7.5, 6);
+    // inside: the co-operative's office — the secretary's desk, ledgers on shelves, a bench for members, the iron safe
+    F.desk(b, 12, 0.7, 11.6, Math.PI, 1.8); F.chair(b, 12, 0.7, 12.6, Math.PI);
+    F.shelf(b, 8.2, 0.7, 13.6, 2.2, 0, rng); F.shelf(b, 15.8, 0.7, 13.6, 2.2, 0, rng);
+    F.bench(b, 9.0, 0.7, 7.6, 2.4); F.bench(b, 15.0, 0.7, 7.6, 2.4);
+    b.box('paint', 0.8, 1.0, 0.7, 17.0, 0.7, 11.0, { col: [0.2, 0.22, 0.22] }); b.collider(17, 11, 0.4, 0.35, 0, 1.8);
+    b.decal('poster', 1, 4, 1, 0.8, 1.2, 12, 2.0, 13.86, Math.PI);
     b.lamp(13.6, 2.6, 5.4, 1.2, 1);
     SPOTS.ledger = b.world(12, 0, 3.4);
     SPOTS.finch = b.world(10.5, 0, 2.2);
@@ -587,7 +614,15 @@ export function buildStructures(scene) {
     const cx = LOC.cutcherry.x, cz = LOC.cutcherry.z;
     b.place(cx, cz, 0);
     b.box('laterite', 25, 2.6, 13, 0, -1.6, 0);
-    b.box('wall', 22, 4.6, 10, 0, 1.0, 0);
+    hall(b, 0, 0, 22, 10, 1.0, 4.4, { doors: [{ side: 'front', w: 1.8, h: 2.8, col: [0.25, 0.3, 0.26] }], win: { front: 4, back: 5, left: 2, right: 2 }, winH: 1.8, sill: 0.9, shutter: [0.25, 0.3, 0.26], floor: [0.62, 0.6, 0.56] });
+    b.platform(0, 0, 12.5, 6.5, 1.0);
+    // inside: the Taluk Office — the Tahsildar's raised desk, clerks' desks in rows, record shelves, a bench of petitioners
+    b.box('plank', 4.0, 0.3, 2.0, 0, 1.0, -3.6, { tile: 1, col: [0.4, 0.28, 0.2] }); b.platform(0, -3.6, 2, 1, 1.3);
+    F.desk(b, 0, 1.3, -3.4, 0, 1.8); F.chair(b, 0, 1.3, -4.2, 0);
+    for (let r = 0; r < 2; r++) for (const sx of [-7, -4, 4, 7]) { F.desk(b, sx, 1.0, -0.5 + r * 2.4, 0, 1.3); F.chair(b, sx, 1.0, -1.25 + r * 2.4, 0); }
+    for (const sx of [-9.5, -6.5, 6.5, 9.5]) F.shelf(b, sx, 1.0, -4.55, 2.4, 0, rng);
+    F.bench(b, -6, 1.0, 4.2, 3.0); F.bench(b, 6, 1.0, 4.2, 3.0);
+    b.box('wood', 2.6, 0.5, 0.04, 0, 4.0, 0, { col: [0.86, 0.8, 0.66] });     // the punkah
     b.roofHip('roof', 26, 14, 3.4, 14, 0, 5.5, 0);
     // portico with pediment
     b.box('laterite', 11, 2.6, 4.4, 0, -1.6, 7);
@@ -595,10 +630,9 @@ export function buildStructures(scene) {
     b.box('wall', 11.4, 0.5, 4.6, 0, 5.3, 7);
     b.roofGable('roof', 4.8, 11.8, 2.2, 0, 5.8, 7, Math.PI / 2, 'wall');
     b.sign(7, 3.4, 0.85, 0, 4.2, 5.14);
-    b.box('wood', 1.8, 2.8, 0.16, 0, 1.0, 5.02, { col: [0.25, 0.3, 0.26] });
-    for (const sx of [-8, -4.4, 4.4, 8]) b.box('wood', 1.2, 1.8, 0.1, sx, 2.0, 5.02, { col: [0.25, 0.3, 0.26] });
     for (let i = 0; i < 4; i++) b.box('stone', 7, 0.26, 0.55, 0, 0.74 - i * 0.25, 9.5 + i * 0.55);
-    b.collider(0, 0, 12.5, 6.5); b.collider(0, 7, 5.5, 2.2, 0, 0.6);
+    for (let i = 0; i < 6; i++) b.circle(-5 + i * 2, 8.6, 0.3);
+    b.collider(0, 7, 5.5, 2.2, 0, 0.6);
     b.platform(0, 7.2, 5.4, 2.1, 1.0);
     // flagstaff
     b.box('stone', 1.4, 0.5, 1.4, 9, 0, 17);
@@ -648,39 +682,49 @@ export function buildStructures(scene) {
     const y0 = 0.6;
     // manager's bungalow
     b.box('laterite', 17, 2.2, 12, -20, -1.5, -6);
-    b.box('wall', 13, 3.3, 8, -20, y0, -6);
+    hall(b, -20, -6, 13, 8, 0.7, 3.2, { doors: [{ side: 'front', w: 1.3, h: 2.3, col: [0.28, 0.4, 0.3] }], win: { front: 2, back: 3, left: 1, right: 1 }, shutter: [0.28, 0.4, 0.3] });
+    b.platform(-20, -6, 8.5, 6, 0.7);
     b.roofHip('roof', 18, 13, 3.1, 7, -20, y0 + 3.1, -6);
-    for (let i = 0; i <= 6; i++) b.cyl('wall', 0.16, 0.19, 3.0, -28 + i * 2.67, y0, -0.4, { seg: 10 });
-    b.box('wood', 1.3, 2.3, 0.14, -20, y0, -1.98, { col: [0.28, 0.4, 0.3] });
-    for (const sx of [-25, -15]) b.box('wood', 1.1, 1.4, 0.1, sx, y0 + 0.9, -1.98, { col: [0.28, 0.4, 0.3] });
-    b.collider(-20, -6, 8.5, 6); b.lamp(-18.4, y0 + 2.3, -0.6, 1.2, 1);
+    for (let i = 0; i <= 6; i++) { b.cyl('wall', 0.16, 0.19, 3.0, -28 + i * 2.67, y0, -0.4, { seg: 10 }); b.circle(-28 + i * 2.67, -0.4, 0.18); }
+    b.lamp(-18.4, y0 + 2.3, -0.6, 1.2, 1);
+    // inside: the manager's office and parlour — a writing desk, cane chairs, a gramophone, the estate map
+    F.desk(b, -24, 0.7, -8.4, 0, 1.6); F.chair(b, -24, 0.7, -9.2, 0);
+    for (const [cx, ry] of [[-16.5, 0.6], [-14.8, -0.6]]) F.chair(b, cx, 0.7, -5.5, ry);
+    b.box('wood', 0.7, 0.5, 0.7, -15.6, 0.7, -6.6, { col: [0.36, 0.24, 0.16] }); b.collider(-15.6, -6.6, 0.35, 0.35, 0, 1.3);
+    b.cone('brass', 0.22, 0.4, -15.6, 1.3, -6.6, { seg: 10, col: BRASS });
+    b.panel('mural', 1.6, 1.0, -20, 1.8, -9.86, 0);
+    F.shelf(b, -27.3, 0.7, -7, 1.6, Math.PI / 2, rng);
     b.smoke(-23, y0 + 6.4, -8);
     // the factory: three floors of withering lofts under corrugated iron
     b.box('laterite', 13, 1.6, 27, 18, -1.2, -4);
-    b.box('plank', 12, 9.2, 26, 18, 0.4, -4, { col: [0.86, 0.84, 0.78], tile: 3 });
+    hall(b, 18, -4, 12, 26, 0.4, 9.2, { mat: 'plank', tile: 3, col: [0.86, 0.84, 0.78], dado: null, doors: [{ side: 'front', w: 3.2, h: 3.2, col: DOOR }], win: 0, floor: [0.46, 0.4, 0.34], ceilCol: [0.6, 0.56, 0.5] });
+    // inside: withering racks of tea leaf, the rolling tables, and chests packed for the coast
+    for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) { b.box('plank', 1.6, 0.05, 6, 14.2 + r * 2.4, 0.9 + k * 0.6, -11, { tile: 1, col: [0.5, 0.42, 0.3] }); b.box('paint', 1.5, 0.05, 5.9, 14.2 + r * 2.4, 0.95 + k * 0.6, -11, { col: [0.28, 0.36, 0.14] }); }
+    for (let r = 0; r < 4; r++) b.collider(14.2 + r * 2.4, -11, 0.85, 3.05, 0, 3);
+    for (const sz of [-2, 1.5]) { b.box('wood', 2.2, 0.85, 1.4, 15.5, 0.4, sz, { col: [0.36, 0.3, 0.24] }); b.cyl('paint', 0.5, 0.5, 0.2, 15.5, 1.25, sz, { seg: 14, col: [0.3, 0.3, 0.3] }); b.collider(15.5, sz, 1.1, 0.7, 0, 1.4); }
+    for (let i = 0; i < 9; i++) b.box('plank', 0.6, 0.6, 0.6, 21 + (i % 3) * 0.65, 0.4 + Math.floor(i / 3) * 0.6, 4 + (i % 2) * 0.1, { tile: 0.6, col: [0.66, 0.52, 0.36] });
+    b.collider(21.65, 4, 1.0, 0.35, 0, 2.2);
     b.roofGable('tin', 28, 14, 3.2, 18, 9.5, -4, Math.PI / 2, 'plank');
     for (let f = 0; f < 3; f++) for (let i = 0; i < 7; i++) {
       b.box('wood', 0.08, 1.5, 2.2, 11.96, 1.6 + f * 2.9, -14.5 + i * 3.5, { col: [0.2, 0.22, 0.2] });
       b.box('wood', 0.08, 1.5, 2.2, 24.04, 1.6 + f * 2.9, -14.5 + i * 3.5, { col: [0.2, 0.22, 0.2] });
     }
-    b.box('wood', 3.2, 3.2, 0.16, 18, 0.4, 9.06, { col: DOOR });
     b.cyl('laterite', 0.7, 0.95, 15, 27, 0, -12, { seg: 10 });
     b.smoke(27, 15.4, -12); b.smoke(27, 15.4, -12);
-    b.collider(18, -4, 6.5, 13.5); b.circle(27, -12, 1.1);
+    b.circle(27, -12, 1.1);
     b.lamp(18, 4.2, 9.5, 1.3, 1);
     // store-shed where the kangani is held
     b.box('laterite', 5.6, 1.6, 4.6, -4, -1.2, -30);
-    b.box('laterite', 5, 2.6, 4, -4, 0.4, -30);
+    hall(b, -4, -30, 5, 4, 0.4, 2.6, { mat: 'laterite', doors: [{ side: 'front', w: 1.2, h: 2.0, col: DOOR }], win: 0, floor: [0.45, 0.38, 0.32] });
     b.roofGable('tin', 6.4, 5.4, 1.2, -4, 3.0, -30, 0, 'laterite');
-    b.box('wood', 1.2, 2.0, 0.14, -4, 0.4, -27.95, { col: DOOR });
-    b.box('paint', 0.16, 0.2, 0.08, -3.55, 1.35, -27.86, { col: [0.25, 0.25, 0.27] });
-    b.collider(-4, -30, 2.8, 2.3);
+    F.sacks(b, -5.8, 0.4, -31.4, 3); b.box('plank', 0.6, 0.6, 0.6, -2.4, 0.4, -31.2, { tile: 0.6 });
     SPOTS.veluCell = b.world(-4, 0, -26.6);
     // coolie lines
-    b.box('laterite', 22, 2.9, 4.2, -26, -0.4, 22);
+    // the coolie lines: six one-room homes under one thatch, each with its own door
+    hall(b, -26, 22, 22, 4.2, 0.05, 2.45, { mat: 'laterite', doors: Array.from({ length: 6 }, (_, i) => ({ side: 'front', at: -11 + 22 / 12 + i * 22 / 6, w: 0.9, h: 1.8, col: DOOR })), win: { front: 0, back: 6, left: 0, right: 0 }, winW: 0.5, winH: 0.5, sill: 1.4, floor: [0.5, 0.36, 0.26], light: false });
+    for (let i = 1; i < 6; i++) wall(b, 'laterite', -37 + i * 22 / 6, 19.9, -37 + i * 22 / 6, 24.1, 0.05, 2.45, [], {});
+    for (let i = 0; i < 6; i++) { const rx = -37 + 22 / 12 + i * 22 / 6; F.mat(b, rx - 0.6, 0.06, 21.2, 0.9, 1.8, [0.7, 0.6, 0.4]); P.pot(b, rx + 1.1, 0.06, 20.6, 0.8); if (i % 2) b.lamp(rx, 1.6, 21, 0.5, 0); }
     b.roofGable('thatch', 23.5, 6, 1.5, -26, 2.5, 22, 0, 'laterite');
-    for (let i = 0; i < 6; i++) b.box('wood', 0.9, 1.8, 0.1, -35 + i * 3.6, 0, 24.12, { col: DOOR });
-    b.collider(-26, 22, 11, 2.2);
     // gate
     for (const sx of [-2.6, 2.6]) { b.box('wall', 0.8, 2.8, 0.8, sx, -0.4, 34); b.sphere('wall', 0.3, sx, 2.65, 34); b.collider(sx, 34, 0.4, 0.4); }
     b.box('wood', 5.2, 0.5, 0.12, 0, 2.5, 34, { col: [0.2, 0.3, 0.22] });
@@ -715,6 +759,7 @@ export function buildStructures(scene) {
     b.place(LOC.lighthouse.x, LOC.lighthouse.z, 0);
     for (let i = 0; i < 9; i++) rock(-6 + rng() * 16, -0.2, 24 + rng() * 8, 0.8 + rng() * 1.1);
     SPOTS.lighthouse = b.world(0, 0, 7);
+    SPOTS.lighthouseDoor = b.world(0, 0, 3.6); SPOTS.lighthouseTop = b.world(0, 21.6, 0);
     SPOTS.duel = b.world(5, 0, 13);
     SPOTS.chest = b.world(1.6, 0, 4.2);
     SPOTS.aground = b.world(38, 0, 31);

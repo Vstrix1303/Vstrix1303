@@ -44,7 +44,7 @@ function profileFor(name) {
 const clean = (t) => String(t).replace(/<[^>]+>/g, '').replace(/[“”"«»]/g, '').replace(/\s+—\s+/g, ', ').trim();
 
 // kind: 'line' (dialogue: replaces anything playing) or 'bark' (a passing remark: never cuts a line)
-export function speak(name, text, kind = 'line', preset = null) {
+export function speak(name, text, kind = 'line', preset = null, vol = 0.95) {
   if (!S || !text || G.voiceOff || (G.audio && G.audio.enabled === false)) return;
   if (kind === 'bark' && S.speaking && G.voiceLine) return;
   S.cancel();
@@ -55,7 +55,7 @@ export function speak(name, text, kind = 'line', preset = null) {
   const r = hash((name || 'narrator') + (preset ? `${preset.skin}|${preset.mundu}|${preset.shirt}|${preset.headgear}` : ''));
   u.pitch = prof.narrator ? 0.82 : prof.child ? 1.45 + r * 0.2 : (prof.female ? 1.05 : 0.88) + (r - 0.5) * 0.22 - (prof.old ? 0.12 : 0);
   u.rate = prof.narrator ? 0.88 : (prof.old ? 0.88 : prof.child ? 1.05 : 0.96) + (r - 0.5) * 0.1;
-  u.volume = 0.95;
+  u.volume = vol;
   G.voiceLine = kind === 'line';
   u.onend = u.onerror = () => { G.voiceLine = false; };
   try { S.speak(u); } catch (e) { /* no speech on this system */ }

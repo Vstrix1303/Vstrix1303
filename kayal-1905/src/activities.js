@@ -200,7 +200,9 @@ export function setupActivities(scene, W, amb) {
     shop.open({ ...d, onClose: restore });
   };
   // I: the satchel, anywhere
-  A.satchel = () => shop.open({ title: 'Satchel', ml: 'സഞ്ചി', sub: (() => { const b = Object.keys(p().buffs).map((k) => `${BUFF_NAME[k]} ${Math.ceil(p().buffs[k] / 60)} min`); return b.length ? 'Now: ' + b.join(' · ') : 'Food and medicine you carry. V eats the best thing for your wounds.'; })(), camera: false, tabs: [satchelTab()] });
+  // how the village sees you, from the strangers you helped, robbed or walked past
+  const standing = () => { const h = st().honour || 0; return `Standing: ${h >= 30 ? 'Respected' : h >= 10 ? 'Well thought of' : h > -10 ? 'Unknown' : h > -30 ? 'Talked about' : 'Not trusted'} (${h > 0 ? '+' : ''}${h})`; };
+  A.satchel = () => shop.open({ title: 'Satchel', ml: 'സഞ്ചി', sub: (() => { const b = Object.keys(p().buffs).map((k) => `${BUFF_NAME[k]} ${Math.ceil(p().buffs[k] / 60)} min`); return (b.length ? 'Now: ' + b.join(' · ') : 'Food and medicine you carry. V eats the best thing for your wounds.') + ' · ' + standing(); })(), camera: false, tabs: [satchelTab()] });
   A.quickUse = quickUse;
   // changing clothes at home: anything owned, for nothing
   if (SPOTS.homeHall) G.interactables.push({ pos: SPOTS.homeHall, r: 2.6, label: 'Change clothes', cond: () => free(), action: () => shop.open({ title: 'The Wardrobe', ml: 'അലമാര', sub: 'What you own, folded in the old teak chest.', camera: true, onClose: restore, tabs: SLOTS.map((sl) => wearTab(sl, () => false, true)) }) });

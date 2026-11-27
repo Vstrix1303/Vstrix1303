@@ -386,7 +386,7 @@ export class Player {
     const cp = Math.cos(this.camPitch), sp = Math.sin(this.camPitch);
     const dir = new THREE.Vector3(Math.sin(this.camYaw) * cp, sp, Math.cos(this.camYaw) * cp);
     // collision: shorten the boom when a wall or the ground is in the way
-    const room = mode === 'foot' ? interiorAt(focus.x, focus.z) : null;
+    const room = mode === 'foot' ? interiorAt(focus.x, focus.z, focus.y) : null;
     let dist = room ? Math.min(baseDist, 2.5) : baseDist * (this.photo ? 1.5 : 1);
     const steps = 10;
     for (let i = 1; i <= steps; i++) {

@@ -131,6 +131,29 @@ export class UI {
   }
   cancelSay() { hush(); clearInterval(this.typing); this.typing = null; this.subResolve = null; this.el.subs.classList.remove('on'); }
 
+  // a dialogue choice: numbered options under the subtitles; 1-4 (or a click / tap) picks one
+  choose(options) {
+    return new Promise((res) => {
+      let el = document.getElementById('choice');
+      if (!el) {
+        el = document.createElement('div'); el.id = 'choice';
+        el.style.cssText = 'position:fixed;left:50%;bottom:21%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:60;font-family:Georgia,serif;pointer-events:auto';
+        document.body.appendChild(el);
+      }
+      el.innerHTML = '';
+      const pick = (i) => { removeEventListener('keydown', key, true); el.style.display = 'none'; G.audio?.sfx('ui'); res(i); };
+      options.forEach((t, i) => {
+        const b = document.createElement('div');
+        b.innerHTML = `<b style="display:inline-block;min-width:1.6em;color:#f2c14e">${i + 1}</b> ${t}`;
+        b.style.cssText = 'background:rgba(12,9,6,0.78);color:#f4e6c0;padding:9px 20px;border-left:3px solid #f2c14e;font-size:18px;cursor:pointer;min-width:340px';
+        b.onclick = () => pick(i); b.ontouchstart = (e) => { e.preventDefault(); pick(i); };
+        el.appendChild(b);
+      });
+      const key = (e) => { const n = parseInt(e.key, 10); if (n >= 1 && n <= options.length) { e.preventDefault(); e.stopPropagation(); pick(n - 1); } };
+      addEventListener('keydown', key, true);
+      el.style.display = 'flex';
+    });
+  }
   letterbox(on) { document.body.classList.toggle('cine', on); }
   fade(to, dur = 1) {
     this.el.fade.style.transition = `opacity ${dur}s ease`;
@@ -251,6 +274,14 @@ export class UI {
       const nx = G.story && G.story.next;
       if (nx) { ctx.beginPath(); ctx.arc(m[0], m[1], 8, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#2a1a06'; ctx.font = 'bold 11px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(nx.def.letter, m[0], m[1] + 0.5); }
       else { ctx.beginPath(); ctx.moveTo(m[0], m[1] - 6); ctx.lineTo(m[0] + 5, m[1]); ctx.lineTo(m[0], m[1] + 6); ctx.lineTo(m[0] - 5, m[1]); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    }
+    // a stranger calling out: a white blip that pulses, '!' once you are close enough to make out words
+    const en = G.enc && G.enc.active;
+    if (en && en.blip) {
+      const m = tm(en.pos.x, en.pos.z, true), pu = 0.6 + 0.4 * Math.sin(G.time * 5);
+      ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.5 * pu})`; ctx.strokeStyle = '#1a120a'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(m[0], m[1], 5.5, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#1a120a'; ctx.font = 'bold 10px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', m[0], m[1] + 0.5);
     }
     // player arrow
     const a = Math.atan2(Math.sin(p.yaw) * cs - Math.cos(p.yaw) * sn, -(Math.sin(p.yaw) * sn + Math.cos(p.yaw) * cs));

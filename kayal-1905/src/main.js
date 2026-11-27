@@ -255,6 +255,7 @@ async function boot() {
     time: (h) => env.setTime(h),
     rain: (v) => env.setRain(v, true),
     spots: SPOTS,
+    encounter: (t) => G.world.encounter?.(t),
     h: getHeight,
   };
 

@@ -18,6 +18,8 @@ import { groundAt, interiorAt, pointInBox } from './physics.js';
 import { Ride } from './vehicles.js';
 import { FX } from './fx.js';
 import { setupActivities } from './activities.js';
+import { setupInteriors } from './interiors.js';
+import { setupEncounters } from './encounters.js';
 import { heightTex, GLSL_HUV } from './terrain.js';
 
 class Wanderer {
@@ -393,6 +395,8 @@ export async function buildWorld(scene, progress) {
     return g;
   };
   setupActivities(scene, W, amb);
+  setupInteriors();
+  W.encounter = setupEncounters(scene);
 
   await progress(0.92, 'Inking the survey map…');
   W.mapImage = buildMapImage(st.marks, 1024);

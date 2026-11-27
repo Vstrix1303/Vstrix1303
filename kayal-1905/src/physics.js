@@ -116,13 +116,15 @@ export function segmentBlocked(ax, az, bx, bz) {
 
 // Roofed interiors: the camera pulls in close and stays under the ceiling.
 export const interiors = [];
-export function addInterior(x, z, hw, hd, rot, ceil) {
-  interiors.push({ x, z, hw, hd, c: Math.cos(rot), s: Math.sin(rot), ceil });
+export function addInterior(x, z, hw, hd, rot, ceil, floor = -1e9) {
+  interiors.push({ x, z, hw, hd, c: Math.cos(rot), s: Math.sin(rot), ceil, floor });
 }
-export function interiorAt(x, z) {
+// y: the height asked about, so an upstairs room and the shop below it are told apart
+export function interiorAt(x, z, y = null) {
   for (let i = 0; i < interiors.length; i++) {
     const b = interiors[i];
     if (Math.abs(x - b.x) > 40 || Math.abs(z - b.z) > 40) continue;
+    if (y != null && (y < b.floor - 0.6 || y > b.ceil)) continue;
     const [lx, lz] = toLocal(b, x, z);
     if (Math.abs(lx) < b.hw && Math.abs(lz) < b.hd) return b;
   }

@@ -15,6 +15,39 @@ every texture, model, animation, sound effect and note of music is generated pro
 > **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
+## Version 14 — every building open, and strangers on the road
+
+- **Walk into the big buildings.**
+  - These are all hollow now, with doorways and furnished rooms:
+    - the mosque: prayer mats, the mimbar and a clock
+    - the church: pews, the altar and candles
+    - the Taluk Office: the Tahsildar's raised desk, clerks' desks, record shelves and a punkah
+    - the co-operative's godown: coir bales, rope and a weighing scale
+    - the co-op office: the secretary's desk, ledgers and a safe
+    - Lakshmi Talkies: benches, a stage and a lit screen
+    - the party offices
+    - the tea estate's bungalow, factory and store shed
+    - the six one-room homes of the coolie lines
+  - Bazaar shophouses have a family room upstairs with a door onto the balcony. The panchayat's upper floor opens onto
+    its verandah roof. **E** at a staircase goes up or down.
+  - The lighthouse door takes you up to the lamp gallery for the view. The temple sanctum stays closed: only the priest
+    goes in.
+- **Strangers (random encounters).**
+  - Every couple of minutes of free roam, somebody up the road gets into trouble. You hear them first, and a white **!**
+    blip pulses on the minimap. Walk over and talk, or ignore them.
+  - The encounters:
+    - a purse-snatcher to run down: tackle him or knock him out, then return the purse or keep it
+    - a snakebite: draw the poison by pressing **E** quickly, or race to the vaidyasala against the clock
+    - a lost child to find by his crying and walk home
+    - a drunk spoiling for a fight: calm him, pay his bus fare, or fight
+    - a man lying in the road who is bait for dacoits
+    - a milkman's bicycle chain to fix
+    - election posters to paste for the C.P.I. or the Congress
+    - an urgent telegram to deliver: good news or bad
+  - Dialogue choices are picked with **1–4**.
+  - How you behave changes your **standing**, shown in the satchel (**I**). It runs from Respected to Not trusted.
+  - A mission starting, dying, or walking 250 m away ends an encounter cleanly.
+
 ## Version 13 — 1957 buildings and real clothes
 
 - **Buildings:**

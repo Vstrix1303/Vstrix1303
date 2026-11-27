@@ -88,6 +88,69 @@ export function wall(b, mat, x0, z0, x1, z1, y0, h, ops = [], o = {}) {
   seg(cur, len, y0, h, true);
 }
 
+// staircases between floors: { lo: world point downstairs, hi: world point upstairs, ry }; the
+// game turns each into a pair of 'Go upstairs' / 'Go downstairs' spots
+export const STAIRS = [];
+export function stair(b, x, z, y0, y1, ry = 0) {
+  const n = Math.max(5, Math.round((y1 - y0) / 0.24)), run = 0.26;
+  for (let i = 0; i < n; i++) b.box('plank', 0.8, 0.06, run + 0.04, x, y0 + (i + 1) * (y1 - y0) / n - 0.06, z + i * run - (n * run) / 2, { tile: 0.6, col: [0.42, 0.3, 0.22] });
+  b.box('plank', 0.06, 0.06, Math.hypot(n * run, y1 - y0), x + 0.42, (y0 + y1) / 2 + 0.6, z, { rx: Math.atan2(y1 - y0, n * run), col: [0.36, 0.26, 0.18] });
+  b.collider(x, z, 0.4, (n * run) / 2, 0, y0 + 0.7);
+  const side = x > 0 ? -0.9 : 0.9;                // the landing spots are on the room's side of the stair
+  STAIRS.push({ lo: b.world(x + side, y0, z - (n * run) / 2), hi: b.world(x + side, y1, z + (n * run) / 2 + 0.3), loY: b.oy + y0, hiY: b.oy + y1 });
+}
+
+// A hollow building of any size: four walls with real door and window openings, a floor to walk
+// on and an interior zone for the camera. Replaces the solid blocks the big buildings used to be.
+//   cx, cz: centre in the current local frame; y0: floor height; H: wall height
+//   o.doors: [{ side: 'front'|'back'|'left'|'right', at: offset from the side's middle, w, h }]
+//   o.win: windows per side { front, back, left, right } (a number, or one number for all)
+export function hall(b, cx, cz, W, D, y0, H, o = {}) {
+  const hw = W / 2, hd = D / 2, mat = o.mat || 'wall';
+  const wo = { col: o.col, dado: o.dado !== undefined ? o.dado : (mat === 'wall' ? DADO : null), shutter: o.shutter, t: o.t, tile: o.tile };
+  const skip = new Set(o.skip || []);
+  const doors = o.doors || [{ side: 'front' }];
+  const nwin = (side) => (typeof o.win === 'number' ? o.win : (o.win && o.win[side] != null ? o.win[side] : Math.max(1, Math.floor((side === 'front' || side === 'back' ? W : D) / 3.2))));
+  const ops = (side, len) => {
+    const out = doors.filter((d) => d.side === side).map((d) => ({ at: len / 2 + (d.at || 0), w: d.w || 1.4, kind: 'door', h: d.h || 2.3, leaf: d.leaf, col: d.col }));
+    const n = nwin(side);
+    for (let i = 1; i <= n; i++) {
+      const at = len * i / (n + 1);
+      if (out.every((q) => Math.abs(q.at - at) > q.w / 2 + 0.75) && at > 0.8 && at < len - 0.8) out.push({ at, w: o.winW || 0.9, kind: 'window', h: o.winH || 1.15, sill: o.sill || 0.9, shutters: o.shutters });
+    }
+    return out;
+  };
+  if (!skip.has('front')) wall(b, mat, cx - hw, cz + hd, cx + hw, cz + hd, y0, H, ops('front', W), { ...wo, out: 1 });
+  if (!skip.has('back')) wall(b, mat, cx - hw, cz - hd, cx + hw, cz - hd, y0, H, ops('back', W), { ...wo, out: -1 });
+  if (!skip.has('left')) wall(b, mat, cx - hw, cz - hd, cx - hw, cz + hd, y0, H, ops('left', D), { ...wo, out: -1 });
+  if (!skip.has('right')) wall(b, mat, cx + hw, cz - hd, cx + hw, cz + hd, y0, H, ops('right', D), { ...wo, out: 1 });
+  b.box('paint', W - 0.3, 0.03, D - 0.3, cx, y0, cz, { col: o.floor || [0.42, 0.18, 0.13] });
+  b.box(o.ceilMat || 'plank', W - 0.2, 0.08, D - 0.2, cx, y0 + H - 0.08, cz, { tile: 1.2, col: o.ceilCol || [0.62, 0.5, 0.4] });   // a ceiling, so the roof's underside is never seen from inside
+  b.platform(cx, cz, hw, hd, y0);
+  b.interior(cx, cz, hw - 0.1, hd - 0.1, y0 + H - 0.1, y0);
+  if (o.light !== false) b.lamp(cx, y0 + H - 0.45, cz, 1.0, 1);
+  return { hw, hd };
+}
+
+// furniture for the halls
+export const F = {
+  bench: (b, x, y, z, len = 2.2, ry = 0) => { b.box('plank', len, 0.07, 0.4, x, y + 0.42, z, { ry, tile: 1 }); for (const s of [-1, 1]) b.box('wood', 0.07, 0.42, 0.36, x + Math.cos(ry) * s * (len / 2 - 0.15), y, z - Math.sin(ry) * s * (len / 2 - 0.15), { ry }); },
+  desk: (b, x, y, z, ry = 0, w = 1.4) => {
+    b.box('plank', w, 0.06, 0.75, x, y + 0.74, z, { ry, tile: 0.8, col: [0.5, 0.36, 0.26] });
+    b.box('plank', w - 0.1, 0.7, 0.68, x, y + 0.04, z, { ry, tile: 0.8, col: [0.42, 0.3, 0.22] });
+    for (let i = 0; i < 3; i++) b.box('paint', 0.3, 0.05, 0.22, x - 0.35 + i * 0.3, y + 0.8 + i * 0.05, z, { ry: ry + i * 0.2, col: [0.9, 0.86, 0.74] });   // files
+    b.collider(x, z, w / 2 + 0.05, 0.4, ry, y + 0.8);
+  },
+  chair: (b, x, y, z, ry = 0) => { b.box('wood', 0.45, 0.05, 0.45, x, y + 0.45, z, { ry, col: [0.4, 0.28, 0.2] }); b.box('wood', 0.45, 0.5, 0.05, x - Math.sin(ry) * 0.2, y + 0.5, z - Math.cos(ry) * 0.2, { ry, col: [0.4, 0.28, 0.2] }); for (const [a, c] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) b.box('wood', 0.04, 0.45, 0.04, x + a * 0.19, y, z + c * 0.19, { col: [0.35, 0.25, 0.18] }); },
+  shelf: (b, x, y, z, w = 1.8, ry = 0, rng = Math.random) => {
+    b.box('plank', w, 2.0, 0.4, x, y, z, { ry, tile: 1, col: [0.45, 0.32, 0.22] });
+    for (let r = 0; r < 4; r++) for (let i = 0; i < Math.floor(w / 0.22); i++) b.box('paint', 0.16, 0.28 + rng() * 0.08, 0.26, x + Math.cos(ry) * (-w / 2 + 0.15 + i * 0.22), y + 0.12 + r * 0.48, z - Math.sin(ry) * (-w / 2 + 0.15 + i * 0.22) + Math.cos(ry) * 0.06, { ry, col: [0.3 + rng() * 0.5, 0.2 + rng() * 0.3, 0.15 + rng() * 0.2] });
+    b.collider(x, z, w / 2, 0.22, ry, y + 2);
+  },
+  mat: (b, x, y, z, w = 1.0, l = 1.8, col = [0.78, 0.66, 0.42], ry = 0) => b.box('paint', w, 0.015, l, x, y + 0.01, z, { ry, col }),
+  sacks: (b, x, y, z, n = 6) => { for (let i = 0; i < n; i++) b.sphere('sack', 0.42, x + (i % 3) * 0.9, y + 0.28 + Math.floor(i / 6) * 0.5, z + Math.floor((i % 6) / 3) * 0.75, { sx: 1.3, sy: 0.7, sz: 0.9 }); b.collider(x + 0.9, z + 0.37, 1.5, 0.8, 0, y + 0.9); },
+};
+
 // The ordinary village house or hut — now with a door you can walk through.
 export function house(b, x, z, ry, o = {}) {
   const w = o.w || 8, d = o.d || 6, wallH = o.wallH || 2.7, ov = o.overhang ?? 1.4;

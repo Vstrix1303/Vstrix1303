@@ -3,7 +3,7 @@
 // platform and a roadside shrine; houses along three new lanes. Returns where the people who work here
 // stand, so the world can put them there.
 import * as THREE from 'three';
-import { house, wall, P, barrel, toolbox, olakkuda, castNet } from './houses.js';
+import { house, wall, P, F, stair, barrel, toolbox, olakkuda, castNet } from './houses.js';
 import { getHeight } from './heightfield.js';
 
 const TAU = Math.PI * 2;
@@ -96,8 +96,9 @@ export function shophouse57(b, x, z, ry, w, d, seed) {
   const y1 = y0 + g1;
   b.box('stone', w + 0.3, 0.16, d + 1.1, 0, y1, 0.45, { col: [0.8, 0.78, 0.74] });
   b.box('paint', w + 0.34, 0.07, 0.06, 0, y1 + 0.02, hd + 1.0, { col: dado });
-  const F = [-1, 0, 1].map((k) => ({ at: hw + k * w * 0.3, w: 0.85, kind: 'window', h: 1.3, sill: 0.8 }));
-  wall(b, 'wall', -hw, hd, hw, hd, y1 + 0.16, g2, F, { ...wo, dado: null, out: 1 });
+  // the middle opening is a door onto the balcony
+  const FW = [-1, 0, 1].map((k) => (k === 0 ? { at: hw, w: 0.9, kind: 'door', h: 2.1, col: shut } : { at: hw + k * w * 0.3, w: 0.85, kind: 'window', h: 1.3, sill: 0.8 }));
+  wall(b, 'wall', -hw, hd, hw, hd, y1 + 0.16, g2, FW, { ...wo, dado: null, out: 1 });
   wall(b, 'wall', -hw, -hd, hw, -hd, y1 + 0.16, g2, [{ at: hw, w: 0.8, kind: 'window', sill: 0.9 }], { ...wo, dado: null, out: -1 });
   wall(b, 'wall', -hw, -hd, -hw, hd, y1 + 0.16, g2, [], { ...wo, dado: null, out: -1 });
   wall(b, 'wall', hw, -hd, hw, hd, y1 + 0.16, g2, [], { ...wo, dado: null, out: 1 });
@@ -123,7 +124,18 @@ export function shophouse57(b, x, z, ry, w, d, seed) {
   for (const s of [-1, 1]) b.box('paint', 0.04, 0.04, 1.2, s * w * 0.42, y0 + 2.2, hd + 0.55, { rx: 0.6, col: [0.18, 0.18, 0.2] });
   for (let i = 0; i < 6; i++) b.box('plank', 0.22, 2.4, 0.035, -hw + 0.32 + i * 0.045, y0, hd + 0.18 + i * 0.035, { ry: 0.05, col: shut.map((c) => c * 1.15) });
   b.decal('ads', seed % 4, 4, 1, 0.8, 0.8, hw + 0.135, y0 + 1.7, -0.7, Math.PI / 2);
-  b.interior(0, 0, hw, hd, y1);
+  b.interior(0, 0, hw, hd, y1, y0);
+  // upstairs: the family's room over the shop, and the balcony over the street
+  const yu = y1 + 0.16;
+  b.platform(0, 0.45, hw, hd + 0.55, yu); b.interior(0, 0, hw - 0.1, hd - 0.1, yt - 0.05, yu);
+  b.box('paint', w - 0.3, 0.02, d - 0.3, 0, yu, 0, { col: [0.5, 0.17, 0.12] });
+  b.box('plank', w - 0.2, 0.06, d - 0.2, 0, yt - 0.06, 0, { tile: 1.2, col: [0.6, 0.48, 0.38] });
+  stair(b, hw - 0.6, -hd + 0.3 + 1.8, y0, yu);
+  b.box('wood', 1.9, 0.35, 0.9, -hw + 1.2, yu, -hd + 0.6, { col: [0.4, 0.28, 0.2] }); b.box('paint', 1.8, 0.08, 0.85, -hw + 1.2, yu + 0.35, -hd + 0.6, { col: [0.86, 0.82, 0.72] });   // a cot
+  b.collider(-hw + 1.2, -hd + 0.6, 0.95, 0.45, 0, yu + 0.5);
+  P.chest(b, -hw + 0.6, yu, 0.6, Math.PI / 2, 0.9); F.chair(b, -0.3, yu, 0.6, Math.PI * 0.2);
+  b.decal('poster', seed % 4, 4, 1, 0.5, 0.75, -hw + 0.13, yu + 1.3, -0.6, Math.PI / 2);
+  b.lamp(0, yt - 0.4, 0, 0.8, 0);
   b.yard(Math.max(w, d) * 0.75 + 4, 0.7).clear(Math.max(w, d) * 0.62 + 2).mark(w + 2, d + 2);
   b.lamp(1.2, y0 + 2.3, hd + 0.4, 1, 0);
 }

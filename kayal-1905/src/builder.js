@@ -135,9 +135,9 @@ export class Builder {
     const u = geo.attributes.uv; for (let k = 0; k < u.count; k++) u.setXY(k, u.getX(k) * uv[0], u.getY(k) * uv[1]);
     return this.geo(mat, geo, TRS(x, y + h / 2, z, 0, ry, 0));
   }
-  interior(x, z, hw, hd, ceil) {
+  interior(x, z, hw, hd, ceil, floor = null) {
     const p = this.world(x, 0, z);
-    addInterior(p.x, p.z, hw, hd, this.ry, this.oy + ceil);
+    addInterior(p.x, p.z, hw, hd, this.ry, this.oy + ceil, floor == null ? -1e9 : this.oy + floor);
     return this;
   }
   // a thin square bar between two WORLD points (wires, rails, ropes)
