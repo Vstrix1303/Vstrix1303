@@ -5,6 +5,7 @@ import { initHeights, initRoads, getHeight, LOC, canalZ, ROADS } from './heightf
 import { buildTextures, TEX } from './textures.js';
 import { buildStructures, SPOTS } from './structures.js';
 import { setupTraffic } from './traffic.js';
+import { buildTarRoads } from './tarroad.js';
 import { buildTerrain, buildMapImage } from './terrain.js';
 import { Env } from './env.js';
 import { Water } from './water.js';
@@ -125,6 +126,7 @@ export async function buildWorld(scene, progress) {
   const st = buildStructures(scene);
   await progress(0.38, 'Flooding the paddy fields…');
   buildTerrain(scene, st.yards);
+  buildTarRoads(scene);                 // 1957: black-top on the trunk road and the port road
   const env = G.env = new Env(scene);
   const water = G.water = new Water(scene, env);
   await progress(0.55, 'Planting coconut groves…');

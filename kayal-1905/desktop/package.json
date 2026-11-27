@@ -1,8 +1,8 @@
 {
   "name": "kayal-1905",
-  "productName": "Kayal 1957",
+  "productName": "Raapakal",
   "version": "7.0.0",
-  "description": "KAYAL - Kerala, 1957. A single-player open-world game set in the backwaters of Kerala.",
+  "description": "RAAPAKAL - Kerala, 1957. A single-player open-world game set in the backwaters of Kerala.",
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -19,8 +19,8 @@
   },
   "build": {
     "appId": "com.kayal1905.game",
-    "productName": "Kayal 1957",
-    "copyright": "Kayal 1957",
+    "productName": "Raapakal",
+    "copyright": "Raapakal",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -53,7 +53,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Kayal 1957"
+      "shortcutName": "Raapakal"
     },
     "mac": {
       "target": [
@@ -92,7 +92,7 @@
       "icon": "build/icon.png",
       "category": "Game"
     },
-    "artifactName": "Kayal-1957-${version}-${os}-${arch}.${ext}",
+    "artifactName": "Raapakal-${version}-${os}-${arch}.${ext}",
     "afterPack": "build/after-pack.cjs"
   },
   "repository": {

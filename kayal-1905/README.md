@@ -1,6 +1,6 @@
-# KAYAL — Travancore, 1905
+# RAAPAKAL — Kerala, 1957
 
-*കായൽ (kayal): the backwaters of Kerala.*
+*രാപ്പകൽ (raapakal): night and day. An open-world game set in the backwaters of Kerala in 1957. (It began as KAYAL — Travancore, 1905, which lives on the `kayal-1905-final` branch.)*
 
 A single-player, story-driven **open-world** adventure set on the Malabar coast in the monsoon of 1905.
 You are **Madhavan**, a boatman's son home after six years on the Bombay docks, to find the family
@@ -12,7 +12,7 @@ It is a browser game: **one self-contained file, no installs, no downloads, no i
 every texture, model, animation, sound effect and note of music is generated procedurally at load time.
 
 
-> **Now set in Kerala, 1957.** The game has moved fifty years on. The 1905 game, with its nine missions,
+> **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
 ## Kerala, 1957 (version 12)

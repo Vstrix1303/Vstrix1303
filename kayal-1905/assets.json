@@ -2,19 +2,125 @@
   "source": "Poly Haven (polyhaven.com) — all assets CC0 (public domain, free for any use, no credit required)",
   "resolution": "1k",
   "textures": {
-    "grass":   { "id": "leafy_grass",              "maps": ["c", "n", "arm"] },
-    "soil":    { "id": "red_laterite_soil_stones", "maps": ["c", "n", "arm"] },
-    "mud":     { "id": "brown_mud_02",             "maps": ["c", "n", "arm"] },
-    "sand":    { "id": "coast_sand_01",            "maps": ["c", "n", "arm"] },
-    "plaster": { "id": "painted_plaster_wall",     "maps": ["c", "n", "arm"] },
-    "laterite":{ "id": "rustic_stone_wall",        "maps": ["c", "n", "arm"] },
-    "roof":    { "id": "clay_roof_tiles",          "maps": ["c", "n", "arm"] },
-    "thatch":  { "id": "thatch_roof_angled",       "maps": ["c", "n", "arm"] },
-    "plank":   { "id": "weathered_brown_planks",   "maps": ["c", "n", "arm"] },
-    "wood":    { "id": "teak_veneer",              "maps": ["c", "n", "arm"] },
-    "stone":   { "id": "granite_tile",             "maps": ["c", "n", "arm"] },
-    "palm":    { "id": "palm_tree_bark",           "maps": ["c", "n", "arm"] },
-    "bark":    { "id": "bark_brown_02",            "maps": ["c", "n", "arm"] },
-    "sack":    { "id": "hessian_230",              "maps": ["c", "n", "arm"] }
+    "grass": {
+      "id": "leafy_grass",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "soil": {
+      "id": "red_laterite_soil_stones",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "mud": {
+      "id": "brown_mud_02",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "sand": {
+      "id": "coast_sand_01",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "plaster": {
+      "id": "painted_plaster_wall",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "laterite": {
+      "id": "rustic_stone_wall",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "roof": {
+      "id": "clay_roof_tiles",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "thatch": {
+      "id": "thatch_roof_angled",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "plank": {
+      "id": "weathered_brown_planks",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "wood": {
+      "id": "teak_veneer",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "stone": {
+      "id": "granite_tile",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "palm": {
+      "id": "palm_tree_bark",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "bark": {
+      "id": "bark_brown_02",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "sack": {
+      "id": "hessian_230",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    },
+    "asphalt": {
+      "id": "asphalt_02",
+      "maps": [
+        "c",
+        "n",
+        "arm"
+      ]
+    }
   }
 }

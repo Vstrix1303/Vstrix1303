@@ -1,4 +1,4 @@
-// KAYAL — Kerala, 1957. Entry point & main loop.
+// RAAPAKAL — Kerala, 1957. Entry point & main loop.
 import * as THREE from 'three';
 import { loadRealTextures, loadHumans } from './assets.js';
 import { G, QUALITY } from './state.js';

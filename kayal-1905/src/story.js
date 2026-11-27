@@ -177,7 +177,7 @@ export class Story {
           await A.wait(0.3);
           await A.fade(0, 1.5);
           if (o.intro) {
-            await A.card('KERALA  ·  APRIL 1957', 'KAYAL', 'കായൽ', 5);
+            await A.card('KERALA  ·  APRIL 1957', 'RAAPAKAL', 'രാപ്പകൽ', 5);
             await A.narrate('Kerala is a year old, and has just voted in a communist government: among the first anywhere to take power through the ballot box.', 7);
             await A.narrate('In Thekkumkara the talk is of land, of rice, and of the new naya paisa.', 5);
           }

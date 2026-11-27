@@ -1,6 +1,6 @@
-# Builds the KAYAL desktop app for Windows (installer + portable zip).
+# Builds the RAAPAKAL desktop app for Windows (installer + portable zip).
 # Download the result from the run's "Artifacts" section on the Actions tab.
-name: KAYAL desktop app
+name: RAAPAKAL desktop app
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - uses: actions/upload-artifact@v4
         with:
-          name: Kayal-1957-windows
+          name: Raapakal-windows
           path: |
             kayal-1905/desktop/dist/*.exe
             kayal-1905/desktop/dist/*.zip
