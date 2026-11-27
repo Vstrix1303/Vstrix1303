@@ -47,6 +47,9 @@ export const P = {
   },
 };
 
+// every hinged door leaf in the world, for doors.js to draw and swing
+export const DOORS = [];
+
 // A wall slab in LOCAL space from (x0,z0) to (x1,z1) (axis-aligned, increasing),
 // with openings: { at: distance along, w, kind: 'door' | 'window' | 'gap', h, sill }.
 export function wall(b, mat, x0, z0, x1, z1, y0, h, ops = [], o = {}) {
@@ -71,9 +74,13 @@ export function wall(b, mat, x0, z0, x1, z1, y0, h, ops = [], o = {}) {
       put('wood', 0.1, dh, t + 0.08, a + 0.03, y0, 0, DARKWOOD); put('wood', 0.1, dh, t + 0.08, c - 0.03, y0, 0, DARKWOOD);
       put('wood', op.w + 0.18, 0.13, t + 0.1, op.at, y0 + dh - 0.05, 0, DARKWOOD);
       if (op.leaf !== false) {
-        // two leaves folded back against the inner face
-        const lw = op.w * 0.5;
-        for (const e of [a - lw / 2 + 0.02, c + lw / 2 - 0.02]) put('wood', lw, dh - 0.12, 0.05, e, y0, -out * (t / 2 + 0.05), op.col || DOOR);
+        // two leaves hung on the jambs: real doors, swung open by whoever comes through (see doors.js)
+        const lw = op.w * 0.5 - 0.02, inset = -out * (t / 2 - 0.03);
+        const L = (al, off) => (ax ? b.world(x0 + al, y0, z0 + off) : b.world(x0 + off, y0, z0 + al));
+        for (const [hinge, toward] of [[a + 0.02, 1], [c - 0.02, -1]]) {
+          const H = L(hinge, inset), C = L(hinge + toward * lw, inset), I = L(hinge, inset - out * lw);
+          DOORS.push({ x: H.x, y: H.y, z: H.z, w: lw, h: dh - 0.1, phiC: Math.atan2(-(C.z - H.z), C.x - H.x), phiO: Math.atan2(-(I.z - H.z), I.x - H.x), cx: (C.x + H.x) / 2, cz: (C.z + H.z) / 2, col: op.col || DOOR });
+        }
       }
     } else if (op.kind === 'window') {
       const sill = op.sill ?? 0.95, wh = op.h ?? 1.0;
@@ -88,16 +95,37 @@ export function wall(b, mat, x0, z0, x1, z1, y0, h, ops = [], o = {}) {
   seg(cur, len, y0, h, true);
 }
 
-// staircases between floors: { lo: world point downstairs, hi: world point upstairs, ry }; the
-// game turns each into a pair of 'Go upstairs' / 'Go downstairs' spots
 export const STAIRS = [];
-export function stair(b, x, z, y0, y1, ry = 0) {
-  const n = Math.max(5, Math.round((y1 - y0) / 0.24)), run = 0.26;
-  for (let i = 0; i < n; i++) b.box('plank', 0.8, 0.06, run + 0.04, x, y0 + (i + 1) * (y1 - y0) / n - 0.06, z + i * run - (n * run) / 2, { tile: 0.6, col: [0.42, 0.3, 0.22] });
-  b.box('plank', 0.06, 0.06, Math.hypot(n * run, y1 - y0), x + 0.42, (y0 + y1) / 2 + 0.6, z, { rx: Math.atan2(y1 - y0, n * run), col: [0.36, 0.26, 0.18] });
-  b.collider(x, z, 0.4, (n * run) / 2, 0, y0 + 0.7);
-  const side = x > 0 ? -0.9 : 0.9;                // the landing spots are on the room's side of the stair
-  STAIRS.push({ lo: b.world(x + side, y0, z - (n * run) / 2), hi: b.world(x + side, y1, z + (n * run) / 2 + 0.3), loY: b.oy + y0, hiY: b.oy + y1 });
+// A staircase you walk up, against a side wall, rising toward the back of the room: its head at zHigh
+// (local z), its foot L further toward +z. Steep and narrow, as shophouse stairs are. A sloping platform under
+// the treads carries you; a rail on the room side keeps you on it. Returns the stairwell to leave open above.
+export function stair(b, x, zHigh, y0, y1) {
+  const n = Math.max(6, Math.round((y1 - y0) / 0.22)), run = 0.22, L = n * run, zLow = zHigh + L, side = x > 0 ? -1 : 1, ang = Math.atan2(y1 - y0, L);
+  for (let i = 0; i < n; i++) b.box('plank', 0.8, 0.07, run + 0.03, x, y0 + (i + 1) * (y1 - y0) / n - 0.07, zLow - (i + 0.5) * run, { tile: 0.6, col: [0.42, 0.3, 0.22] });
+  const mid = (zHigh + zLow) / 2, len = Math.hypot(L, y1 - y0);
+  b.box('plank', 0.06, 0.22, len, x - side * 0.43, (y0 + y1) / 2 - 0.14, mid, { rx: ang, col: [0.36, 0.26, 0.18] });                    // stringer by the wall
+  b.box('wood', 0.05, 0.05, len, x + side * 0.45, (y0 + y1) / 2 + 0.88, mid, { rx: ang, col: [0.3, 0.2, 0.14] });                       // handrail
+  for (let i = 0; i <= 4; i++) { const t = i / 4; b.box('wood', 0.04, 0.9, 0.04, x + side * 0.45, y0 + (y1 - y0) * t, zLow - L * t, { col: [0.3, 0.2, 0.14] }); }
+  b.ramp(x, mid, 0.42, L / 2, y1, y0);
+  const r0 = zHigh + 0.95, r1 = zLow - 0.7;                 // the rail: open at the foot to step on, and at the head to step off
+  if (r1 > r0) b.collider(x + side * 0.47, (r0 + r1) / 2, 0.03, (r1 - r0) / 2);
+  STAIRS.push({ foot: b.world(x, y0, zLow + 0.35), head: b.world(x, y1, zHigh - 0.3), up: b.ry + Math.PI });   // 'up' is the heading that climbs
+  return { x0: x - 0.5, x1: x + 0.5, z0: zHigh - 0.05, z1: zLow + 0.05, side, rail: [r0, r1] };
+}
+// a slab (floor, ceiling) with a rectangular hole in it: up to four boxes around the hole
+export function holed(b, mat, cx, cz, W, D, y, h, hole, o = {}) {
+  const X0 = cx - W / 2, X1 = cx + W / 2, Z0 = cz - D / 2, Z1 = cz + D / 2;
+  if (!hole) { b.box(mat, W, h, D, cx, y, cz, o); return; }
+  const hx0 = Math.max(X0, hole.x0), hx1 = Math.min(X1, hole.x1), hz0 = Math.max(Z0, hole.z0), hz1 = Math.min(Z1, hole.z1);
+  const put = (x0, x1, z0, z1) => { if (x1 - x0 > 0.01 && z1 - z0 > 0.01) b.box(mat, x1 - x0, h, z1 - z0, (x0 + x1) / 2, y, (z0 + z1) / 2, o); };
+  put(X0, hx0, Z0, Z1); put(hx1, X1, Z0, Z1); put(hx0, hx1, Z0, hz0); put(hx0, hx1, hz1, Z1);
+}
+export function holedPlatform(b, cx, cz, hw, hd, y, hole) {
+  if (!hole) { b.platform(cx, cz, hw, hd, y); return; }
+  const X0 = cx - hw, X1 = cx + hw, Z0 = cz - hd, Z1 = cz + hd;
+  const hx0 = Math.max(X0, hole.x0), hx1 = Math.min(X1, hole.x1), hz0 = Math.max(Z0, hole.z0), hz1 = Math.min(Z1, hole.z1);
+  const put = (x0, x1, z0, z1) => { if (x1 - x0 > 0.01 && z1 - z0 > 0.01) b.platform((x0 + x1) / 2, (z0 + z1) / 2, (x1 - x0) / 2, (z1 - z0) / 2, y); };
+  put(X0, hx0, Z0, Z1); put(hx1, X1, Z0, Z1); put(hx0, hx1, Z0, hz0); put(hx0, hx1, hz1, Z1);
 }
 
 // A hollow building of any size: four walls with real door and window openings, a floor to walk

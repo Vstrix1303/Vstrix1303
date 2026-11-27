@@ -3,7 +3,7 @@
 // platform and a roadside shrine; houses along three new lanes. Returns where the people who work here
 // stand, so the world can put them there.
 import * as THREE from 'three';
-import { house, wall, P, F, stair, barrel, toolbox, olakkuda, castNet } from './houses.js';
+import { house, wall, P, F, stair, holed, holedPlatform, barrel, toolbox, olakkuda, castNet } from './houses.js';
 import { getHeight } from './heightfield.js';
 
 const TAU = Math.PI * 2;
@@ -94,7 +94,9 @@ export function shophouse57(b, x, z, ry, w, d, seed) {
   wall(b, 'wall', hw, -hd, hw, hd, y0, g1, [], { ...wo, out: 1 });
   // the floor above, running out over the street as a balcony
   const y1 = y0 + g1;
-  b.box('stone', w + 0.3, 0.16, d + 1.1, 0, y1, 0.45, { col: [0.8, 0.78, 0.74] });
+  // the stair up the right-hand wall at the back: its well is left open in the floor above
+  const well = stair(b, hw - 0.6, -hd + 0.95, y0, y1 + 0.16);
+  holed(b, 'stone', 0, 0.45, w + 0.3, d + 1.1, y1, 0.16, well, { col: [0.8, 0.78, 0.74] });
   b.box('paint', w + 0.34, 0.07, 0.06, 0, y1 + 0.02, hd + 1.0, { col: dado });
   // the middle opening is a door onto the balcony
   const FW = [-1, 0, 1].map((k) => (k === 0 ? { at: hw, w: 0.9, kind: 'door', h: 2.1, col: shut } : { at: hw + k * w * 0.3, w: 0.85, kind: 'window', h: 1.3, sill: 0.8 }));
@@ -127,10 +129,12 @@ export function shophouse57(b, x, z, ry, w, d, seed) {
   b.interior(0, 0, hw, hd, y1, y0);
   // upstairs: the family's room over the shop, and the balcony over the street
   const yu = y1 + 0.16;
-  b.platform(0, 0.45, hw, hd + 0.55, yu); b.interior(0, 0, hw - 0.1, hd - 0.1, yt - 0.05, yu);
-  b.box('paint', w - 0.3, 0.02, d - 0.3, 0, yu, 0, { col: [0.5, 0.17, 0.12] });
+  holedPlatform(b, 0, 0.45, hw, hd + 0.55, yu, well); b.interior(0, 0, hw - 0.1, hd - 0.1, yt - 0.05, yu);
+  holed(b, 'paint', 0, 0, w - 0.3, d - 0.3, yu, 0.02, well, { col: [0.5, 0.17, 0.12] });
   b.box('plank', w - 0.2, 0.06, d - 0.2, 0, yt - 0.06, 0, { tile: 1.2, col: [0.6, 0.48, 0.38] });
-  stair(b, hw - 0.6, -hd + 0.3 + 1.8, y0, yu);
+  // a rail round the well upstairs, open at the stair's head
+  b.box('wood', 0.05, 0.9, well.z1 - well.rail[0], well.x0, yu, (well.rail[0] + well.z1) / 2, { col: [0.3, 0.2, 0.14] }); b.box('wood', well.x1 - well.x0, 0.9, 0.05, (well.x0 + well.x1) / 2, yu, well.z1, { col: [0.3, 0.2, 0.14] });
+  b.collider((well.x0 + well.x1) / 2, well.z1, (well.x1 - well.x0) / 2, 0.03, 0, 50, yu - 0.4);
   b.box('wood', 1.9, 0.35, 0.9, -hw + 1.2, yu, -hd + 0.6, { col: [0.4, 0.28, 0.2] }); b.box('paint', 1.8, 0.08, 0.85, -hw + 1.2, yu + 0.35, -hd + 0.6, { col: [0.86, 0.82, 0.72] });   // a cot
   b.collider(-hw + 1.2, -hd + 0.6, 0.95, 0.45, 0, yu + 0.5);
   P.chest(b, -hw + 0.6, yu, 0.6, Math.PI / 2, 0.9); F.chair(b, -0.3, yu, 0.6, Math.PI * 0.2);

@@ -1,8 +1,7 @@
-// Getting about inside: stairs between floors, the climb up the Azhimukham light, and the temple's
+// Getting about inside: the climb up the Azhimukham light, and the temple's
 // sanctum (which only the priest enters).
 import * as THREE from 'three';
 import { G } from './state.js';
-import { STAIRS } from './houses.js';
 import { SPOTS } from './structures.js';
 
 export function setupInteriors() {
@@ -17,11 +16,6 @@ export function setupInteriors() {
     await G.ui.fade(0, 0.35);
     pl.snapCam = false; pl.locked = false;
   };
-  // each staircase: a spot at its foot and one at its head, each usable only from its own floor
-  for (const s of STAIRS) {
-    G.interactables.push({ pos: s.lo, r: 1.5, label: 'Go upstairs', cond: () => onFoot() && Math.abs(p().pos.y - s.loY) < 0.8, action: () => go(s.hi, s.hiY) });
-    G.interactables.push({ pos: s.hi, r: 1.5, label: 'Go downstairs', cond: () => onFoot() && Math.abs(p().pos.y - s.hiY) < 0.8, action: () => go(s.lo, s.loY) });
-  }
   // the lighthouse: up the spiral to the lamp gallery, for the view over the bar and the sea
   if (SPOTS.lighthouseDoor) {
     G.interactables.push({

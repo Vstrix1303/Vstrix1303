@@ -25,6 +25,7 @@ export function setupEncounters(scene) {
   const pp = () => p().worldPos();
   const dist = (a) => { const w = pp(); return Math.hypot(w.x - a.x, w.z - a.z); };
   const state = () => S().state;
+  const reward = (a, why) => S().addMoney(a > 0 ? Math.max(1, Math.round(a * (G.rewardMult ? G.rewardMult() : 1))) : a, why);
   const honour = (n, why) => {
     const st = state(); st.honour = clamp((st.honour || 0) + n, -100, 100); S().save();
     ui().toast(`${n > 0 ? 'Honour ▲' : 'Honour ▼'}${why ? ' &nbsp;·&nbsp; ' + why : ''}`, 4);
@@ -154,10 +155,10 @@ export function setupEncounters(scene) {
         const c = await ui().choose(['Give back the purse', 'Keep it for your trouble']);
         if (c === 0) {
           await A.dialog([['M', 'Here. Count it, it is all there.'], [vic, 'Eight annas for the ration shop, and the bus fare home. God bless you. Take this — no, take it.']]);
-          S().addMoney(12, 'a reward from ' + vic.name); honour(2, 'returned a purse');
+          reward(12, 'a reward from ' + vic.name); honour(2, 'returned a purse');
         } else {
           await A.dialog([['M', 'He must have dropped it running. I looked.'], [vic, 'Dropped it. Of course. You and he are the same, only he runs faster.']]);
-          S().addMoney(40, 'the purse'); honour(-3, 'kept a stolen purse');
+          reward(40, 'the purse'); honour(-3, 'kept a stolen purse');
         }
       },
     },
@@ -182,7 +183,7 @@ export function setupEncounters(scene) {
           if (ok && Math.random() < 0.85) {
             man.pose = 'sit';
             await A.dialog([[man, 'Ammé… my leg is fire. But I can feel it. I can feel it!'], [wife, 'You saved him. We have nothing, but take this — and come for sadya at Onam.']]);
-            S().addMoney(16, 'their thanks'); honour(3, 'saved a snakebitten man'); return;
+            reward(16, 'their thanks'); honour(3, 'saved a snakebitten man'); return;
           }
           await A.dialog([[wife, 'He is not breathing — no, no, no…']]); wife.pose = 'cower'; honour(0); return;
         }
@@ -192,13 +193,13 @@ export function setupEncounters(scene) {
         await A.dialog([[wife, 'Ask for Kunjikrishnan vaidyar. Run!']]);
         let left = 120, got = false;
         obj('Fetch the snakebite medicine from the vaidyasala', shop.front);
-        const it = en.int(shop.front, 3.2, 'Ask the vaidyar for snakebite medicine', () => !got, async () => { got = true; en.unint(it); S().addMoney(-6, 'the vaidyar\'s medicine'); A.toast('Run back with it!', 3); obj('Take the medicine back', man.pos); });
+        const it = en.int(shop.front, 3.2, 'Ask the vaidyar for snakebite medicine', () => !got, async () => { got = true; en.unint(it); reward(-6, 'the vaidyar\'s medicine'); A.toast('Run back with it!', 3); obj('Take the medicine back', man.pos); });
         await A.until((dt) => { left -= dt; ui().setTimer(`${Math.ceil(left)}`); return left <= 0 || (got && dist(man.pos) < 3); });
         ui().setTimer(null);
         if (got && left > 0) {
           man.pose = 'sit';
           await A.dialog([[wife, 'You came back! Quick, quick —'], [man, 'Bitter as neem… but the pain is going.'], [wife, 'God sent you down this road. Take this, please.']]);
-          S().addMoney(24, 'their thanks'); honour(3, 'saved a snakebitten man');
+          reward(24, 'their thanks'); honour(3, 'saved a snakebitten man');
         } else { await A.dialog([[wife, 'Too late. He is gone.']]); wife.pose = 'cower'; }
       },
     },
@@ -230,7 +231,7 @@ export function setupEncounters(scene) {
         await A.until(() => dist(mum.pos) < 4 && kid.pos.distanceTo(mum.pos) < 6);
         kid.follow = null;
         await A.dialog([[mum, 'Unni! You useless, wicked — come here.'], [mum, 'Thank you. Thank you. Here — it is not much.']]);
-        S().addMoney(10, 'a mother\'s thanks'); honour(2, 'found a lost child');
+        reward(10, 'a mother\'s thanks'); honour(2, 'found a lost child');
       },
     },
 
@@ -249,7 +250,7 @@ export function setupEncounters(scene) {
         const c = await ui().choose(['Calm him down', 'Give him two annas for the bus home', 'Shove him out of the way']);
         if (c === 1) {
           if (!S().canPay(2)) { await A.dialog([['M', 'I have nothing on me.'], [d, 'Then you are worse off than me!']]); return; }
-          S().addMoney(-2, 'bus fare for a drunk');
+          reward(-2, 'bus fare for a drunk');
           await A.dialog([[d, 'Two annas… you are a good man. A good man. I will go home. My wife will kill me, but I will go home.']]);
           honour(1, 'sent a drunk home'); d.goal = { x: d.pos.x + 30, z: d.pos.z, speed: 1.0 }; await A.wait(3); return;
         }
@@ -294,7 +295,7 @@ export function setupEncounters(scene) {
         if (foes.every((f) => f.ko)) {
           const loot = 20 + Math.floor(Math.random() * 30);
           A.toast('The dacoits lie groaning in the road.', 4);
-          S().addMoney(loot, 'the dacoits\' takings'); honour(1, 'beat off an ambush');
+          reward(loot, 'the dacoits\' takings'); honour(1, 'beat off an ambush');
         } else if (p().health > 0) A.toast('You got away.', 3);
       },
     },
@@ -320,7 +321,7 @@ export function setupEncounters(scene) {
         const ok = await mash(A, 'Fixing the chain', 0.09, 0.12, 10);
         if (ok) {
           await A.dialog([[m, 'Hah! It runs! Here — drink, it is fresh this morning. And a little something.']]);
-          p().health = Math.min(100, p().health + 30); S().addMoney(4, 'thanks from the milkman'); honour(1, 'helped a stranger');
+          p().health = Math.min(100, p().health + 30); reward(4, 'thanks from the milkman'); honour(1, 'helped a stranger');
         } else await A.dialog([[m, 'Never mind, never mind. I will push it. Thank you for trying.']]);
       },
     },
@@ -360,7 +361,7 @@ export function setupEncounters(scene) {
         obj('Go back for your money', m.pos);
         await waitAt(en, A, m.pos, 2.6, 'Collect your pay');
         await A.dialog([[m, en.red ? 'Lal salaam! Six annas, as promised. The revolution keeps its word.' : 'Good boy. Six annas, and my blessing.']]);
-        S().addMoney(6, 'poster money'); honour(1, null);
+        reward(6, 'poster money'); honour(1, null);
       },
     },
 
@@ -387,7 +388,7 @@ export function setupEncounters(scene) {
         await A.dialog(good
           ? [['M', 'A telegram for you. From Madras.'], [to, 'From Madras? My son… he has passed! B.A. Second Class! Wait, wait, take something, sweets are not ready yet—']]
           : [['M', 'A telegram for you. From Madras.'], [to, '"Father serious. Come at once." … Thank you for bringing it. I must find the bus timings.']]);
-        S().addMoney(good ? 8 : 2, good ? 'happy news' : 'the peon\'s two annas'); honour(1, null);
+        reward(good ? 8 : 2, good ? 'happy news' : 'the peon\'s two annas'); honour(1, null);
       },
     },
   };

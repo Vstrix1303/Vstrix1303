@@ -24,8 +24,8 @@ export function addCircle(x, z, r) {
 }
 
 // Oriented box. rot = rotation about Y (same convention as three.js)
-export function addBox(x, z, hw, hd, rot = 0, top = 50) {
-  const b = { t: 1, x, z, hw, hd, c: Math.cos(rot), s: Math.sin(rot), top };
+export function addBox(x, z, hw, hd, rot = 0, top = 50, bot = -1e9) {
+  const b = { t: 1, x, z, hw, hd, c: Math.cos(rot), s: Math.sin(rot), top, bot };
   boxes.push(b);
   insert(b, x, z, Math.hypot(hw, hd));
   return b;
@@ -33,6 +33,10 @@ export function addBox(x, z, hw, hd, rot = 0, top = 50) {
 
 export function addPlatform(x, z, hw, hd, rot, y) {
   platforms.push({ x, z, hw, hd, c: Math.cos(rot), s: Math.sin(rot), y });
+}
+// a sloping platform (a staircase): y0 at its local -z end rising to y1 at +z
+export function addRamp(x, z, hw, hd, rot, y0, y1) {
+  platforms.push({ x, z, hw, hd, c: Math.cos(rot), s: Math.sin(rot), y: y0, y1 });
 }
 
 // world -> box local (inverse of rotation about Y by rot)
@@ -47,7 +51,9 @@ export function groundAt(x, z, curY = 1e9) {
     const p = platforms[i];
     if (Math.abs(x - p.x) > 60 || Math.abs(z - p.z) > 60) continue;
     const [lx, lz] = toLocal(p, x, z);
-    if (Math.abs(lx) <= p.hw && Math.abs(lz) <= p.hd && p.y > h && curY > p.y - 1.2) h = p.y;
+    if (Math.abs(lx) > p.hw || Math.abs(lz) > p.hd) continue;
+    const py = p.y1 == null ? p.y : p.y + (p.y1 - p.y) * (lz + p.hd) / (2 * p.hd);
+    if (py > h && curY > py - (p.y1 == null ? 1.2 : 0.6)) h = py;
   }
   return h;
 }
@@ -77,7 +83,7 @@ export function resolve(pos, r, y = 0) {
           pos.x += dx * push; pos.z += dz * push;
         }
       } else {
-        if (y > o.top) continue;
+        if (y > o.top || y < o.bot || o.off) continue;
         const [lx, lz] = toLocal(o, pos.x, pos.z);
         const ex = o.hw + r, ez = o.hd + r;
         if (Math.abs(lx) < ex && Math.abs(lz) < ez) {

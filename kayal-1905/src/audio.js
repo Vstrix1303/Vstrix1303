@@ -153,6 +153,8 @@ export class AudioSys {
       case 'sniper': this.burst('lowpass', 2400, 0.5, 1.1 * v, 0.001, 0.5, null, 0, 250); this.tone('sine', 110, 36, 0.9 * v, 0.002, 0.4); this.burst('bandpass', 500, 0.6, 0.25 * v, 0.2, 2.2, null, 0.1, 120); break;
       case 'silenced': this.burst('bandpass', 1400, 1.2, 0.35 * v, 0.001, 0.09, null, 0, 600); break;
       case 'launch': this.burst('bandpass', 900, 0.7, 0.7 * v, 0.01, 0.9, null, 0, 300); this.burst('highpass', 2500, 0.5, 0.3 * v, 0.02, 0.6); break;
+      case 'door': this.burst('bandpass', 380, 3, 0.12 * v, 0.05, 0.35, null, 0, 520); this.tone('triangle', 210, 260, 0.03 * v, 0.08, 0.3); break;
+      case 'doorShut': if (v > 0.05) { this.tone('sine', 140, 70, 0.3 * v, 0.003, 0.14); this.burst('lowpass', 700, 0.6, 0.2 * v, 0.002, 0.08); } break;
       case 'click': this.burst('highpass', 4200, 1.5, 0.18 * v, 0.001, 0.03); break;
       case 'punch': this.tone('sine', 160, 60, 0.45 * v, 0.002, 0.1); this.burst('lowpass', 900, 0.7, 0.25 * v, 0.002, 0.06); break;
       case 'reload': for (let k = 0; k < 3; k++) this.burst('highpass', 3800, 1.5, 0.16 * v, 0.001, 0.035, null, k * 0.11); break;

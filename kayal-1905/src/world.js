@@ -20,6 +20,9 @@ import { FX } from './fx.js';
 import { Combat } from './combat.js';
 import { setupActivities } from './activities.js';
 import { setupInteriors } from './interiors.js';
+import { STAIRS, DOORS } from './houses.js';
+import { setupDoors } from './doors.js';
+import { setupStanding } from './standing.js';
 import { setupEncounters } from './encounters.js';
 import { heightTex, GLSL_HUV } from './terrain.js';
 
@@ -316,7 +319,7 @@ export async function buildWorld(scene, progress) {
   // ---- the police: one at the bus stand, one walking the bazaar, lathis in hand
   {
     const POL = ['Move along now. The bus will come when it comes.', 'Elections or no elections, there will be order in this bazaar.', 'Your papers? No, no — I am only joking. Go on.'];
-    const cop = (x, z, yaw, o) => { const n = amb('Police constable', CAST.police, x, z, yaw, { facePlayer: true, lines: POL, ...o }); n.h.hold(makeStick(1.15, 0x4a3018)); n.h.grip = true; return n; };
+    const cop = (x, z, yaw, o) => { const n = amb('Police constable', CAST.police, x, z, yaw, { facePlayer: true, lines: POL, ...o }); n.h.hold(makeStick(1.15, 0x4a3018)); n.h.grip = true; n.police = true; return n; };
     const bs = SPOTS.busStand;
     if (bs) cop(bs.x + Math.cos(SPOTS.busStandRy) * 4, bs.z - Math.sin(SPOTS.busStandRy) * 4, SPOTS.busStandRy + Math.PI);
     cop(-30, 8, 1.4, { route: [new THREE.Vector3(-44, 0, 12.4), new THREE.Vector3(-10, 0, 6.4), new THREE.Vector3(16, 0, 1.4), new THREE.Vector3(-10, 0, 6.4)], speed: 1.1 });
@@ -397,7 +400,9 @@ export async function buildWorld(scene, progress) {
     return g;
   };
   setupActivities(scene, W, amb);
-  setupInteriors();
+  setupInteriors(); G.stairs = STAIRS; G.doors = DOORS;
+  setupDoors(scene, st.mats && st.mats.plank && st.mats.plank.map);
+  setupStanding();
   W.encounter = setupEncounters(scene);
 
   await progress(0.92, 'Inking the survey map…');

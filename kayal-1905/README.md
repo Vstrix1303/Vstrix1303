@@ -15,6 +15,30 @@ every texture, model, animation, sound effect and note of music is generated pro
 > **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
+## Version 16 — stairs you climb, doors that open, a name that matters
+
+- **Walk up the stairs.**
+  - Shophouses and the panchayat have real staircases: steep wooden treads along a side wall, rising toward the
+    back, with a handrail.
+  - The stairwell is open through the floor above, with a rail round it upstairs.
+  - There is no more fade-and-teleport.
+- **Doors open and close.**
+  - Every doorway has its leaves hung on the jambs: about two hundred doors across the map.
+  - A door swings in as you, or a villager, walk up to it, creaks, and falls shut a moment after you've gone
+    through.
+  - They are drawn in a single batch, so they cost almost nothing.
+- **Standing has consequences.**
+  - **Prices:**
+    - Respected: 15% off in every shop and at the gunsmith.
+    - Well thought of: 7% off.
+    - Talked about: 15% over the odds.
+    - Not trusted: 30% over.
+  - **Greetings.** Villagers you pass greet you, thank you, or mutter and pull their children away, depending on
+    your standing.
+  - **Fear.** People duck and cover if you walk about with a gun out.
+  - **Rewards.** Strangers pay more to someone with a good name (up to 1.5×) and less to someone with a bad one.
+  - **Police.** At *Not trusted* the constables know your face and come for you on sight.
+
 ## Version 15 — Madhavan rearmed, and a new HUD
 
 - **Hands free.** You start with nothing in your hands: left-click punches (jab left, jab right), and right-click

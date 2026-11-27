@@ -69,7 +69,7 @@ export class Shop {
     this.wasLocked = p.locked; p.locked = true;
     G.input.enabled = false; G.input.releaseLock();
     document.body.classList.add('shopopen', 'nohud');
-    this.q('.sh-title').textContent = o.title; this.q('.sh-ml').textContent = o.ml || ''; this.q('.sh-sub').textContent = o.sub || '';
+    this.q('.sh-title').textContent = o.title; this.q('.sh-ml').textContent = o.ml || ''; this.q('.sh-sub').textContent = (o.sub || '') + (o.camera !== false && G.priceNote ? G.priceNote() : '');
     if (o.camera && p.mode === 'foot') {
       // a portrait of Madhavan, standing to the left of the panel: he turns to the most open side
       let best = null;

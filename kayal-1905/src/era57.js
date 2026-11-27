@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { getHeight, ROADS } from './heightfield.js';
 import { pointInBox } from './physics.js';
-import { house, wall, hall, stair, F, P } from './houses.js';
+import { house, wall, hall, stair, holed, holedPlatform, F, P } from './houses.js';
 import { shop } from './village.js';
 
 const TAU = Math.PI * 2;
@@ -91,7 +91,8 @@ function office57(b, x, z, ry, w, d, o = {}) {
   }
   for (let i = 0; i < 3; i++) b.box('stone', 2.2, 0.2, 0.42, 0, y0 - 0.2 - i * 0.2, vz + 0.2 + i * 0.42, { col: [0.72, 0.7, 0.66] });
   let yt = y0 + h1;
-  b.box('stone', w + 0.4, 0.2, d + vd + 0.5, 0, yt, vd / 2 + 0.05, { col: [0.84, 0.82, 0.78] });
+  const well = o.storeys === 2 ? stair(b, -hw + 0.6, -hd + 0.95, y0, yt + 0.2) : null;
+  holed(b, 'stone', 0, vd / 2 + 0.05, w + 0.4, d + vd + 0.5, yt, 0.2, well, { col: [0.84, 0.82, 0.78] });
   b.box('paint', w + 0.44, 0.08, 0.06, 0, yt + 0.06, vz + 0.32, { col: trim });
   if (o.storeys === 2) {        // a second floor set back over the verandah roof, its own row of windows
     const y2 = yt + 0.2, F2 = [];
@@ -110,10 +111,11 @@ function office57(b, x, z, ry, w, d, o = {}) {
     b.decal('plaque', o.plaque ?? 3, 4, 2, 0.9, 0.45, 0, yt + 1.0, hd + 0.17);
     b.sign(o.sign, 2.4, 0.6, 0, y2 - 0.08 + 0.42, vz + 0.37);
     // the upper floor: the president's room, and the verandah roof as a terrace
-    b.platform(0, 0, hw, hd, y2); b.platform(0, hd + vd / 2 + 0.1, hw + 0.1, vd / 2 + 0.2, y2);
+    holedPlatform(b, 0, 0, hw, hd, y2, well); b.platform(0, hd + vd / 2 + 0.1, hw + 0.1, vd / 2 + 0.2, y2);
+    b.box('wood', 0.05, 0.9, well.z1 - well.rail[0], well.x1, y2, (well.rail[0] + well.z1) / 2, { col: [0.3, 0.2, 0.14] }); b.box('wood', well.x1 - well.x0, 0.9, 0.05, (well.x0 + well.x1) / 2, y2, well.z1, { col: [0.3, 0.2, 0.14] });
+    b.collider((well.x0 + well.x1) / 2, well.z1, (well.x1 - well.x0) / 2, 0.03, 0, 50, y2 - 0.4);
     b.interior(0, 0, hw - 0.1, hd - 0.1, y2 + 2.75, y2);
-    b.box('paint', w - 0.3, 0.02, d - 0.3, 0, y2, 0, { col: [0.5, 0.17, 0.12] }); b.box('plank', w - 0.2, 0.06, d - 0.2, 0, y2 + 2.74, 0, { tile: 1.2, col: [0.6, 0.48, 0.38] });
-    stair(b, -hw + 0.6, -hd + 0.3 + 1.9, y0, y2);
+    holed(b, 'paint', 0, 0, w - 0.3, d - 0.3, y2, 0.02, well, { col: [0.5, 0.17, 0.12] }); b.box('plank', w - 0.2, 0.06, d - 0.2, 0, y2 + 2.74, 0, { tile: 1.2, col: [0.6, 0.48, 0.38] });
     F.desk(b, 1.2, y2, -hd + 1.2, 0, 1.6); F.chair(b, 1.2, y2, -hd + 0.5, 0); F.shelf(b, hw - 0.4, y2, -0.4, 1.8, -Math.PI / 2);
     F.bench(b, 0.4, y2, hd - 0.8, 2.6);
     b.lamp(0, y2 + 2.4, 0, 0.9, 1);
@@ -130,7 +132,7 @@ function office57(b, x, z, ry, w, d, o = {}) {
     b.decal('plaque', o.plaque ?? 0, 4, 2, 0.6, 0.3, 0, yp + 1.0, vz + 0.37);
   }
   b.interior(0, 0, hw, hd, y0 + h1, y0);
-  b.box('plank', w - 0.2, 0.06, d - 0.2, 0, y0 + h1 - 0.06, 0, { tile: 1.2, col: [0.6, 0.48, 0.38] });
+  holed(b, 'plank', 0, 0, w - 0.2, d - 0.2, y0 + h1 - 0.06, 0.06, well, { tile: 1.2, col: [0.6, 0.48, 0.38] });
   // inside: a desk under a portrait, benches for the members, files on shelves, a charkha or a red flag
   F.desk(b, 0, y0, -hd + 1.0, 0, 1.6); F.chair(b, 0, y0, -hd + 0.4, 0);
   F.bench(b, -hw / 2 - 0.3, y0, hd - 0.45, Math.min(2.2, hw - 1.0)); F.shelf(b, hw - 0.35, y0, -0.6, 1.6, -Math.PI / 2);

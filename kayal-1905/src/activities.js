@@ -109,7 +109,11 @@ export function setupActivities(scene, W, amb) {
   // ------------------------------------------------ shops: clothes, food, medicine
   const shop = G.shop = new Shop();
   const st = () => S().state;
-  const pay = (n, what) => { if (!S().canPay(n)) { G.audio?.sfx('ui'); ui().toast(`Not enough money for ${what}.`, 2.5); return false; } if (n) S().addMoney(-n); G.audio?.sfx('coin'); return true; };
+  // what things cost depends on who you are: the respected get a little off, the talked-about pay over the odds
+  const cost = (n) => (n > 0 ? Math.max(1, Math.round(n * G.priceMult())) : 0);
+  const canPay = (n) => S().canPay(cost(n));
+  const fmtPrice = (n) => fmtMoney(cost(n));
+  const pay = (n, what) => { n = cost(n); if (!S().canPay(n)) { G.audio?.sfx('ui'); ui().toast(`Not enough money for ${what}.`, 2.5); return false; } if (n) S().addMoney(-n); G.audio?.sfx('coin'); return true; };
   const colourOf = (look) => look.shoulderCloth ?? look.shirt ?? look.gearColor ?? look.bag ?? look.mundu ?? (look.cape ? 0x8a7a4a : look.mark ? 0xd8b070 : look.sandals ? 0x6a4a2a : 0x8d5b3c);
   const preview = (over) => p().setLook(lookFor(st(), over));
   // a tab of pieces for one slot; sold: which of them this shop has
@@ -117,9 +121,9 @@ export function setupActivities(scene, W, amb) {
     const id = slot + ':' + k, own = () => st().owned.includes(id), worn = () => st().wear[slot] === k;
     return {
       name: it.name, desc: it.desc, price: it.price, swatch: colourOf(it.look),
-      tag: () => (worn() ? { text: 'WEARING', cls: 'worn' } : own() ? { text: 'OWNED', cls: 'own' } : { text: fmtMoney(it.price) }),
-      label: () => (worn() ? 'Wearing' : own() || free ? 'Wear' : `Buy · ${fmtMoney(it.price)}`),
-      can: () => !worn() && (own() || free || S().canPay(it.price)),
+      tag: () => (worn() ? { text: 'WEARING', cls: 'worn' } : own() ? { text: 'OWNED', cls: 'own' } : { text: fmtPrice(it.price) }),
+      label: () => (worn() ? 'Wearing' : own() || free ? 'Wear' : `Buy · ${fmtPrice(it.price)}`),
+      can: () => !worn() && (own() || free || canPay(it.price)),
       preview: () => preview({ wear: { ...st().wear, [slot]: k } }),
       act: () => { if (!own() && !free) { if (!pay(it.price, it.name)) return; st().owned.push(id); } st().wear[slot] = k; S().save(); S().dress(); },
     };
@@ -127,8 +131,8 @@ export function setupActivities(scene, W, amb) {
   const itemTab = (name, kind) => ({ name, items: () => Object.entries(ITEMS).filter(([, it]) => it.sold.includes(kind)).map(([k, it]) => ({
     name: it.name, desc: `${it.ml} — ${it.desc}`, price: it.price, swatch: it.swatch,
     stat: (st().items[k] || 0) ? `In your satchel: ${st().items[k]}` : '',
-    tag: () => ({ text: fmtMoney(it.price) + (st().items[k] ? `  ·  ×${st().items[k]}` : '') }),
-    label: () => `Buy · ${fmtMoney(it.price)}`, can: () => S().canPay(it.price),
+    tag: () => ({ text: fmtPrice(it.price) + (st().items[k] ? `  ·  ×${st().items[k]}` : '') }),
+    label: () => `Buy · ${fmtPrice(it.price)}`, can: () => canPay(it.price),
     act: () => { if (!pay(it.price, it.name)) return; st().items[k] = (st().items[k] || 0) + 1; S().save(); },
   })) });
   const satchelTab = () => ({ name: 'Satchel', empty: 'Your satchel is empty. Food and medicine are sold in the bazaar.', items: () => Object.keys(st().items).filter((k) => st().items[k] > 0 && ITEMS[k]).map((k) => ({
@@ -143,9 +147,9 @@ export function setupActivities(scene, W, amb) {
     return {
       name: `${w.name} · ${w.ml}`, desc: w.desc + (early() ? `  Not yet — ${NEED[w.need] || 'later in the story'}.` : ''), price: w.price,
       stat: `Damage ${w.dmg} · reach ${w.reach} m · ${w.multi ? 'hits all around' : w.dur < 0.32 ? 'very fast' : w.dur > 0.6 ? 'slow' : 'steady'}${w.shield ? ' · shield' : ''}`,
-      tag: () => (cur() ? { text: 'IN HAND', cls: 'worn' } : own() ? { text: 'OWNED', cls: 'own' } : early() ? { text: 'LATER' } : { text: fmtMoney(w.price) }),
-      label: () => (cur() ? 'In hand' : own() ? 'Take it' : `Buy · ${fmtMoney(w.price)}`),
-      can: () => !cur() && (own() || (!early() && S().canPay(w.price))),
+      tag: () => (cur() ? { text: 'IN HAND', cls: 'worn' } : own() ? { text: 'OWNED', cls: 'own' } : early() ? { text: 'LATER' } : { text: fmtPrice(w.price) }),
+      label: () => (cur() ? 'In hand' : own() ? 'Take it' : `Buy · ${fmtPrice(w.price)}`),
+      can: () => !cur() && (own() || (!early() && canPay(w.price))),
       act: () => {
         if (!own()) { if (!pay(w.price, w.name)) return; st().weapons.push(k); ui().toast(`<b>${w.name}</b> — yours. Hold <b>Tab</b> for the weapon wheel: it sits in the melee segment (press <b>2</b>).`, 5); }
         st().weapon = k; st().melee = k; p().setWeapon(k); S().save();
@@ -163,16 +167,16 @@ export function setupActivities(scene, W, amb) {
       const rows = [{
         name: `${G0.name} · ${G0.ml}`, desc: G0.desc, price: G0.price, swatch: 0x3a3c40,
         stat: `Damage ${Math.round(S0.dmg)}${S0.pellets ? ' ×' + S0.pellets : ''} · range ${Math.round(S0.range)} m · ${S0.mag} rounds · ${S0.auto ? 'automatic' : (1 / S0.rate).toFixed(1) + ' shots a second'}${S0.radius ? ' · blast ' + S0.radius.toFixed(1) + ' m' : ''}`,
-        tag: () => (own() ? { text: 'OWNED', cls: 'own' } : { text: fmtMoney(G0.price) }),
-        label: () => (own() ? 'Take it in hand' : `Buy · ${fmtMoney(G0.price)}`),
-        can: () => own() || S().canPay(G0.price), preview: () => show(),
+        tag: () => (own() ? { text: 'OWNED', cls: 'own' } : { text: fmtPrice(G0.price) }),
+        label: () => (own() ? 'Take it in hand' : `Buy · ${fmtPrice(G0.price)}`),
+        can: () => own() || canPay(G0.price), preview: () => show(),
         act: () => {
           if (!own()) { if (!pay(G0.price, G0.name)) return; st().weapons.push(k); st().ammo[k] = (st().ammo[k] || 0) + AMMO_TYPES[k].n; st().mag[k] = gunStats(k, mods()).mag; ui().toast(`<b>${G0.name}</b> — yours, loaded, with a box of rounds. Hold <b>Tab</b> for the wheel, or press <b>${['pistol', 'shotgun', 'rifle', 'sniper', 'rocket'].indexOf(k) + 3}</b>.`, 5); }
           st().weapon = k; S().save();
         },
       }];
       const am = AMMO_TYPES[k];
-      rows.push({ name: am.name, desc: 'Packed in oilcloth, sold by the box.', price: am.price, swatch: 0xb8a060, stat: `Carried: ${st().ammo[k] || 0} spare`, tag: () => ({ text: fmtMoney(am.price) }), label: () => `Buy · ${fmtMoney(am.price)}`, can: () => own() && S().canPay(am.price), preview: () => show(), act: () => { if (!pay(am.price, am.name)) return; st().ammo[k] = (st().ammo[k] || 0) + am.n; S().save(); } });
+      rows.push({ name: am.name, desc: 'Packed in oilcloth, sold by the box.', price: am.price, swatch: 0xb8a060, stat: `Carried: ${st().ammo[k] || 0} spare`, tag: () => ({ text: fmtPrice(am.price) }), label: () => `Buy · ${fmtPrice(am.price)}`, can: () => own() && canPay(am.price), preview: () => show(), act: () => { if (!pay(am.price, am.name)) return; st().ammo[k] = (st().ammo[k] || 0) + am.n; S().save(); } });
       for (const cat of modCats(k)) for (const [o, part] of modOpts(cat, k)) {
         const id = `${k}:${cat}:${o}`, has = () => part.price === 0 || st().modsOwned.includes(id), on = () => mods()[cat] === o;
         const col = part.metal ? part.metal[0] : part.wood ?? part.inlay ?? null;
@@ -180,9 +184,9 @@ export function setupActivities(scene, W, amb) {
           name: `${MODS[cat].name} — ${part.name}`, desc: part.desc || `${MODS[cat].name} for the ${G0.name}.`, price: part.price, swatch: col,
           stat: (() => { const t = gunStats(k, { ...mods(), [cat]: o }), b = gunStats(k, mods()), d = []; const cmp = (n, a, c, better, f = (x) => Math.round(x)) => { if (Math.abs(a - c) > 1e-6) d.push(`${n} ${f(a)} → ${f(c)}${(better ? c > a : c < a) ? ' ▲' : ' ▼'}`); };
             cmp('Range', b.range, t.range, true); cmp('Rounds', b.mag, t.mag, true); cmp('Spread', b.aim, t.aim, false, (x) => x.toFixed(2)); cmp('Damage', b.dmg, t.dmg, true); cmp('Recoil', b.recoil, t.recoil, false, (x) => (x * 100).toFixed(1)); cmp('Zoom', 60 / b.zoom, 60 / t.zoom, true, (x) => x.toFixed(1) + 'x'); if (t.sup && !b.sup) d.push('Silent'); return d.join(' · '); })(),
-          tag: () => (on() ? { text: 'FITTED', cls: 'worn' } : has() ? { text: 'OWNED', cls: 'own' } : { text: fmtMoney(part.price) }),
-          label: () => (on() ? 'Fitted' : has() ? 'Fit it' : `Buy and fit · ${fmtMoney(part.price)}`),
-          can: () => own() && !on() && (has() || S().canPay(part.price)),
+          tag: () => (on() ? { text: 'FITTED', cls: 'worn' } : has() ? { text: 'OWNED', cls: 'own' } : { text: fmtPrice(part.price) }),
+          label: () => (on() ? 'Fitted' : has() ? 'Fit it' : `Buy and fit · ${fmtPrice(part.price)}`),
+          can: () => own() && !on() && (has() || canPay(part.price)),
           preview: () => show({ ...mods(), [cat]: o }),
           act: () => { if (!has()) { if (!pay(part.price, part.name)) return; st().modsOwned.push(id); } st().mods[k] = { ...(st().mods[k] || {}), [cat]: o }; S().save(); show(); G.audio?.sfx('reload'); },
         });
@@ -197,9 +201,9 @@ export function setupActivities(scene, W, amb) {
     const cur = () => st()[key] === k;
     return {
       name: it.name, desc: it.desc, price: it.price,
-      tag: () => (cur() ? { text: 'CURRENT', cls: 'worn' } : { text: it.price ? fmtMoney(it.price) : 'free' }),
-      label: () => (cur() ? 'Current' : it.price ? `Pay · ${fmtMoney(it.price)}` : 'Choose'),
-      can: () => !cur() && S().canPay(it.price),
+      tag: () => (cur() ? { text: 'CURRENT', cls: 'worn' } : { text: it.price ? fmtPrice(it.price) : 'free' }),
+      label: () => (cur() ? 'Current' : it.price ? `Pay · ${fmtPrice(it.price)}` : 'Choose'),
+      can: () => !cur() && canPay(it.price),
       preview: () => preview({ [key]: k }),
       act: () => { if (!pay(it.price, it.name)) return; st()[key] = k; S().save(); S().dress(); G.audio?.sfx('swing', 0.3); },
     };
@@ -226,7 +230,7 @@ export function setupActivities(scene, W, amb) {
       tailor: { title: 'The Tailor of Puthenthura', ml: 'തയ്യൽക്കട', sub: 'Cut to measure, finished by the next tide.', camera: true, tabs: SLOTS.map((sl) => wearTab(sl, all)) },
       provisions: { title: 'Provisions', ml: 'പലചരക്ക്', sub: 'Rice, oil, jaggery — and food for the road.', tabs: [itemTab('For the road', 'provisions'), satchelTab()] },
       vaidyasala: { title: 'Vaidyasala', ml: 'വൈദ്യശാല', sub: 'Ayurvedic medicines, prepared by the vaidyan.', tabs: [itemTab('Medicines', 'vaidyasala'), satchelTab()] },
-      tea: { title: 'Tea Shop', ml: 'ചായക്കട', sub: 'Chaya, and whatever is hot in the pot.', tabs: [{ name: 'Food', items: () => [{ name: 'A glass of chaya', desc: 'Hot, sweet and strong. Drunk here: restores health and breath.', price: 1, swatch: 0xa8743a, label: () => 'Drink · 1 as', can: () => S().canPay(1) || S().state.done <= 1, act: () => { if (S().state.done > 1 && !pay(1, 'a chaya')) return; p().health = 100; p().stamina = 100; G.audio?.sfx('pickup'); ui().toast('Hot, sweet, and strong enough to stand a spoon in.', 3); } }, ...itemTab('', 'tea').items()] }, satchelTab()] },
+      tea: { title: 'Tea Shop', ml: 'ചായക്കട', sub: 'Chaya, and whatever is hot in the pot.', tabs: [{ name: 'Food', items: () => [{ name: 'A glass of chaya', desc: 'Hot, sweet and strong. Drunk here: restores health and breath.', price: 1, swatch: 0xa8743a, label: () => 'Drink · 1 as', can: () => canPay(1) || S().state.done <= 1, act: () => { if (S().state.done > 1 && !pay(1, 'a chaya')) return; p().health = 100; p().stamina = 100; G.audio?.sfx('pickup'); ui().toast('Hot, sweet, and strong enough to stand a spoon in.', 3); } }, ...itemTab('', 'tea').items()] }, satchelTab()] },
       barber: { title: 'The Barber', ml: 'ക്ഷുരകൻ', sub: 'Under the banyan, with a razor, a mirror and a great deal of news.', camera: true, tabs: [styleTab('Hair', 'hair', HAIR), styleTab('Moustache & beard', 'face', FACE)] },
       kollan: { title: 'The Blacksmith', ml: 'കൊല്ലൻ', sub: 'Bell-metal for the kitchen, iron for everything else.', tabs: [weaponTab('Blades', 'kollan')] },
       kalari: { title: 'Kalari', ml: 'കളരി', sub: 'The gurukkal teaches the weapons of the old fighting art — and sells the oil.', tabs: [weaponTab('Weapons', 'kalari'), itemTab('Oil', 'kalari')] },
@@ -238,7 +242,7 @@ export function setupActivities(scene, W, amb) {
   };
   // I: the satchel, anywhere
   // how the village sees you, from the strangers you helped, robbed or walked past
-  const standing = () => { const h = st().honour || 0; return `Standing: ${h >= 30 ? 'Respected' : h >= 10 ? 'Well thought of' : h > -10 ? 'Unknown' : h > -30 ? 'Talked about' : 'Not trusted'} (${h > 0 ? '+' : ''}${h})`; };
+  const standing = () => { const h = st().honour || 0; return `Standing: ${h >= 30 ? 'Respected' : h >= 10 ? 'Well thought of' : h > -10 ? 'Unknown' : h > -30 ? 'Talked about' : 'Not trusted'} (${h > 0 ? '+' : ''}${h})${G.priceNote ? G.priceNote().replace('  ·  ', ' — prices ') : ''}${h <= -30 ? ' — the police are looking for you' : ''}`; };
   A.satchel = () => shop.open({ title: 'Satchel', ml: 'സഞ്ചി', sub: (() => { const b = Object.keys(p().buffs).map((k) => `${BUFF_NAME[k]} ${Math.ceil(p().buffs[k] / 60)} min`); return (b.length ? 'Now: ' + b.join(' · ') : 'Food and medicine you carry. V eats the best thing for your wounds.') + ' · ' + standing(); })(), camera: false, tabs: [satchelTab()] });
   A.quickUse = quickUse;
   // changing clothes at home: anything owned, for nothing

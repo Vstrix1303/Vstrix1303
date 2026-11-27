@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GB, TRS, boxGeo, hipRoofGeo, gableRoofGeo, gableEndGeo } from './geo.js';
 import { TEX } from './textures.js';
 import { getHeight } from './heightfield.js';
-import { addBox, addPlatform, addCircle, addInterior } from './physics.js';
+import { addBox, addPlatform, addRamp, addCircle, addInterior } from './physics.js';
 import { REAL, hasReal, realMaterial } from './assets.js';
 
 export function makeMaterials() {
@@ -168,12 +168,17 @@ export class Builder {
     this.geo(mat, geo, TRS(x, y, z, 0, ry, 0));
     return this;
   }
-  collider(x, z, hw, hd, ry = 0, top = 50) {
+  collider(x, z, hw, hd, ry = 0, top = 50, bot = null) {
     const p = this.world(x, 0, z);
-    addBox(p.x, p.z, hw, hd, this.ry + ry, this.oy + top);
+    return addBox(p.x, p.z, hw, hd, this.ry + ry, this.oy + top, bot == null ? -1e9 : this.oy + bot);
     return this;
   }
   circle(x, z, r) { const p = this.world(x, 0, z); addCircle(p.x, p.z, r); return this; }
+  ramp(x, z, hw, hd, y0, y1) {
+    const p = this.world(x, 0, z);
+    addRamp(p.x, p.z, hw, hd, this.ry, this.oy + y0, this.oy + y1);
+    return this;
+  }
   platform(x, z, hw, hd, y) {
     const p = this.world(x, 0, z);
     addPlatform(p.x, p.z, hw, hd, this.ry, this.oy + y);
