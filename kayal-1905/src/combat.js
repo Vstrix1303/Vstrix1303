@@ -57,11 +57,12 @@ export class Combat {
       const mult = hit.head ? (W.head || 2.2) : 1;
       const falloff = W.pellets ? Math.max(0.25, 1 - hit.t / W.range) : 1;
       const dmg = W.dmg * mult * falloff;
-      if (hit.n.canBeHit) {
+      if (!hit.n.noHit) {
+        if (!hit.n.canBeHit && !hit.n.guard) hit.n.shot = true;        // a villager shot: worse than a fist
         hit.n.takeHit(dmg, from.x, from.z);
         if (!hit.n.hostile && !hit.n.ko && hit.n.guard) hit.n.becomeHostile(false);
         G.hud?.hitMark(hit.n.ko, hit.head);
-      } else this.scare(hit.n.pos, 6);
+      }
       G.fx?.dust(tmp2.set(hit.n.pos.x, hit.n.pos.y + 1.1, hit.n.pos.z), 1, 0.35);
       return hit.n;
     }
@@ -87,7 +88,7 @@ export class Combat {
     for (const n of G.npcs) {
       if (!n.active || n.ko) continue;
       const d = n.pos.distanceTo(p); if (d > R) continue;
-      if (n.canBeHit) { n.takeHit(W.dmg * (1 - d / R) + 20, p.x, p.z); n.kx = (n.kx || 0) * 2.5; n.kz = (n.kz || 0) * 2.5; G.hud?.hitMark(n.ko, false); }
+      if (!n.noHit) { n.takeHit(W.dmg * (1 - d / R) + 20, p.x, p.z); n.kx = (n.kx || 0) * 2.5; n.kz = (n.kz || 0) * 2.5; G.hud?.hitMark(n.ko, false); }
     }
     this.scare(p, 40);
     const pl = G.player, pd = pl.worldPos(tmp).distanceTo(p);

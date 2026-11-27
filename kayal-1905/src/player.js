@@ -419,7 +419,7 @@ export class Player {
     let any = false;
     const inReach = [];
     for (const n of G.npcs) {
-      if (!n.canBeHit || n.ko || !n.active) continue;
+      if (n.ko || !n.active || n.attached || n.noHit) continue;          // anyone can be struck, not only enemies
       const dx = n.pos.x - this.pos.x, dz = n.pos.z - this.pos.z, d = Math.hypot(dx, dz);
       if (d > W.reach) continue;
       if (d > 0.4 && (dx * fx + dz * fz) / d < W.arc) continue;

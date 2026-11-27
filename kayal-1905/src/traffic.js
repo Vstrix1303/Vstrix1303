@@ -13,7 +13,8 @@ import { Quadruped, makeVallam, makePaddle } from './characters.js';
 import { makeCart, makeJutka } from './structures.js';
 import { damp, angleDamp, clamp } from './util.js';
 import { ERA } from './era.js';
-import { makeBicycle, makeBus, makeLorry, makeJeep, makeCar, makeLaunch } from './vehicles.js';
+import { makeBicycle, makeBus, makeLorry, makeJeep, makeCar, makeLaunch, Ride } from './vehicles.js';
+import { NPC } from './npc.js';
 
 // ---------------------------------------------------------------- the network
 const NET = {};
@@ -124,6 +125,8 @@ class Traveller {
       if (b === 'npc' && this.blockT > 5) { this.ignoreT = 7; this.blockT = 0; }      // a man who will not move: go round him
     } else this.blockT = Math.min(0, this.blockT + dt);
     if (this.scareT > 0) { this.scareT -= dt; target = 0; }
+    // stopped for no good reason too long (wedged at a junction, nose to nose): leave the road, to come back elsewhere
+    if (this.kind !== 'walker' && this.speed < 0.25 && this.wait <= 0 && b !== 'player') { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 10) { this.stuckT = 0; this.despawn(); return 0; } } else this.stuckT = 0;
     this.speed = damp(this.speed, target, target < this.speed ? 4.5 : 1.3, dt);
     const ds = this.speed * dt, r0 = this.r;
     this.s += ds * this.dir;
@@ -223,7 +226,7 @@ class Motor extends Traveller {
   constructor(scene, o) {
     super(scene, 'motor', o);
     const m = this.model = o.make(o.color); this.root.add(m.root);
-    this.len = o.len; this.wid = o.wid; this.bus = !!o.bus; this.stopT = 0;
+    this.len = o.len; this.wid = o.wid; this.bus = !!o.bus; this.stopT = 0; this.vk = o.vk; this.color = o.color; this.driverLook = o.driver; this.seat = o.seat;
     this.crew = [];
     if (o.driver) { const h = new Human(o.driver); h.root.position.set(...o.seat); h.state = 'drive'; m.root.add(h.root); this.crew.push(h); }
     this.finish();
@@ -250,7 +253,7 @@ class Cyclist extends Traveller {
     super(scene, 'cyclist', o);
     const b = this.bike = makeBicycle(o.color); this.root.add(b.root);
     this.h = new Human(o.look); this.h.state = 'cycle'; this.h.root.position.set(0, 0.05, -0.16); b.root.add(this.h.root);
-    this.len = 1.7;
+    this.len = 1.7; this.vk = 'bicycle'; this.color = o.color; this.driverLook = o.look;
     this.finish();
   }
   update(dt, pp, all, d) {
@@ -323,7 +326,7 @@ export function setupTraffic(scene, W, mats) {
       car: { make: makeCar, name: 'Motorist', speed: 9.5, half: 0.9, reach: 8, len: 4.4, wid: 1.65, roads: WIDE, seat: [-0.38, -0.25, 0.0], driver: { skin: SK[1], shirt: 0xf0ece0, trousers: 0x3a3a40, moustache: true }, colors: [0x1a1a1c, 0xe6dcc0, 0x5a1a1a, 0x5a7a9a] },
     };
     const motors = { low: ['bus', 'lorry', 'car'], medium: ['bus', 'lorry', 'jeep', 'car'], high: ['bus', 'bus', 'lorry', 'jeep', 'car', 'car'], ultra: ['bus', 'bus', 'lorry', 'lorry', 'jeep', 'car', 'car'] }[G.quality] || ['bus', 'lorry', 'jeep', 'car'];
-    motors.forEach((k, i) => { const K = KINDS[k]; list.push(new Motor(scene, { ...K, color: K.colors ? K.colors[i % K.colors.length] : undefined, lane: 0.25, turn: [6, 8], far: 200 })); });
+    motors.forEach((k, i) => { const K = KINDS[k]; list.push(new Motor(scene, { ...K, vk: k, color: K.colors ? K.colors[i % K.colors.length] : undefined, lane: 0.25, turn: [6, 8], far: 200 })); });
     const nc = { low: 2, medium: 4, high: 6, ultra: 7 }[G.quality] || 4;
     for (let i = 0; i < nc; i++) {
       const fem = i % 4 === 3, look = fem ? { ...VF[i % VF.length] } : { ...VM[(i * 3 + 2) % VM.length], skin: SK[(i * 4 + 1) % SK.length], shirt: [0xe6e0d0, 0x6a84a0, 0xd8c8a0, undefined][i % 4] };
@@ -358,6 +361,48 @@ export function setupTraffic(scene, W, mats) {
     }
     return false;
   };
+  // ---- anything on wheels can be taken: the driver is pulled down and runs (or swings at you), and it is yours
+  const stolen = [];
+  const steal = (t) => {
+    const ride = new Ride(scene, t.vk, t.pos.x, t.pos.z, t.yaw, { color: t.color });
+    ride.speed = 0; ride.stolen = true;
+    W.rides.push(ride);
+    const it = { pos: ride.pos, r: ride.spec.radius + 2.2, label: ride.spec.on, cond: () => G.player.mode === 'foot' && !G.activity && !ride.rider, action: () => G.player.mountHorse(ride) };
+    G.interactables.push(it); ride.inter = it; stolen.push(ride);
+    t.despawn();
+    // the driver, on the road beside it
+    const side = t.vk === 'bicycle' ? 1.0 : (t.wid || 1.5) * 0.5 + 0.8, sx = t.pos.x - Math.cos(t.yaw) * side, sz = t.pos.z + Math.sin(t.yaw) * side;
+    const n = new NPC(scene, t.name || 'Driver', t.driverLook || CAST.villagerM[0], sx, sz, t.yaw);
+    n.temp = true; n.takeHit(1, G.player.pos.x, G.player.pos.z);
+    G.audio?.sfx('punch');
+    G.player.mountHorse(ride);
+    return ride;
+  };
+  const jack = { pos: new THREE.Vector3(), r: 1, label: '', t: null, prio: false,
+    cond: () => jack.t && jack.t.active && G.player.mode === 'foot' && !G.activity && !G.story?.busy,
+    action: () => { if (jack.t && jack.t.active) steal(jack.t); } };
+  G.interactables.push(jack);
+  G.updaters.push(() => {
+    const pp = G.player.pos;
+    let best = null, bd = 1e9;
+    for (const t of list) {
+      if (!t.active || !t.vk) continue;
+      const d = Math.hypot(t.pos.x - pp.x, t.pos.z - pp.z), reach = (t.len || 2) / 2 + 2.2;
+      if (d < reach && d < bd) { bd = d; best = t; }
+    }
+    jack.t = best;
+    if (best) { jack.pos.copy(best.pos); jack.r = (best.len || 2) / 2 + 2.2; jack.label = { bicycle: 'Take the bicycle', bus: 'Take the bus', lorry: 'Take the lorry', jeep: 'Take the jeep', car: 'Take the car' }[best.vk]; }
+    // abandoned stolen vehicles far behind are cleared away; so are the drivers you left in the road
+    for (let i = stolen.length - 1; i >= 0; i--) {
+      const r = stolen[i];
+      if (!r.rider && Math.hypot(r.pos.x - pp.x, r.pos.z - pp.z) > 260) {
+        scene.remove(r.root); const k = W.rides.indexOf(r); if (k >= 0) W.rides.splice(k, 1);
+        const j = G.interactables.indexOf(r.inter); if (j >= 0) G.interactables.splice(j, 1);
+        stolen.splice(i, 1);
+      }
+    }
+    for (const n of [...G.npcs]) if (n.temp && Math.hypot(n.pos.x - pp.x, n.pos.z - pp.z) > 160) n.dispose();
+  });
   G.updaters.push((dt) => {
     const pp = G.player.worldPos(tmp);
     barkT -= dt;

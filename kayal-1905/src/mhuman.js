@@ -330,13 +330,14 @@ export function clothingMaterial(o, d) {
     uY: { value: new THREE.Vector4(B[0][1] + 0.085, B[16][1], B[17][1], B[3][1]) },
     uY2: { value: new THREE.Vector4(B[7][1], B[8][1], B[2][1] + 0.13, hem) },
     uCov: { value: 0 },
+    uMundu2: { value: new THREE.Vector3(0, 0, 0) },    // a mundu worn: x on, y top and z bottom of the skin it hides
   };
   const mat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 1, envMapIntensity: 0.8 });
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vRest; varying vec3 vRestN; flat varying float vPart; attribute float cov; uniform float uCov; varying float vHide;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position; vRestN = normal; vPart = skinIndex.x; vHide = (int(cov + 0.5) & int(uCov + 0.5)) != 0 ? 1.0 : 0.0;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vRest; varying vec3 vRestN; flat varying float vPart; attribute float cov; uniform float uCov; uniform vec3 uMundu2; varying float vHide;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position; vRestN = normal; vPart = skinIndex.x; vHide = (int(cov + 0.5) & int(uCov + 0.5)) != 0 ? 1.0 : 0.0; if (uMundu2.x > 0.5 && position.y < uMundu2.y && position.y > uMundu2.z && skinIndex.x != 8.0 && skinIndex.x != 13.0 && skinIndex.x != 9.0 && skinIndex.x != 14.0) vHide = 1.0;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vHide;\n' + CLOTHE_GLSL)
       .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vHide > 0.5) discard;')
@@ -525,6 +526,8 @@ export function buildBody(h, o, key) {
     // the mundu's own cloth, painted by the same atlas the old figures used
     const over = pieces.some((q) => q[0].endsWith('M')) ? 2 : o.shirt != null && o.style !== 'blouse' ? 1 : 0;
     h.skirt = extra(skirtGeometry(d, !!o.munduLong, over), h.skirtMaterial);
+    // the legs under the cloth are not drawn, so a knee swinging forward never shows through it
+    mat.userData.U.uMundu2.value.set(1, B[0][1] + 0.085 - 0.05, o.munduLong ? B[17][1] + 0.1 : B[16][1] + 0.08);
   }
   // garments: fitted pieces over the body, the skin they cover discarded, the painted version turned off
   h.garments = [];

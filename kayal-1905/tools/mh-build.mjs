@@ -364,7 +364,8 @@ for (const [key, p] of Object.entries(PRESETS)) {
     for (let v = 0; v < N; v++) if (del.has(SRC[v])) {
       const y = P[v * 3 + 1];
       const armBare = PC.half && ARM.has(SKI[v * 4]) && y < elbowY + 0.02;
-      if (PC.part === 'upper' ? y > (PC.crop ? cropY + 0.03 : PC.hem ? hipY - 0.1 : hipY) && !armBare : PC.part === 'lower' ? y < hipY + 0.12 : PC.part === 'shorts' ? y < hipY + 0.12 && y > kneeY + 0.1 : true) cov[v] |= PC.bit;
+      const arm = ARM.has(SKI[v * 4]) || SKI[v * 4] === 5 || SKI[v * 4] === 10;      // arms hang down past the hips: trousers never hide them
+      if (PC.part === 'upper' ? y > (PC.crop ? cropY + 0.03 : PC.hem ? hipY - 0.1 : hipY) && !armBare : PC.part === 'lower' ? y < hipY + 0.12 && !arm : PC.part === 'shorts' ? y < hipY + 0.12 && y > kneeY + 0.1 && !arm : true) cov[v] |= PC.bit;
     }
   }
 

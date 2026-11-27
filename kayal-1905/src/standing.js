@@ -28,6 +28,15 @@ export function setupStanding() {
   G.rewardMult = () => tier().reward;
   G.priceNote = () => { const t = tier(); return t.price < 1 ? `  ·  ${t.name}: ${Math.round((1 - t.price) * 100)}% off` : t.price > 1 ? `  ·  ${t.name}: ${Math.round((t.price - 1) * 100)}% over the odds` : ''; };
 
+  // striking or shooting a villager costs your good name, and brings any constable who sees it
+  const lastAssault = new WeakMap();
+  G.onAssault = (n, dmg) => {
+    if (G.story?.mode !== 'free') return;
+    const st = G.story.state;
+    if ((lastAssault.get(n) || -1e9) < G.time - 30) { lastAssault.set(n, G.time); st.honour = Math.max(-100, (st.honour || 0) - (n.shot ? 5 : 2)); G.story.save(); G.ui.toast(`Honour ▼ &nbsp;·&nbsp; ${n.shot ? 'shot' : 'attacked'} ${n.name}`, 3); }
+    for (const c of G.npcs) if (c.police && c.active && !c.ko && !c.hostile && c.pos.distanceTo(n.pos) < 35) { c.canBeHit = true; c.hitDmg = 11; c.becomeHostile(false); G.ui.bark(c.name, 'Stop! Police!', 2.5, c.h.preset); }
+    G.combat?.scare(n.pos, 12);
+  };
   let greetT = 4, policeT = 0, wantedSaid = false;
   const said = new WeakMap();
   G.updaters.push((dt) => {

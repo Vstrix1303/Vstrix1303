@@ -183,7 +183,10 @@ class Engine {
 // ---------------------------------------------------------------- what the player can ride
 const SPEC = {
   bicycle: { make: makeBicycle, max: 5.2, sprint: 7.6, acc: 2.6, brake: 6, rev: 0, turn: 2.4, radius: 0.4, camDist: 4.4, camHead: 1.75, pose: 'cycle', seat: [0, 0.05, -0.16], icon: 'bike', on: 'Ride the bicycle', off: 'Get off the bicycle', bell: true },
-  jeep: { make: makeJeep, max: 11, sprint: 16, acc: 4.5, brake: 9, rev: 3.5, turn: 1.6, radius: 1.05, camDist: 7.2, camHead: 2.1, pose: 'drive', seat: [-0.35, 0.14, -0.08], icon: 'jeep', on: 'Drive the jeep', off: 'Get out of the jeep', engine: true },
+  car: { make: makeCar, max: 13, sprint: 19, acc: 5, brake: 10, rev: 4, turn: 1.5, radius: 1.0, len: 4.4, camDist: 7.4, camHead: 2.0, pose: 'drive', seat: [-0.38, -0.25, 0.0], icon: 'jeep', on: 'Drive the car', off: 'Get out of the car', engine: true },
+  lorry: { make: makeLorry, max: 10, sprint: 13.5, acc: 2.8, brake: 7, rev: 3, turn: 1.0, radius: 1.5, len: 6.6, camDist: 11, camHead: 3.3, pose: 'drive', seat: [-0.45, 0.4, 1.0], icon: 'jeep', on: 'Drive the lorry', off: 'Get out of the lorry', engine: true },
+  bus: { make: makeBus, max: 9, sprint: 12, acc: 2.2, brake: 6, rev: 2.5, turn: 0.85, radius: 1.8, len: 8.4, camDist: 13.5, camHead: 3.8, pose: 'drive', seat: [-0.6, 0.5, 2.4], icon: 'jeep', on: 'Drive the bus', off: 'Get out of the bus', engine: true },
+  jeep: { make: makeJeep, len: 3.6, max: 11, sprint: 16, acc: 4.5, brake: 9, rev: 3.5, turn: 1.6, radius: 1.05, camDist: 7.2, camHead: 2.1, pose: 'drive', seat: [-0.35, 0.14, -0.08], icon: 'jeep', on: 'Drive the jeep', off: 'Get out of the jeep', engine: true },
 };
 export class Ride {
   constructor(scene, kind, x, z, yaw, o = {}) {
@@ -222,10 +225,16 @@ export class Ride {
         this.pos.x = nx; this.pos.z = nz; resolve(this.pos, this.spec.radius, this.pos.y);
         const moved = Math.hypot(this.pos.x - ox, this.pos.z - oz);
         if (moved < Math.abs(this.speed) * dt * 0.4) { if (Math.abs(this.speed) > 4) G.audio?.sfx('thud', 0.6); this.speed *= 0.6; }
+        // run someone down at speed and they go flying
+        if (this.rider && Math.abs(this.speed) > 3) for (const n of G.npcs) {
+          if (!n.active || n.ko || n.attached || n.noHit) continue;
+          const d = Math.hypot(n.pos.x - this.pos.x, n.pos.z - this.pos.z);
+          if (d < this.spec.radius + 0.5) { n.takeHit(Math.abs(this.speed) * 9, this.pos.x, this.pos.z); n.kx = Math.sin(this.yaw) * this.speed; n.kz = Math.cos(this.yaw) * this.speed; G.audio?.sfx('thud'); }
+        }
       }
     }
     this.pos.y = damp(this.pos.y, groundAt(this.pos.x, this.pos.z, this.pos.y + 0.6), 14, dt);
-    const f = this.kind === 'jeep' ? 1.1 : 0.5, sx = Math.sin(this.yaw), cz = Math.cos(this.yaw);
+    const f = this.spec.len ? this.spec.len * 0.3 : 0.5, sx = Math.sin(this.yaw), cz = Math.cos(this.yaw);
     const hf = getHeight(this.pos.x + sx * f, this.pos.z + cz * f), hb = getHeight(this.pos.x - sx * f, this.pos.z - cz * f);
     this.pitch = damp(this.pitch, clamp(-Math.atan2(hf - hb, 2 * f), -0.35, 0.35), 6, dt);
     this.roll = damp(this.roll, this.kind === 'bicycle' ? clamp(-this.yawRate * Math.abs(this.speed) * 0.06, -0.35, 0.35) : 0, 5, dt);

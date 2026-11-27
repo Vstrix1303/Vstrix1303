@@ -53,7 +53,7 @@ export function setupBlobs(scene) {
       const big = a.o.type ? 1 : 2.1;                     // the elephants have no 'type'; cows and horses do
       put(a.pos.x, a.pos.y, a.pos.z, 1.0 * big, 2.2 * big, a.yaw);
     }
-    for (const r of G.world?.rides || []) if (near(r.pos)) put(r.pos.x, r.pos.y, r.pos.z, r.kind === 'jeep' ? 1.85 : 0.55, r.kind === 'jeep' ? 3.9 : 1.9, r.yaw);
+    for (const r of G.world?.rides || []) if (near(r.pos)) put(r.pos.x, r.pos.y, r.pos.z, r.kind === 'bicycle' ? 0.55 : r.spec.radius * 1.8, r.kind === 'bicycle' ? 1.9 : (r.spec.len || 3.6) + 0.4, r.yaw);
     const h = G.world?.horse;
     if (h && h.root.visible !== false && h.usable !== false && near(h.pos)) put(h.pos.x, h.pos.y, h.pos.z, 1.0, 2.4, h.yaw);
     im.count = n;

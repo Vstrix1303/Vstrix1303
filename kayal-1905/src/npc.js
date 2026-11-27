@@ -109,8 +109,17 @@ export class NPC {
     const d = Math.hypot(this.pos.x - fx, this.pos.z - fz) || 1, kb = this.boss ? 2 : 5;
     this.kx = (this.pos.x - fx) / d * kb; this.kz = (this.pos.z - fz) / d * kb;
     if (this.guard && !this.hostile) this.becomeHostile(true);
+    // an ordinary villager struck in the street: a man with some fight in him hits back, the rest run
+    if (!this.guard && !this.boss && !this.hostile && !this.canBeHit) {
+      this.civ = true; this.fixedY = false; this.pose = 'idle'; this.wander = 0;
+      const p = this.h.preset || {};
+      if (this.fightsBack === undefined) this.fightsBack = !p.female && !p.child && !p.age && !p.grey && Math.random() < 0.5;
+      G.onAssault?.(this, dmg);
+      if (this.fightsBack && this.health > dmg) { this.canBeHit = true; this.hitDmg = 8; this.becomeHostile(false); G.ui?.bark(this.name, ['You dare?', 'Come on, then!', 'Eda! I\'ll teach you!'][Math.random() * 3 | 0], 2.5, p); }
+      else { this.fleeT = 14; G.ui?.bark(this.name, ['Ayyo! Help!', 'Somebody help me!', 'Leave me alone!'][Math.random() * 3 | 0], 2.5, p); }
+    }
     if (this.health <= 0) {
-      this.health = 0; this.ko = true; this.h.state = 'ko'; this.hostile = false; this.aiMode = 'ko';
+      this.health = 0; this.ko = true; this.h.state = 'ko'; this.hostile = false; this.aiMode = 'ko'; this.koT = 0;
       if (this.cone) this.cone.visible = false;
       G.story?.onKO?.(this);
     }
@@ -153,7 +162,19 @@ export class NPC {
       if (want !== !!this.h.umbrella) { this.h.setUmbrella(want); this.h.umb?.traverse((ob) => ob.layers.set(1)); }
     }
 
-    if (this.ko) { state = 'ko'; }
+    if (this.ko) {
+      state = 'ko';
+      // a villager knocked down gets up again in a while, and gets away from you
+      if (this.civ && (this.koT = (this.koT || 0) + dt) > 30 && dp > 4) { this.ko = false; this.health = 60; this.canBeHit = false; this.hostile = false; this.aiMode = 'idle'; this.fleeT = 10; this.h.state = 'idle'; state = 'idle'; }
+    }
+    else if (this.fleeT > 0) {
+      // running from you, away and across the fields, until far enough to feel safe
+      this.fleeT -= dt;
+      const ax = this.pos.x - pp.x, az = this.pos.z - pp.z, al = Math.hypot(ax, az) || 1;
+      this.moveToward(this.pos.x + ax / al * 4, this.pos.z + az / al * 4, 4.6, dt, true); state = 'move';
+      if (dp > 45) this.fleeT = 0;
+      if (this.fleeT <= 0 && this.route) this.aiMode = 'patrol';
+    }
     else if (this.stun > 0) {
       this.stun -= dt;
       this.pos.x += (this.kx || 0) * dt; this.pos.z += (this.kz || 0) * dt;

@@ -373,6 +373,7 @@ export function updateMotion(h, dt) {
         if (ph < duty) {
           if (f.sw >= 0) { f.sw = -1; h.onStep?.(i); }
           f.stance = ph / duty;
+          f.yaw += angleDiff(f.yaw, w.yaw) * Math.min(1, dt * 7);         // the planted foot pivots on its ball as the body turns
         } else {
           if (f.sw < 0) { f.fx = f.x; f.fz = f.z; f.fy = f.gy; f.fyaw = f.yaw; }
           const sw = (ph - duty) / (1 - duty), tRem = (1 - sw) * (1 - duty) * stride / Math.max(sp, 0.3);
@@ -397,7 +398,7 @@ export function updateMotion(h, dt) {
           f.x = lerp(f.fx, hxw, e); f.z = lerp(f.fz, hzw, e); f.yaw = f.fyaw + angleDiff(f.fyaw, w.yaw) * e;
           if (f.sw >= 1) { f.sw = -1; f.idle = false; h.stepCd = 0.07; h.onStep?.(i); }
         } else {
-          const err = Math.hypot(f.x - hxw, f.z - hzw) / S + Math.abs(angleDiff(f.yaw, w.yaw)) * 0.22;
+          const err = Math.hypot(f.x - hxw, f.z - hzw) / S + Math.abs(angleDiff(f.yaw, w.yaw)) * 0.55;
           if (err > we) { we = err; worst = i; }
         }
         f.stance = 0.4;
@@ -430,7 +431,8 @@ export function updateMotion(h, dt) {
       const kk = f.sw >= 0 || jumped ? 40 : 60;
       f.ax = jumped ? ax : damp(f.ax, ax, kk, dt); f.ay = jumped ? ty : damp(f.ay, ty, kk, dt); f.az = jumped ? az : damp(f.az, az, kk, dt);
       f.pitch = damp(f.pitch, pitch, 30, dt);
-      if (f.sw < 0) { const hd2 = (f.ax - (hx + (i ? 1 : -1) * R.hipX)) ** 2 + (f.az - hz - HZ) ** 2; low = Math.min(low, f.ay + R.hipDrop + Math.sqrt(Math.max(0.02, LMAX * LMAX - hd2))); }
+      // only a foot carrying weight sets how low the hips may go; a trailing foot peels off its heel instead
+      if (f.sw < 0 && (!moving || f.stance < 0.62)) { const hd2 = (f.ax - (hx + (i ? 1 : -1) * R.hipX)) ** 2 + (f.az - hz - HZ) ** 2; low = Math.min(low, f.ay + R.hipDrop + Math.sqrt(Math.max(0.02, LMAX * LMAX - hd2))); }
     }
     // pelvis: rises over the standing leg, drops and turns with the stride
     if (moving) {
@@ -441,8 +443,8 @@ export function updateMotion(h, dt) {
       pvZ += -0.04 * (1 - 0.4 * runT) * walkA * Math.cos(psi);
       pvX += 0.02 * runT;
     }
-    const drop = Math.max(0, hy - low);
-    h.reach = damp(h.reach || 0, Math.min(drop, 0.5), drop > (h.reach || 0) ? 30 : 8, dt);
+    const drop = Math.max(0, hy - low), cap = moving ? lerp(0.035, 0.07, runT) : 0.5;     // walking never sinks more than a few centimetres
+    h.reach = damp(h.reach || 0, Math.min(drop, cap), 10, dt);
     hy -= h.reach * h.ik;
   }
   h.walkAmp = walkA;
