@@ -443,6 +443,35 @@ export function buildTextures() {
     grit(c, rng, 1.4, 30, 18);
     TEX.slogans = tex(c, { repeat: false });
   }
+  // ---- 1957: enamel advertising boards (4 across), invented brands in the style of the period
+  {
+    const [c, g] = mk(1024, 256);
+    const A = [['GANESH', 'BEEDI', '#c0201a', '#f6d84a'], ['LOTUS', 'SOAP', '#1e4a8a', '#f4f0e4'], ['SURYA', 'TEA', '#1e5a2a', '#f2e2a0'], ['TIGER', 'TORCH', '#1a1a1a', '#f0b030']];
+    A.forEach(([a, b2, bg, fg], i) => {
+      const x = i * 256;
+      g.fillStyle = bg; g.fillRect(x, 0, 256, 256);
+      g.strokeStyle = fg; g.lineWidth = 8; g.strokeRect(x + 10, 10, 236, 236);
+      g.fillStyle = fg; g.beginPath(); g.arc(x + 128, 92, 48, 0, 7); g.fill();
+      g.fillStyle = bg; g.font = 'bold 40px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(a[0], x + 128, 94);
+      g.fillStyle = fg; g.font = 'bold 36px Georgia, serif'; g.fillText(a, x + 128, 168, 220); g.font = 'bold 26px Georgia, serif'; g.fillText(b2, x + 128, 208, 220);
+      // chipped enamel at the corners
+      g.fillStyle = 'rgba(30,24,18,0.85)'; for (let k = 0; k < 9; k++) { const cx = x + (k % 2 ? 236 - rng() * 30 : 14 + rng() * 30), cy = k % 3 ? 14 + rng() * 26 : 236 - rng() * 26; g.beginPath(); g.arc(cx, cy, 3 + rng() * 7, 0, 7); g.fill(); }
+    });
+    grit(c, rng, 1.2, 30, 10);
+    TEX.ads = tex(c, { repeat: false });
+  }
+  // ---- 1957: date plaques for the parapets of the new buildings (4 x 2)
+  {
+    const [c, g] = mk(1024, 256);
+    ['1948', '1950', '1951', '1953', '1954', '1955', '1956', '1957'].forEach((y, i) => {
+      const x = (i % 4) * 256, yy = Math.floor(i / 4) * 128;
+      g.fillStyle = '#e8e2d0'; g.fillRect(x, yy, 256, 128);
+      g.strokeStyle = '#8a7a5a'; g.lineWidth = 6; g.strokeRect(x + 8, yy + 8, 240, 112);
+      g.fillStyle = '#5a4a32'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 22px Georgia, serif'; g.fillText('ESTD.', x + 128, yy + 40); g.font = 'bold 44px Georgia, serif'; g.fillText(y, x + 128, yy + 84);
+    });
+    grit(c, rng, 1.0, 20, 10);
+    TEX.plaques = tex(c, { repeat: false });
+  }
   // ---- carved and painted gable-board (mukhappu)
   {
     const [c, g] = mk(256, 128);

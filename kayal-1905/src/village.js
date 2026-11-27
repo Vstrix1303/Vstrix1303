@@ -3,7 +3,7 @@
 // platform and a roadside shrine; houses along three new lanes. Returns where the people who work here
 // stand, so the world can put them there.
 import * as THREE from 'three';
-import { house, P, barrel, toolbox, olakkuda, castNet } from './houses.js';
+import { house, wall, P, barrel, toolbox, olakkuda, castNet } from './houses.js';
 import { getHeight } from './heightfield.js';
 
 const TAU = Math.PI * 2;
@@ -77,11 +77,61 @@ const GOODS = {
   },
 };
 
+// A bazaar shophouse of the fifties: two storeys of colour-washed plaster, the shop open to the street
+// below behind folding plank shutters and a tin awning, a balcony and shuttered windows above, and
+// either a tiled roof or a flat concrete one behind a parapet with the year it was built.
+const WASH = [[0.72, 0.84, 0.92], [0.8, 0.9, 0.72], [0.96, 0.84, 0.58], [0.96, 0.8, 0.8], [0.95, 0.94, 0.9], [0.84, 0.9, 0.95], [0.92, 0.88, 0.7]];
+const SHUT = [[0.18, 0.42, 0.3], [0.2, 0.32, 0.55], [0.55, 0.2, 0.16], [0.34, 0.3, 0.26]];
+export function shophouse57(b, x, z, ry, w, d, seed) {
+  b.place(x, z, ry);
+  const y0 = 0.5, hw = w / 2, hd = d / 2, g1 = 3.1, g2 = 2.7, wash = WASH[seed % WASH.length], shut = SHUT[(seed >> 1) % SHUT.length];
+  const dado = wash.map((c) => c * 0.62), wo = { col: wash, dado, shutter: shut };
+  b.box('laterite', w + 0.6, 2.0, d + 1.8, 0, -1.5, 0.5); b.platform(0, 0.5, (w + 0.6) / 2, (d + 1.8) / 2, y0);
+  b.box('paint', w - 0.26, 0.03, d - 0.26, 0, y0, 0, { col: [0.5, 0.17, 0.12] });                  // red-oxide floor
+  wall(b, 'wall', -hw, hd, hw, hd, y0, g1, [{ at: hw, w: w * 0.74, kind: 'door', h: 2.55, leaf: false }], { ...wo, out: 1 });
+  wall(b, 'wall', -hw, -hd, hw, -hd, y0, g1, [], { ...wo, out: -1 });
+  wall(b, 'wall', -hw, -hd, -hw, hd, y0, g1, [], { ...wo, out: -1 });
+  wall(b, 'wall', hw, -hd, hw, hd, y0, g1, [], { ...wo, out: 1 });
+  // the floor above, running out over the street as a balcony
+  const y1 = y0 + g1;
+  b.box('stone', w + 0.3, 0.16, d + 1.1, 0, y1, 0.45, { col: [0.8, 0.78, 0.74] });
+  b.box('paint', w + 0.34, 0.07, 0.06, 0, y1 + 0.02, hd + 1.0, { col: dado });
+  const F = [-1, 0, 1].map((k) => ({ at: hw + k * w * 0.3, w: 0.85, kind: 'window', h: 1.3, sill: 0.8 }));
+  wall(b, 'wall', -hw, hd, hw, hd, y1 + 0.16, g2, F, { ...wo, dado: null, out: 1 });
+  wall(b, 'wall', -hw, -hd, hw, -hd, y1 + 0.16, g2, [{ at: hw, w: 0.8, kind: 'window', sill: 0.9 }], { ...wo, dado: null, out: -1 });
+  wall(b, 'wall', -hw, -hd, -hw, hd, y1 + 0.16, g2, [], { ...wo, dado: null, out: -1 });
+  wall(b, 'wall', hw, -hd, hw, hd, y1 + 0.16, g2, [], { ...wo, dado: null, out: 1 });
+  const bz = hd + 0.92, by = y1 + 0.16, n = Math.round(w / 0.2);
+  b.box('wood', w + 0.24, 0.08, 0.1, 0, by + 0.86, bz, { col: shut }); b.box('wood', w + 0.24, 0.06, 0.08, 0, by + 0.08, bz, { col: shut });
+  for (let i = 0; i <= n; i++) b.cyl('wood', 0.022, 0.028, 0.78, -hw - 0.06 + i * (w + 0.12) / n, by + 0.08, bz, { seg: 5, col: [0.92, 0.9, 0.84] });
+  for (const s of [-1, 1]) { b.box('wood', 0.08, 0.08, 0.95, s * (hw + 0.1), by + 0.86, hd + 0.45, { col: shut }); }
+  // the roof: tiles, or a flat roof behind a parapet with the year on it
+  const yt = by + g2;
+  if (seed % 2) {
+    b.roofHip('roof', w + 1.0, d + 2.0, 1.6, Math.max(w - d, w * 0.3), 0, yt - 0.06, 0.45);
+  } else {
+    b.box('stone', w + 0.3, 0.18, d + 0.3, 0, yt, 0, { col: [0.8, 0.78, 0.74] });
+    b.box('wall', w + 0.3, 0.78, 0.16, 0, yt + 0.18, hd + 0.07, { col: wash });
+    b.box('wall', w * 0.36, 0.44, 0.17, 0, yt + 0.96, hd + 0.07, { col: wash });
+    for (const s of [-1, 1]) b.box('wall', 0.16, 0.5, d + 0.3, s * (hw + 0.07), yt + 0.18, 0, { col: wash });
+    b.box('wall', w + 0.3, 0.5, 0.16, 0, yt + 0.18, -hd - 0.07, { col: wash });
+    b.box('paint', w + 0.38, 0.08, 0.22, 0, yt + 0.9, hd + 0.07, { col: dado });
+    b.decal('plaque', seed % 8, 4, 2, 0.86, 0.43, 0, yt + 1.18, hd + 0.16);
+  }
+  // the tin awning over the shop front on iron brackets, the plank shutters stacked to one side
+  b.box('tin', w * 0.94, 0.04, 1.45, 0, y0 + 2.36, hd + 0.66, { rx: 0.24, col: [0.66, 0.64, 0.6] });
+  for (const s of [-1, 1]) b.box('paint', 0.04, 0.04, 1.2, s * w * 0.42, y0 + 2.2, hd + 0.55, { rx: 0.6, col: [0.18, 0.18, 0.2] });
+  for (let i = 0; i < 6; i++) b.box('plank', 0.22, 2.4, 0.035, -hw + 0.32 + i * 0.045, y0, hd + 0.18 + i * 0.035, { ry: 0.05, col: shut.map((c) => c * 1.15) });
+  b.decal('ads', seed % 4, 4, 1, 0.8, 0.8, hw + 0.135, y0 + 1.7, -0.7, Math.PI / 2);
+  b.interior(0, 0, hw, hd, y1);
+  b.yard(Math.max(w, d) * 0.75 + 4, 0.7).clear(Math.max(w, d) * 0.62 + 2).mark(w + 2, d + 2);
+  b.lamp(1.2, y0 + 2.3, hd + 0.4, 1, 0);
+}
+
 export function shop(b, x, z, ry, kind, sign, rng, o = {}) {
   const w = o.w || 6.6, d = o.d || 5.2, hw = w / 2, hd = d / 2;
-  house(b, x, z, ry, { w, d, porch: false, awning: o.awning ?? 0, fence: false, washing: false, lamp: 1, smoke: false, shopfront: true, mural: false, overhang: 1.5 });
-  // house() leaves the builder placed at this shop
-  b.sign(sign, 2.5, 0.62, 0, 0.5 + 2.33 + 0.31, hd + 0.135);
+  shophouse57(b, x, z, ry, w, d, Math.abs(Math.round(x * 7.3 + z * 3.1)));
+  b.sign(sign, 2.4, 0.5, 0, 0.5 + 2.58, hd + 0.14);
   // the counter across most of the opening, a gap at one end to walk in
   const cw = Math.min(3.6, w * 0.58) * 0.72;
   b.box('plank', cw, 0.75, 0.55, -0.45, 0.5, hd - 0.45, { tile: 0.8, col: [0.55, 0.42, 0.3] });

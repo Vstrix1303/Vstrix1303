@@ -38,6 +38,8 @@ function baseMaterials(std) {
     sign: std({ map: TEX.signs, roughness: 0.9 }),
     poster: std({ map: TEX.posters, roughness: 0.85 }),
     slogan: std({ map: TEX.slogans, roughness: 0.95 }),
+    ads: std({ map: TEX.ads, roughness: 0.35, metalness: 0.1 }),
+    plaque: std({ map: TEX.plaques, roughness: 0.9 }),
     gable: std({ map: TEX.gable, roughness: 0.8, side: THREE.DoubleSide }),
     mural: std({ map: TEX.mural, roughness: 0.9 }),
     jali: std({ map: TEX.jali, roughness: 0.75, side: THREE.DoubleSide }),
