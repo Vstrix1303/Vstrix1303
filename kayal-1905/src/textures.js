@@ -365,9 +365,9 @@ export function buildTextures() {
     grit(c, rng, 0.8, 0, 0);
     TEX.gGrass = tex(c, { srgb: false });
   }
-  // ---- painted signboards (2 x 8 atlas)
+  // ---- painted signboards (2 x 16 atlas)
   {
-    const [c, g] = mk(1024, 1024);
+    const [c, g] = mk(1024, 2048);
     const SG = [
       ['MOIDEEN & SONS', 'SPICES · PEPPER · GINGER', '#e8dcb8', '#3a1c10'], ['COIR WORKERS', 'CO-OPERATIVE SOCIETY · PUTHENTHURA', '#7a1c18', '#f0e2b8'],
       ['ചായക്കട', 'TEA & TIFFIN', '#7a1f18', '#f2e6c0'], ['കള്ള് ഷാപ്പ്', 'TODDY', '#e8dcb8', '#1a1a1a'],
@@ -377,6 +377,11 @@ export function buildTextures() {
       ['പാത്രക്കട', 'BRASS & COPPER VESSELS', '#2a2418', '#e8c870'], ['വൈദ്യശാല', 'AYURVEDA · VAIDYAN', '#e4dcc0', '#1e4a2a'],
       ['തപാൽ', 'POST & TELEGRAPH OFFICE', '#8a1c18', '#f2e2b8'], ['മൺപാത്രം', 'POTTERY · KUSAVAN', '#c8a070', '#3a1a0c'],
       ['ചന്ത', 'MARKET · THEKKUMKARA', '#e8dcb8', '#2a3a1c'], ['പള്ളിക്കൂടം', 'GOVT. LOWER PRIMARY SCHOOL', '#1c2a3a', '#ece0b8'],
+      // 1957
+      ['ബസ് സ്റ്റാൻഡ്', 'BUS STAND · THEKKUMKARA', '#1c3a6a', '#f0e4c0'], ['ടാക്കീസ്', 'LAKSHMI TALKIES · 3 SHOWS DAILY', '#2a1a3a', '#f2d070'],
+      ['റേഷൻ കട', 'RATION SHOP · FAIR PRICE', '#e8dcb8', '#1a3a1a'], ['C. P. I.', 'LOCAL COMMITTEE OFFICE', '#b01a14', '#f8e6c0'],
+      ['കോൺഗ്രസ്', 'INDIAN NATIONAL CONGRESS · MANDALAM', '#f0ecdc', '#1a5a2a'], ['പഞ്ചായത്ത്', 'PANCHAYAT OFFICE · THEKKUMKARA', '#e8dcb8', '#2a2a5a'],
+      ['വായനശാല', 'READING ROOM & LIBRARY', '#2a4a3a', '#efe2b8'], ['TIMETABLE', 'ALLEPPEY 7.10 · QUILON 9.40 · KOTTAYAM 1.15', '#1c1c1c', '#f0e8d0'],
     ];
     SG.forEach(([a, b, bg, fg], i) => {
       const x = (i % 2) * 512, y = Math.floor(i / 2) * 128;
@@ -388,6 +393,55 @@ export function buildTextures() {
     });
     grit(c, rng, 1.1, 30, 12);
     TEX.signs = tex(c, { repeat: false });
+  }
+  // ---- 1957: hand-painted film posters for the talkies (4 across)
+  {
+    const [c, g] = mk(1024, 512);
+    const P = [
+      ['നീലക്കുയിൽ', 'NEELAKUYIL', '#123a5a', '#e8b04a', '#f6e2a8'], ['പാടാത്ത പൈങ്കിളി', 'PADATHA PAINKILI', '#6a1a2a', '#f0a050', '#fbe6b0'],
+      ['രാരിച്ചൻ എന്ന പൗരൻ', 'RARICHAN ENNA PAURAN', '#1e4a2a', '#e8d070', '#f4ecc0'], ['ജീവിതനൗക', 'JEEVITHA NAUKA', '#3a1a4a', '#f08a70', '#f8e0c8'],
+    ];
+    P.forEach(([ml, en, bg, hi, fg], i) => {
+      const x = i * 256;
+      const grd = g.createLinearGradient(x, 0, x, 512); grd.addColorStop(0, hi); grd.addColorStop(0.55, bg); grd.addColorStop(1, '#0c0806');
+      g.fillStyle = grd; g.fillRect(x, 0, 256, 512);
+      // two painted faces, the hero and the heroine, in the bold style of the hoardings
+      for (const [cx, cy, r, sk] of [[x + 92, 170, 58, '#c88a5a'], [x + 172, 214, 50, '#d89a6a']]) {
+        g.fillStyle = '#140c08'; g.beginPath(); g.ellipse(cx, cy - r * 0.35, r * 1.02, r * 0.8, 0, Math.PI, 0); g.fill();
+        g.fillStyle = sk; g.beginPath(); g.ellipse(cx, cy, r * 0.78, r, 0, 0, 7); g.fill();
+        g.fillStyle = '#1a0e08'; g.fillRect(cx - r * 0.42, cy - r * 0.12, r * 0.24, r * 0.09); g.fillRect(cx + r * 0.18, cy - r * 0.12, r * 0.24, r * 0.09);
+        g.fillStyle = '#8a2a20'; g.fillRect(cx - r * 0.2, cy + r * 0.45, r * 0.4, r * 0.1);
+      }
+      g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = "bold 34px 'Noto Serif Malayalam', 'Nirmala UI', Georgia, serif"; g.fillText(ml, x + 128, 352, 236);
+      g.font = 'bold 20px Georgia, serif'; g.fillText(en, x + 128, 392, 236);
+      g.font = '14px Georgia, serif'; g.fillText('LAKSHMI TALKIES · NOW SHOWING', x + 128, 470, 236);
+      g.strokeStyle = '#0c0806'; g.lineWidth = 6; g.strokeRect(x + 3, 3, 250, 506);
+    });
+    grit(c, rng, 1.0, 40, 10);
+    TEX.posters = tex(c, { repeat: false });
+  }
+  // ---- 1957: election slogans painted on whitewash (2 across): the ears of corn and sickle, the two bullocks
+  {
+    const [c, g] = mk(1024, 256);
+    for (let i = 0; i < 2; i++) {
+      const x = i * 512;
+      g.fillStyle = '#ece6d4'; g.fillRect(x, 0, 512, 256);
+      const col = i ? '#1a5a2a' : '#b01a14';
+      g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 9; g.lineCap = 'round';
+      if (!i) {        // ears of corn and a sickle
+        g.beginPath(); g.arc(x + 110, 128, 62, -0.4, 3.5); g.stroke(); g.beginPath(); g.moveTo(x + 64, 172); g.lineTo(x + 46, 206); g.stroke();
+        for (const dx of [-14, 14]) { g.beginPath(); g.moveTo(x + 110 + dx, 200); g.quadraticCurveTo(x + 110 + dx * 1.6, 120, x + 110 + dx * 0.4, 52); g.stroke(); for (let k = 0; k < 6; k++) { g.beginPath(); g.ellipse(x + 110 + dx * (1.3 - k * 0.15), 150 - k * 16, 8, 4, dx > 0 ? -0.6 : 0.6, 0, 7); g.fill(); } }
+      } else {         // two bullocks under a yoke
+        for (const dx of [-36, 36]) { g.beginPath(); g.ellipse(x + 110 + dx, 150, 30, 20, 0, 0, 7); g.fill(); g.fillRect(x + 92 + dx, 160, 6, 40); g.fillRect(x + 122 + dx, 160, 6, 40); g.beginPath(); g.ellipse(x + 110 + dx * 1.6, 128, 12, 10, 0, 0, 7); g.fill(); }
+        g.fillRect(x + 40, 112, 140, 9);
+      }
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = "bold 60px 'Noto Serif Malayalam', 'Nirmala UI', Georgia, serif"; g.fillText('വോട്ട് ചെയ്യുക', x + 350, 104, 300);
+      g.font = 'bold 30px Georgia, serif'; g.fillText(i ? 'VOTE CONGRESS' : 'VOTE C.P.I.', x + 350, 178, 300);
+    }
+    grit(c, rng, 1.4, 30, 18);
+    TEX.slogans = tex(c, { repeat: false });
   }
   // ---- carved and painted gable-board (mukhappu)
   {

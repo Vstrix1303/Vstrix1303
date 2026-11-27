@@ -36,6 +36,8 @@ function baseMaterials(std) {
     plank: std({ map: TEX.plank, roughness: 0.9 }),
     sack: std({ map: TEX.sack, roughness: 1 }),
     sign: std({ map: TEX.signs, roughness: 0.9 }),
+    poster: std({ map: TEX.posters, roughness: 0.85 }),
+    slogan: std({ map: TEX.slogans, roughness: 0.95 }),
     gable: std({ map: TEX.gable, roughness: 0.8, side: THREE.DoubleSide }),
     mural: std({ map: TEX.mural, roughness: 0.9 }),
     jali: std({ map: TEX.jali, roughness: 0.75, side: THREE.DoubleSide }),
@@ -150,11 +152,18 @@ export class Builder {
   // hand-painted signboard i from the atlas, facing local +Z
   sign(i, w, h, x, y, z, ry = 0) {
     const geo = new THREE.PlaneGeometry(w, h);
-    const uv = geo.attributes.uv, u0 = (i % 2) * 0.5, v1 = 1 - Math.floor(i / 2) * 0.125;
-    for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) * 0.5, v1 - 0.125 + uv.getY(k) * 0.125);
+    const R = 1 / 16, uv = geo.attributes.uv, u0 = (i % 2) * 0.5, v1 = 1 - Math.floor(i / 2) * R;      // 2 x 16 atlas
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) * 0.5, v1 - R + uv.getY(k) * R);
     const m = TRS(x, y, z, 0, ry, 0);
     this.geo('sign', geo, m);
     this.geo('wood', boxGeo(w + 0.14, h + 0.14, 0.05, 2), m.clone().multiply(TRS(0, 0, -0.035)), [0.5, 0.42, 0.36]);
+    return this;
+  }
+  // a flat picture from an atlas of cols x rows (posters, slogans) laid on a wall
+  decal(mat, i, cols, rows, w, h, x, y, z, ry = 0) {
+    const geo = new THREE.PlaneGeometry(w, h), uv = geo.attributes.uv, u0 = (i % cols) / cols, v1 = 1 - Math.floor(i / cols) / rows;
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) / cols, v1 - 1 / rows + uv.getY(k) / rows);
+    this.geo(mat, geo, TRS(x, y, z, 0, ry, 0));
     return this;
   }
   collider(x, z, hw, hd, ry = 0, top = 50) {

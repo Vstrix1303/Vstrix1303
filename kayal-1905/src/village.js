@@ -77,7 +77,7 @@ const GOODS = {
   },
 };
 
-function shop(b, x, z, ry, kind, sign, rng, o = {}) {
+export function shop(b, x, z, ry, kind, sign, rng, o = {}) {
   const w = o.w || 6.6, d = o.d || 5.2, hw = w / 2, hd = d / 2;
   house(b, x, z, ry, { w, d, porch: false, awning: o.awning ?? 0, fence: false, washing: false, lamp: 1, smoke: false, shopfront: true, mural: false, overhang: 1.5 });
   // house() leaves the builder placed at this shop
