@@ -12,6 +12,8 @@ import { Human, CAST, SKIN } from './human.js';
 import { Quadruped, makeVallam, makePaddle } from './characters.js';
 import { makeCart, makeJutka } from './structures.js';
 import { damp, angleDamp, clamp } from './util.js';
+import { ERA } from './era.js';
+import { makeBicycle, makeBus, makeLorry, makeJeep, makeCar, makeLaunch } from './vehicles.js';
 
 // ---------------------------------------------------------------- the network
 const NET = {};
@@ -47,6 +49,8 @@ const SAY = {
   jutka: ['Make way! Make way for the jutka!', 'Stand clear, the mare is nervous!'],
   rider: ['Out of the road, man!', 'Mind yourself!'],
   walker: ['Namaskaram, Madhava.', 'Back from Bombay, and still walking? Buy a bicycle.', 'They say the bazaar has Balaramapuram cloth this week.', 'Rain before evening. My knee says so.', 'Going far?', 'Is it true about the Company and the pepper lands?'],
+  motor: ['Hoy! Off the road!', 'Do you want to be in tomorrow\'s paper? Move!', 'The bus will not wait and neither will I!'],
+  cyclist: ['Aside, aside!', 'Mind the bell, Madhava!'],
   scare: ['Aiyo! Is this a road or a racecourse?', 'Slow down! There are children on this road!', 'Ente Deivame — he rides like the road is his!'],
 };
 let barkT = 0;
@@ -115,7 +119,8 @@ class Traveller {
     if (b) {
       target = typeof b === 'object' ? Math.min(target, b.speed * 0.9) : 0;
       this.blockT += dt;
-      if (b === 'player' && this.blockT > 2.2) { bark(this.name, this.kind === 'walker' ? 'walker' : this.kind, this.h?.preset || this.crew?.[0]?.preset); this.blockT = -6; }
+      if (b === 'player' && this.blockT > 2.2) {
+        if (this.kind === 'motor') G.audio?.sfx('horn', 0.55); else if (this.kind === 'cyclist') G.audio?.sfx('cycbell', 0.6); bark(this.name, this.kind === 'walker' ? 'walker' : this.kind, this.h?.preset || this.crew?.[0]?.preset); this.blockT = -6; }
       if (b === 'npc' && this.blockT > 5) { this.ignoreT = 7; this.blockT = 0; }      // a man who will not move: go round him
     } else this.blockT = Math.min(0, this.blockT + dt);
     if (this.scareT > 0) { this.scareT -= dt; target = 0; }
@@ -213,14 +218,61 @@ class Walker extends Traveller {
     h.tick(dt, d);
   }
 }
+// ---- a motor vehicle: bus, lorry, jeep or car, a driver at the wheel; the bus stops at the bus stand
+class Motor extends Traveller {
+  constructor(scene, o) {
+    super(scene, 'motor', o);
+    const m = this.model = o.make(o.color); this.root.add(m.root);
+    this.len = o.len; this.wid = o.wid; this.bus = !!o.bus; this.stopT = 0;
+    this.crew = [];
+    if (o.driver) { const h = new Human(o.driver); h.root.position.set(...o.seat); h.state = 'drive'; m.root.add(h.root); this.crew.push(h); }
+    this.finish();
+  }
+  update(dt, pp, all, d) {
+    const bs = G.world?.SPOTS?.busStand;
+    if (this.bus && bs && this.stopT <= 0 && Math.hypot(this.pos.x - bs.x, this.pos.z - bs.z) < 12) { this.wait = Math.max(this.wait, 11); this.stopT = 70; }
+    this.stopT -= dt;
+    const ds = this.move(dt, pp, all);
+    this.pos.y = damp(this.pos.y, this.ground(), 6, dt);
+    this.sync();
+    for (const w of this.model.wheels) w.spin.rotation.x += ds / w.r;
+    if (d < 95) for (const h of this.crew) { h.speed = 0; h.lod = d > 25 ? 1 : 0; h.near = d < 8; h.tick(dt, d); }
+    const pl = G.player;
+    if (pl.mode === 'foot' && d < this.len + 3) {
+      const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+      for (const k of [-0.4, 0, 0.4]) this.push(pl, this.pos.x + fx * this.len * k, this.pos.z + fz * this.len * k, this.wid * 0.62);
+    }
+  }
+}
+// ---- someone on a bicycle
+class Cyclist extends Traveller {
+  constructor(scene, o) {
+    super(scene, 'cyclist', o);
+    const b = this.bike = makeBicycle(o.color); this.root.add(b.root);
+    this.h = new Human(o.look); this.h.state = 'cycle'; this.h.root.position.set(0, 0.05, -0.16); b.root.add(this.h.root);
+    this.len = 1.7;
+    this.finish();
+  }
+  update(dt, pp, all, d) {
+    const ds = this.move(dt, pp, all);
+    this.pos.y = damp(this.pos.y, this.ground(), 10, dt);
+    this.sync();
+    for (const w of this.bike.wheels) w.spin.rotation.x += ds / w.r;
+    this.bike.crank.rotation.x += ds / 0.34 * 0.55;
+    if (d < 110) { this.h.speed = this.speed; this.h.lod = d > 25 ? 1 : 0; this.h.near = d < 8; this.h.tick(dt, d); }
+    const pl = G.player;
+    if (pl.mode === 'foot' && d < 3) this.push(pl, this.pos.x, this.pos.z, 0.6);
+  }
+}
 class CanalBoat extends Traveller {
   constructor(scene, o) {
     super(scene, 'boat', o);
-    const v = makeVallam();
+    const v = o.launch ? makeLaunch() : makeVallam();
     this.root.add(v.root);
-    this.h = new Human(o.look); this.h.root.position.set(0, -0.2, -1.75); this.h.state = 'paddle'; this.h.rowRate = 3.4;
+    this.launch = !!o.launch;
+    this.h = new Human(o.look); this.h.root.position.set(0, this.launch ? -0.05 : -0.2, this.launch ? -3.7 : -1.75); this.h.state = this.launch ? 'boat' : 'paddle'; this.h.rowRate = 3.4;
     v.root.add(this.h.root);
-    this.h.hold(makePaddle()); this.h.grip = true;
+    if (!this.launch) { this.h.hold(makePaddle()); this.h.grip = true; }
     if (v.cargo) v.cargo.visible = !!o.cargo;
     this.t = Math.random() * 9;
     this.finish();
@@ -231,7 +283,7 @@ class CanalBoat extends Traveller {
     this.move(dt, pp, all);
     this.root.position.set(this.pos.x, 0.03 + Math.sin(this.t * 1.3) * 0.025, this.pos.z);
     this.root.rotation.set(Math.sin(this.t * 0.9) * 0.015, this.yaw, Math.sin(this.t * 1.1) * 0.02, 'YXZ');
-    if (d < 110) { this.h.state = this.speed > 0.3 ? 'paddle' : 'boat'; this.h.lod = d > 25 ? 1 : 0; this.h.tick(dt, d); }
+    if (d < 110) { this.h.state = !this.launch && this.speed > 0.3 ? 'paddle' : 'boat'; this.h.lod = d > 25 ? 1 : 0; this.h.tick(dt, d); }
   }
 }
 
@@ -241,6 +293,8 @@ export function setupTraffic(scene, W, mats) {
   const canal = line('canal', CANAL, 3);
   const VM = CAST.villagerM, VF = CAST.villagerF;
   const n = { low: [2, 0, 1, 4, 1], medium: [3, 1, 1, 6, 1], high: [4, 1, 2, 8, 2], ultra: [4, 1, 2, 9, 2] }[G.quality] || [3, 1, 1, 6, 1];
+  const in57 = !ERA.storyMissions && ERA.year >= 1950;
+  if (in57) { n[1] = 0; n[2] = 0; n[0] = Math.max(1, n[0] - 1); n[3] = Math.max(3, n[3] - 2); }
   const list = [];
   const ox = (i) => new Quadruped('cow', { hump: true, color: [0xe4ddcf, 0xcdc3b0, 0xb8ab94, 0xd9d2c4][i % 4] });
   for (let i = 0; i < n[0]; i++) {
@@ -259,6 +313,24 @@ export function setupTraffic(scene, W, mats) {
     list.push(new Walker(scene, { name: fem ? 'Village woman' : 'Villager', roads: ANY, speed: 1.2 + (i % 4) * 0.08, half: 0.35, reach: 1.5, lane: 0.42, turn: [2, 5], look, headLoad: i % 3 !== 0 }));
   }
   for (let i = 0; i < n[4]; i++) list.push(new CanalBoat(scene, { name: 'Boatman', roads: ['canal'], speed: 1.7, half: 0.6, reach: 7, lane: 0.3, turn: [6, 8], look: CAST.oarsman[i % 2], cargo: i % 2 === 0, far: 190 }));
+  if (in57) {
+    // 1957: buses, lorries, a jeep and cars on the main roads; bicycles everywhere; a launch on the canal
+    const SK = SKIN;
+    const KINDS = {
+      bus: { make: makeBus, name: 'Bus driver', bus: true, speed: 7.2, half: 1.2, reach: 12, len: 8.4, wid: 2.3, roads: ['main', 'north', 'south'], seat: [-0.6, 0.5, 2.4], driver: { ...VM[5], shirt: 0x8a7d5a, headgear: 'cap', gearColor: 0x6a5a3a } },
+      lorry: { make: makeLorry, name: 'Lorry driver', speed: 6.4, half: 1.1, reach: 10, len: 6.6, wid: 2.2, roads: ['main', 'north', 'quay', 'south'], seat: [-0.45, 0.4, 1.0], driver: { ...VM[1] }, colors: [0x2c4a6a, 0x3a5a2a, 0x6a2a1a] },
+      jeep: { make: makeJeep, name: 'Jeep driver', speed: 9, half: 0.85, reach: 8, len: 3.6, wid: 1.5, roads: WIDE, seat: [-0.35, 0.14, -0.08], driver: { skin: SK[2], shirt: 0x8a7d5a, trousers: 0x6a5e44, moustache: 'big', headgear: 'cap', gearColor: 0x6a5e44, style: 'uniform' }, colors: [0x4f5a3c, 0x2a3a5a] },
+      car: { make: makeCar, name: 'Motorist', speed: 9.5, half: 0.9, reach: 8, len: 4.4, wid: 1.65, roads: WIDE, seat: [-0.38, -0.25, 0.0], driver: { skin: SK[1], shirt: 0xf0ece0, trousers: 0x3a3a40, moustache: true }, colors: [0x1a1a1c, 0xe6dcc0, 0x5a1a1a, 0x5a7a9a] },
+    };
+    const motors = { low: ['bus', 'lorry', 'car'], medium: ['bus', 'lorry', 'jeep', 'car'], high: ['bus', 'bus', 'lorry', 'jeep', 'car', 'car'], ultra: ['bus', 'bus', 'lorry', 'lorry', 'jeep', 'car', 'car'] }[G.quality] || ['bus', 'lorry', 'jeep', 'car'];
+    motors.forEach((k, i) => { const K = KINDS[k]; list.push(new Motor(scene, { ...K, color: K.colors ? K.colors[i % K.colors.length] : undefined, lane: 0.25, turn: [6, 8], far: 200 })); });
+    const nc = { low: 2, medium: 4, high: 6, ultra: 7 }[G.quality] || 4;
+    for (let i = 0; i < nc; i++) {
+      const fem = i % 4 === 3, look = fem ? { ...VF[i % VF.length] } : { ...VM[(i * 3 + 2) % VM.length], skin: SK[(i * 4 + 1) % SK.length], shirt: [0xe6e0d0, 0x6a84a0, 0xd8c8a0, undefined][i % 4] };
+      list.push(new Cyclist(scene, { name: fem ? 'Schoolteacher' : 'Cyclist', roads: ANY, speed: 3.6 + (i % 3) * 0.4, half: 0.4, reach: 3, lane: 0.38, turn: [3, 5], look, color: [0x14130f, 0x1a2a4a, 0x2a1a14][i % 3] }));
+    }
+    list.push(new CanalBoat(scene, { name: 'Launch serang', roads: ['canal'], speed: 3.0, half: 1.0, reach: 12, lane: 0.25, turn: [8, 10], look: { ...VM[3] }, launch: true, far: 220 }));
+  }
   W.traffic = list;
 
   const tmp = new THREE.Vector3(), fwd = new THREE.Vector3();

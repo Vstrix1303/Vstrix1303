@@ -163,6 +163,15 @@ export function updateMotion(h, dt) {
       if (u >= 1) { h.mountT = null; h.mountOff = null; }
       else { const e = ease(u), arc = Math.sin(Math.PI * u); h.mountOff = [lerp(-0.62, 0, e), lerp(-0.85, 0, e) + 0.2 * arc]; g.legRz += 1.15 * arc; g.legR += 0.5 * arc; g.kneeR -= 0.6 * arc; g.spine += 0.35 * (1 - e); g.armL = g.armR = -1.5; g.elL = g.elR = -0.5; k = 20; }
     }
+  } else if (s === 'cycle') {           // on a bicycle: pedalling, hands on the bars, leaning in a little
+    h.phase += dt * Math.abs(sp) * 1.6;
+    const c = Math.sin(h.phase), q = Math.cos(h.phase);
+    g.legL = -1.05 - 0.42 * c; g.legR = -1.05 + 0.42 * c; g.kneeL = 1.3 + 0.42 * q; g.kneeR = 1.3 - 0.42 * q; g.legLz = -0.05; g.legRz = 0.05;
+    g.spine = 0.3; g.head = -0.2;
+    g.armL = g.armR = -1.1; g.elL = g.elR = -0.3; g.armLz = 0.22; g.armRz = -0.22; g.fingL = g.fingR = 1.2;
+  } else if (s === 'drive') {           // at the wheel
+    g.legL = g.legR = -1.35; g.kneeL = g.kneeR = 1.25; g.spine = 0.04;
+    g.armL = g.armR = -1.0; g.elL = g.elR = -0.85; g.armLz = 0.32; g.armRz = -0.32; g.fingL = g.fingR = 1.2;
   } else if (s === 'bench' || s === 'sidesaddle') {
     g.legL = g.legR = -1.42; g.kneeL = g.kneeR = 1.45; g.spine = 0.08 + Math.sin(t * 0.33 + h.shiftSeed) * 0.04;
     g.armL = -0.5; g.armR = -0.5; g.elL = g.elR = -0.85; g.armLz = 0.12; g.armRz = -0.12; g.fingL = g.fingR = 0.6;

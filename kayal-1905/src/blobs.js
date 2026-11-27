@@ -43,6 +43,8 @@ export function setupBlobs(scene) {
     for (const t of G.world?.traffic || []) {
       if (!t.active || !near(t.pos) || t.kind === 'boat') continue;
       if (t.kind === 'walker') put(t.pos.x, t.pos.y, t.pos.z, 0.95, 0.95);
+      else if (t.kind === 'motor') put(t.pos.x, t.pos.y, t.pos.z, t.wid + 0.35, t.len + 0.4, t.yaw);
+      else if (t.kind === 'cyclist') put(t.pos.x, t.pos.y, t.pos.z, 0.55, 1.9, t.yaw);
       else if (t.kind === 'rider') put(t.pos.x, t.pos.y, t.pos.z, 1.1, 2.4, t.yaw);
       else { const fx = Math.sin(t.yaw), fz = Math.cos(t.yaw), L = t.len || 2.4; put(t.pos.x + fx * L * 0.55, t.pos.y, t.pos.z + fz * L * 0.55, 2.1, L * 2.2, t.yaw); }
     }
@@ -51,8 +53,9 @@ export function setupBlobs(scene) {
       const big = a.o.type ? 1 : 2.1;                     // the elephants have no 'type'; cows and horses do
       put(a.pos.x, a.pos.y, a.pos.z, 1.0 * big, 2.2 * big, a.yaw);
     }
+    for (const r of G.world?.rides || []) if (near(r.pos)) put(r.pos.x, r.pos.y, r.pos.z, r.kind === 'jeep' ? 1.85 : 0.55, r.kind === 'jeep' ? 3.9 : 1.9, r.yaw);
     const h = G.world?.horse;
-    if (h && h.root.visible !== false && near(h.pos)) put(h.pos.x, h.pos.y, h.pos.z, 1.0, 2.4, h.yaw);
+    if (h && h.root.visible !== false && h.usable !== false && near(h.pos)) put(h.pos.x, h.pos.y, h.pos.z, 1.0, 2.4, h.yaw);
     im.count = n;
     im.instanceMatrix.needsUpdate = true;
   });

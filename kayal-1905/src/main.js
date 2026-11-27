@@ -291,7 +291,7 @@ async function boot() {
           if (d < it.r && (d < bd || it.prio) && (!it.cond || it.cond())) { bd = it.prio ? -1 : d; label = it.label; act = it.action; }
         }
       } else if (player.mode === 'horse') {
-        if (player.mount.speed < 4 && !story.noDismount) { label = 'Dismount'; act = () => player.dismount(); }
+        if (player.mount.speed < 4 && !story.noDismount) { label = player.mount.offLabel || 'Dismount'; act = () => player.dismount(); }
       } else if (player.mode === 'boat') {
         landT -= dt;
         if (landT <= 0) { landT = 0.2; landing = player.mount.speed < 3.5 ? player.mount.landing() : null; }

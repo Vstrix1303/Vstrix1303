@@ -13,7 +13,8 @@ import { NPC } from './npc.js';
 import { Horse, Boat } from './entities.js';
 import { CAST, Quadruped, Elephant, Bird, makeVallam, makeKettuvallam, SKIN } from './characters.js';
 import { makeRng, TAU, damp, angleDamp } from './util.js';
-import { groundAt, interiorAt } from './physics.js';
+import { groundAt, interiorAt, pointInBox } from './physics.js';
+import { Ride } from './vehicles.js';
 import { FX } from './fx.js';
 import { setupActivities } from './activities.js';
 import { heightTex, GLSL_HUV } from './terrain.js';
@@ -142,6 +143,27 @@ export async function buildWorld(scene, progress) {
   W.vallams = [W.boat, new Boat(scene, SPOTS.portBoat.x, SPOTS.portBoat.z, 0), new Boat(scene, SPOTS.hamletBoat.x, SPOTS.hamletBoat.z, Math.PI / 2)];
   W.horse = new Horse(scene, SPOTS.stableHorse.x, SPOTS.stableHorse.z, SPOTS.stableFace, { name: 'Sultan' });
   W.horse.usable = false;
+  // ---- 1957: a bicycle at the tharavadu gate, and the panchayat's jeep beside its office
+  W.rides = [];
+  {               // leaning on open ground just outside the gate, not on any step or ledge
+    const hg = SPOTS.homeGate;
+    let x = hg.x + 3, z = hg.z + 6;
+    for (const [dx, dz] of [[3.5, 6], [-3.5, 6], [4.5, 8.5], [-4.5, 8.5], [0, 9.5], [6, 5], [-6, 5]]) {
+      const cx = hg.x + dx, cz = hg.z + dz;
+      if (!pointInBox(cx, cz, 0.9) && Math.abs(groundAt(cx, cz) - getHeight(cx, cz)) < 0.05 && getHeight(cx, cz) > 0.5) { x = cx; z = cz; break; }
+    }
+    W.rides.push(new Ride(scene, 'bicycle', x, z, 0.3));
+  }
+  {
+    const s = SPOTS.era57?.panchayat;
+    if (s) {
+      const fx = Math.sin(s.ry), fz = Math.cos(s.ry), rx = Math.cos(s.ry), rz = -Math.sin(s.ry);
+      let x = s.x + fx * 2 + rx * 7.5, z = s.z + fz * 2 + rz * 7.5;
+      if (pointInBox(x, z, 1.3) || getHeight(x, z) < 0.5) { x = s.x + fx * 9.5; z = s.z + fz * 9.5; }
+      W.rides.push(new Ride(scene, 'jeep', x, z, s.ry + Math.PI / 2));
+    }
+  }
+  for (const r of W.rides) G.interactables.push({ pos: r.pos, r: r.kind === 'jeep' ? 3.2 : 2.4, label: r.spec.on, cond: () => G.player.mode === 'foot' && !G.activity && !r.rider, action: () => G.player.mountHorse(r) });
   for (const b of W.vallams) G.interactables.push({ pos: b.pos, r: 3.6, label: 'Board the vallam', cond: () => W.boatsUnlocked && G.player.mode === 'foot' && !G.activity, action: () => G.player.mountBoat(b) });
   G.interactables.push({ pos: W.horse.pos, r: 2.8, label: 'Mount the horse', cond: () => W.horse.usable && G.player.mode === 'foot', action: () => G.player.mountHorse(W.horse) });
 
@@ -386,6 +408,7 @@ export async function buildWorld(scene, progress) {
     for (const b of W.vallams) b.update(dt);
     for (const b of W.extraBoats) b.update(dt);
     W.horse.update(dt);
+    for (const r of W.rides) r.update(dt);
     fx.update(dt);
     for (const r of W.riders) r.update(dt);
   });

@@ -13,6 +13,8 @@ export const EQUIP = {
   paddle: svg('<path d="M14 54 L40 22" stroke="#0b0806" stroke-width="8"/><path d="M14 54 L40 22" stroke="#b98a52" stroke-width="4"/><ellipse cx="46" cy="15" rx="7" ry="12" transform="rotate(38 46 15)" fill="#b98a52" stroke="#0b0806" stroke-width="3"/>'),
   horse: svg('<path d="M18 52 V30 a14 14 0 0 1 28 0 V52" stroke="#0b0806" stroke-width="13"/><path d="M18 52 V30 a14 14 0 0 1 28 0 V52" stroke="#c9c2b0" stroke-width="7"/><g fill="#0b0806"><circle cx="18" cy="42" r="1.6"/><circle cx="46" cy="42" r="1.6"/><circle cx="21" cy="24" r="1.6"/><circle cx="43" cy="24" r="1.6"/><circle cx="32" cy="17" r="1.6"/></g>'),
   bucket: svg('<path d="M16 26 L22 54 H42 L48 26 Z" fill="#9a7648" stroke="#0b0806" stroke-width="3.5"/><path d="M17 34 H47 M19 45 H45" stroke="#0b0806" stroke-width="2.5"/><path d="M16 26 Q32 4 48 26" stroke="#0b0806" stroke-width="3.5"/><ellipse cx="32" cy="26" rx="16" ry="4" fill="#6fa8b4" stroke="#0b0806" stroke-width="3"/>'),
+  bike: svg('<circle cx="16" cy="42" r="11" stroke="#0b0806" stroke-width="5"/><circle cx="48" cy="42" r="11" stroke="#0b0806" stroke-width="5"/><circle cx="16" cy="42" r="11" stroke="#c9c2b0" stroke-width="2.4"/><circle cx="48" cy="42" r="11" stroke="#c9c2b0" stroke-width="2.4"/><path d="M16 42 L28 24 L44 24 L48 42 M28 24 L33 42 L44 24 M24 20 H32 M42 18 L46 18" stroke="#c9c2b0" stroke-width="3.2"/>'),
+  jeep: svg('<path d="M8 40 V30 L18 28 L24 18 H40 L44 28 H56 V40 Z" fill="#5a6440" stroke="#0b0806" stroke-width="3.5" stroke-linejoin="round"/><circle cx="20" cy="42" r="7" fill="#1a1612" stroke="#0b0806" stroke-width="3"/><circle cx="46" cy="42" r="7" fill="#1a1612" stroke="#0b0806" stroke-width="3"/><path d="M26 20 H38 L41 28 H24 Z" fill="#9fb0b0"/>'),
   short: svg('<path d="M20 46 L44 18" stroke="#0b0806" stroke-width="9"/><path d="M20 46 L44 18" stroke="#5a3a22" stroke-width="5"/><path d="M20 46 L24 41" stroke="#e9c15a" stroke-width="5"/>'),
   otta: svg('<path d="M14 52 C22 40 30 40 32 30 C34 20 44 16 50 12" stroke="#0b0806" stroke-width="10" fill="none"/><path d="M14 52 C22 40 30 40 32 30 C34 20 44 16 50 12" stroke="#5a3a22" stroke-width="5.5" fill="none"/><circle cx="50" cy="12" r="4.5" fill="#5a3a22" stroke="#0b0806" stroke-width="2.5"/>'),
   kathi: svg('<path d="M16 52 L28 40" stroke="#0b0806" stroke-width="9"/><path d="M16 52 L28 40" stroke="#8a6a42" stroke-width="5"/><path d="M27 41 L46 18 Q54 12 52 22 Q44 30 34 46 Z" fill="#c9cdd2" stroke="#0b0806" stroke-width="3"/>'),
@@ -150,7 +152,7 @@ export class UI {
     if (this.barkT > 0) { this.barkT -= dt; if (this.barkT <= 0) this.el.bark.classList.remove('on'); }
     this.hurtV = Math.max(0, this.hurtV - dt * 1.4);
     if (this.areaT > 0) { this.areaT -= dt; if (this.areaT <= 0) this.el.areaSub.textContent = ''; }
-    const eq = p.mode === 'horse' ? 'horse' : p.mode === 'boat' ? 'paddle' : p.rod.visible ? 'rod' : p.bucket.visible ? 'bucket' : (p.wdef?.icon || 'staff');
+    const eq = p.mode === 'horse' ? (p.mount?.icon || 'horse') : p.mode === 'boat' ? 'paddle' : p.rod.visible ? 'rod' : p.bucket.visible ? 'bucket' : (p.wdef?.icon || 'staff');
     if (eq !== this.equip) { this.equip = eq; document.getElementById('equip').innerHTML = EQUIP[eq]; }
     if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0) this.el.banner.classList.remove('on'); }
     if (this.moneyT > 0) { this.moneyT -= dt; if (this.moneyT <= 0) this.el.moneyDelta.className = ''; }
@@ -242,6 +244,7 @@ export class UI {
     for (const b of W.vallams) icon(b.pos, '#6fc3d6', W.boatsUnlocked && p.mount !== b);
     if (this.waypoint) { const m = tm(this.waypoint.x, this.waypoint.z, true); ctx.fillStyle = '#58b7e8'; ctx.strokeStyle = '#0c2a3a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(m[0], m[1], 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
     icon(W.horse.pos, '#c9a070', W.horse.usable && p.mode !== 'horse');
+    for (const r of W.rides || []) icon(r.pos, r.kind === 'jeep' ? '#9fb07a' : '#e8d8b0', p.mount !== r);
     if (this.markerPos) {
       const m = tm(this.markerPos.x, this.markerPos.z, true);
       ctx.fillStyle = '#f2c14e'; ctx.strokeStyle = '#3a2408'; ctx.lineWidth = 1.5;

@@ -149,7 +149,8 @@ export class Story {
     ui.letterbox(false); ui.setHud(!p.photo); ui.setMarker(null); ui.hideDead(); ui.setTimer(null); ui.setMeter(null); ui.setBoss(null);
     W.boat.cargo.visible = false;
     W.boatsUnlocked = d >= 2;
-    W.horse.usable = d >= 4;
+    W.horse.usable = ERA.storyMissions ? d >= 4 : false;
+    W.horse.root.visible = ERA.storyMissions;
     W.horse.call = false;
     G.fx.fireHeat = 0;
     if (!ERA.storyMissions) {

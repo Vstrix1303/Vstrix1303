@@ -126,6 +126,14 @@ export class Player {
 
   mountHorse(horse) {
     if (this.mount) return;
+    if (!horse.q) {               // a bicycle or a jeep: sit on it, the right way for each
+      this.mode = 'horse'; this.mount = horse; horse.rider = this;
+      horse.seatNode.add(this.root); this.root.position.set(...horse.seat); this.root.rotation.set(0, 0, 0);
+      this.h.state = horse.pose; this.crouch = false; this.h.mountQ = null; this.h.mountT = null;
+      this.stick.visible = false;
+      G.audio?.sfx(horse.engine ? 'horn' : 'cycbell', 0.25);
+      return;
+    }
     this.mode = 'horse'; this.mount = horse; horse.rider = this;
     horse.q.body.add(this.root);          // sit on the moving back, not the ground point beneath it
     this.root.position.set(0, horse.q.seatY - horse.q.baseY, -0.06); this.root.rotation.set(0, 0, 0);
@@ -295,7 +303,8 @@ export class Player {
       this.h.speed = m.speed; this.speedNow = m.speed;
       this.pos.copy(m.pos); this.yaw = m.yaw;
       this.stamina = Math.min(100, this.stamina + 10 * dt);
-      if (m.speed > 1) {
+      if (free && m.horn && (inp.consume('Attack') || inp.consume('KeyF'))) m.horn();
+      if (m.q && m.speed > 1) {
         this.footT -= dt * (1.5 + m.speed * 0.42);
         if (this.footT <= 0) { this.footT = 1; G.audio?.sfx('hoof', clamp(m.speed / 12, 0.3, 1)); }
       }
@@ -363,8 +372,8 @@ export class Player {
     const cam = this.camera;
     const focus = this.worldPos(new THREE.Vector3());
     const mode = this.mode;
-    const headY = mode === 'horse' ? 2.35 : mode === 'boat' ? 1.25 : this.crouch ? 1.15 : 1.55;
-    const baseDist = (mode === 'horse' ? 6.2 : mode === 'boat' ? (this.mount.chundan ? 13.5 : 7.6) : this.aiming ? 1.9 : 3.7) * (this.aiming ? 1 : this.zoom);
+    const headY = mode === 'horse' ? (this.mount.camHead ?? 2.35) : mode === 'boat' ? 1.25 : this.crouch ? 1.15 : 1.55;
+    const baseDist = (mode === 'horse' ? (this.mount.camDist ?? 6.2) : mode === 'boat' ? (this.mount.chundan ? 13.5 : 7.6) : this.aiming ? 1.9 : 3.7) * (this.aiming ? 1 : this.zoom);
     if (this.photo) {
       this.photoAng += dt * 0.12;
       this.camYaw += dt * 0.12;
