@@ -86,21 +86,22 @@ function palmGeo(rng, o) {
       if (!o.lo) trunk.add(ico, m, nc, [0.05, 0.05]);
     }
   }
-  // pepper vine wrapped around the trunk
+  // pepper vine wrapped around the trunk: many small leaf cards at all angles, thinning toward the top,
+  // so it reads as a leafy climber rather than a green column
   if (o.vine) {
-    for (let i = 0; i < 16; i++) {
-      const t = 0.06 + (i / 16) * 0.55, c = path(t), a = rng() * TAU;
-      const s = 0.55 + rng() * 0.3, r = o.trunkR + 0.12;
+    const n = o.lo ? 18 : 90;
+    for (let i = 0; i < n; i++) {
+      const t = 0.03 + Math.pow(rng(), 1.3) * 0.5, c = path(t), a = rng() * TAU;
+      const s = (o.lo ? 0.3 : 0.16) + rng() * 0.12, r = o.trunkR + 0.04 + rng() * 0.14 * (1 - t);
       const cx = c[0] + Math.cos(a) * r, cz = c[2] + Math.sin(a) * r;
-      const nx = Math.cos(a), nz = Math.sin(a);
-      const tx = -nz, tz = nx;
-      const col = [0.55, 0.75, 0.5];
-      // quad facing outward, reuse the frond atlas' dense middle region
-      const v0 = fr.vert(cx - tx * s, c[1] - s, cz - tz * s, nx, 0.3, nz, 0.3, 0.2, ...col);
-      const v1 = fr.vert(cx + tx * s, c[1] - s, cz + tz * s, nx, 0.3, nz, 0.55, 0.2, ...col);
-      const v2 = fr.vert(cx + tx * s, c[1] + s, cz + tz * s, nx, 0.3, nz, 0.55, 0.8, ...col);
-      const v3 = fr.vert(cx - tx * s, c[1] + s, cz - tz * s, nx, 0.3, nz, 0.3, 0.8, ...col);
-      fr.quad(v0, v1, v2, v3);
+      const tilt = (rng() - 0.5) * 1.6, twist = a + (rng() - 0.5) * 1.2;
+      const nx = Math.cos(twist), nz = Math.sin(twist), tx = -nz, tz = nx;
+      const up = Math.cos(tilt), out = Math.sin(tilt);
+      const g = 0.45 + rng() * 0.25, col = [g * 0.85, g * 1.25, g * 0.7];
+      const u0 = 0.32 + rng() * 0.12, v0 = 0.25 + rng() * 0.4, du = 0.1, dv = 0.16;
+      const p = (sx, sy) => [cx + tx * sx * s + nx * out * sy * s, c[1] + up * sy * s, cz + tz * sx * s + nz * out * sy * s];
+      const q0 = p(-1, -1), q1 = p(1, -1), q2 = p(1, 1), q3 = p(-1, 1);
+      fr.quad(fr.vert(...q0, nx, 0.4, nz, u0, v0, ...col), fr.vert(...q1, nx, 0.4, nz, u0 + du, v0, ...col), fr.vert(...q2, nx, 0.4, nz, u0 + du, v0 + dv, ...col), fr.vert(...q3, nx, 0.4, nz, u0, v0 + dv, ...col));
     }
   }
   return { trunk: trunk.build(), fronds: fr.build(), top: T };
