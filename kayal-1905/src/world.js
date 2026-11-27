@@ -88,36 +88,36 @@ function buildLamps(scene, lamps) {
 
 const BARKS = {
   village: [
-    'The monsoon came eleven days early. The old men say that means a fat pepper crop — or a flood.',
-    'They say in Bengal people are burning English cloth in the streets. Swadeshi, they call it.',
-    'Finch sahib\'s peons were at the toddy shop again, counting other men\'s coconut palms.',
-    'If you go up into the hills, mind the elephants. They come down for the jackfruit.',
-    'His Highness has opened an assembly at Trivandrum where even a farmer may speak. Imagine that.',
-    'Namaskaram, Madhava. Your mother would have been glad to see this day.',
+    'They say the new ministry will give the land to the men who till it. The janmi says over his dead body.',
+    'Did you hear it on the radio? The Agrarian Relations Bill. My father would not have believed it.',
+    'The ration shop had rice today. Real rice, not that American wheat.',
+    'The bus from Alleppey was two hours late again. The driver blamed the ferry, the ferry blamed the driver.',
+    'My son writes from Bombay. He wants a transistor radio. I want him home.',
+    'Namaskaram, Madhava. Back from the city, and still you walk like a boatman.',
   ],
-  tea: ['Chaya? One chuckram. For a man home from Bombay, the first glass is free.', 'Sit, sit. A boatman\'s son should not stand like a stranger in his own village.'],
-  well: ['Devaki reads English better than the Company clerk. That is what frightens them.', 'The well is sweet again now the rains have come.'],
-  paddy: ['The seedlings must be in before the next rain. No time for talk, Madhava.', 'Six years away and you still walk like a boatman.'],
+  tea: ['Chaya? Six naya paisa. For a man home from Bombay, the first glass is free.', 'Sit, sit. The radio says rain by evening. The radio is usually wrong.'],
+  well: ['Devaki has started a night class for the women. Reading and writing, and the price of things.', 'The well is sweet again now the rains have come.'],
+  paddy: ['The seedlings must be in before the next rain. No time for talk, Madhava.', 'Half the crop goes to the landlord still. Until the bill is law, that is.'],
   port: [
-    'Pepper, cardamom, ginger, turmeric! The ships at Alleppey are waiting!',
-    'The Company pays in paper and collects in land.',
+    'Coir, pepper, cashew! The lorries for Cochin are waiting!',
+    'The co-operative pays every Saturday now. No more waiting on the merchant\'s mood.',
     'Karimeen, fresh from the kayal this morning!',
-    'Mind your purse near the godown. And mind the peons more.',
+    'Mind your purse near the godown. There are smugglers about, and police who look the other way.',
   ],
-  priest: ['The temple tank is full to the top step. A good omen.', 'Light a lamp at dusk, Madhava. Your family has kept that flame for two hundred years.'],
+  priest: ['The temple tank is full to the top step. A good omen.', 'Light a lamp at dusk, Madhava. Ministers come and go; the lamp stays.'],
   bazaar: [
-    'Everything costs more since the Company men came. Even the salt.',
-    'Did you hear? Kunjan\'s boy passed the matriculation. First in the taluk to do it.',
-    'Two annas for that? My grandmother bought a cow for less.',
-    'The anchal runner says the roads to Quilon are flooded past Kayamkulam.',
+    'Everything costs more this year. Even the salt.',
+    'Did you hear? Kunjan\'s girl passed the SSLC. First in the panchayat to do it.',
+    'Twenty-five naya paisa for that? With the old coins it was four annas, and still too much.',
+    'The post office has a telephone now. One telephone, and a queue from here to Kayamkulam.',
   ],
-  market: ['Karimeen, chemmeen, kakka — the kayal\'s best, an hour out of the water!', 'Plantain, yam, drumstick, ash gourd! Fresh from Kuttanad!', 'Coconuts, ten for an anna. Feel the weight of that one.', 'Pay what it is worth, not what the Company says it is worth.'],
-  square: ['In my day the Diwan walked to the temple like any man. Now they ride in carriages with English horses.', 'The banyan was old when my grandfather was young. It has seen three Rajas and two floods.', 'Mark my words: the Company will want the paddy next, after the pepper.'],
-  hill: ['The Peishkar hears petitions at first light and not a minute after.', 'Tea in the hills, pepper in the foothills, rice in the low country. Travancore feeds half the world\'s kitchens.'],
+  market: ['Karimeen, chemmeen, kakka — the kayal\'s best, an hour out of the water!', 'Plantain, yam, drumstick, ash gourd! Fresh from Kuttanad!', 'Coconuts, ten for sixty naya paisa. Feel the weight of that one.', 'Pay what it is worth, not what the middleman says it is worth.'],
+  square: ['In my day the Maharaja\'s men collected the tax. Now a man with a red flag tells us the land is ours.', 'The banyan was old when my grandfather was young. It has seen Rajas, Diwans and now ministers.', 'Mark my words: the landlords will not give up the paddy without a fight.'],
+  hill: ['The estate workers marched to the Taluk Office for their wages. The manager called the police.', 'Tea in the hills, pepper in the foothills, rice in the low country. Kerala feeds half the country\'s kitchens.'],
 };
 
 export async function buildWorld(scene, progress) {
-  await progress(0.05, 'Surveying the coast of Travancore…');
+  await progress(0.05, 'Surveying the coast of Kerala…');
   initHeights(); initRoads();
   buildTextures();
   await progress(0.2, 'Raising the Western Ghats…');
@@ -177,10 +177,10 @@ export async function buildWorld(scene, progress) {
   // ---- named cast
   const C = W.cast;
   const VM_ = CAST.villagerM, VF_ = CAST.villagerF;
-  C.ammavan = new NPC(scene, 'Raman Ammavan', CAST.ammavan, SPOTS.ammavan.x, SPOTS.ammavan.z, Math.PI, { facePlayer: true, cane: true, title: 'Ammavan', lines: ['The land remembers who tends it, Madhava.', 'Your grandfather planted these vines. I will not be the one to lose them.'] });
-  C.devaki = new NPC(scene, 'Devaki', CAST.devaki, SPOTS.devaki.x, SPOTS.devaki.z, Math.PI, { facePlayer: true, lines: ['Numbers do not lie, chetta. Only the men who write them.', 'I taught myself from the mission school primers. Do not tell Ammavan how many I borrowed.'] });
-  C.ouseph = new NPC(scene, 'Ouseph', CAST.ouseph, SPOTS.ouseph.x, SPOTS.ouseph.z, Math.PI / 2, { facePlayer: true, lines: ['Forty years on this water and she still surprises me.', 'The kayal gives fish to the patient and trouble to the proud.'] });
-  C.moideen = new NPC(scene, 'Moideen Hajji', CAST.moideen, SPOTS.moideen.x, SPOTS.moideen.z, Math.PI / 2, { facePlayer: true, title: 'Moideen Hajji', lines: ['Tellicherry pepper, Alleppey green cardamom. The Arabs sailed here for these before Vasco da Gama was born.', 'An honest scale is the best advertisement.'] });
+  C.ammavan = new NPC(scene, 'Raman Ammavan', CAST.ammavan, SPOTS.ammavan.x, SPOTS.ammavan.z, Math.PI, { facePlayer: true, cane: true, title: 'Ammavan', lines: ['The land remembers who tends it, Madhava. Now the government says it will remember too.', 'I have seen the Maharaja\'s men, the British and now the communists. The rain is the only one that never changes.'] });
+  C.devaki = new NPC(scene, 'Devaki', CAST.devaki, SPOTS.devaki.x, SPOTS.devaki.z, Math.PI, { facePlayer: true, lines: ['Numbers do not lie, chetta. Only the men who write them.', 'I teach the night class at the school. Thirty women, and every one of them can sign her name now.'] });
+  C.ouseph = new NPC(scene, 'Ouseph', CAST.ouseph, SPOTS.ouseph.x, SPOTS.ouseph.z, Math.PI / 2, { facePlayer: true, lines: ['Forty years on this water and she still surprises me. Now they put engines on the boats. Engines!', 'The kayal gives fish to the patient and trouble to the proud.'] });
+  C.moideen = new NPC(scene, 'Moideen Hajji', CAST.moideen, SPOTS.moideen.x, SPOTS.moideen.z, Math.PI / 2, { facePlayer: true, title: 'Moideen Hajji', lines: ['Tellicherry pepper, Alleppey green cardamom. The lorries take it to Cochin now, and the ships take it to the world.', 'An honest scale is the best advertisement. And the new coins make cheating harder.'] });
   C.peishkar = new NPC(scene, 'The Peishkar', CAST.peishkar, SPOTS.peishkar.x, SPOTS.peishkar.z, 0, { y: SPOTS.peishkar.y, facePlayer: true });
   C.finch = new NPC(scene, 'Mr. Finch', CAST.finch, SPOTS.finch.x, SPOTS.finch.z, Math.PI, { facePlayer: true });
   C.finch.setActive(false);
@@ -203,7 +203,7 @@ export async function buildWorld(scene, progress) {
   C.carmichael = new NPC(scene, 'Mr. Carmichael', CAST.carmichael, SPOTS.peishkar.x + 2, SPOTS.peishkar.z, 0, { y: SPOTS.peishkar.y, facePlayer: true, cane: 0.98 }); C.carmichael.setActive(false);
   C.velu = new NPC(scene, 'Velu', CAST.velu, SPOTS.veluCell.x, SPOTS.veluCell.z, 0, { facePlayer: true, lines: ['Every name, every anna. I wrote it down because nobody else would.', 'Kannimala tea is the best in the hills. It deserves a better master.'] }); C.velu.setActive(false);
   const FM = [['Kunjipennu', VF_[2]], ['Pathrose', VM_[2]], ['Alikutty', VM_[3]]];
-  C.farmers = SPOTS.farms.map((f, i) => new NPC(scene, FM[i][0], FM[i][1], f.x, f.z, Math.atan2(-f.x, -f.z), { facePlayer: true, lines: ['The rain is kind this year. The Company was not.', 'Come and eat when the hearing is done, mone.'] }));
+  C.farmers = SPOTS.farms.map((f, i) => new NPC(scene, FM[i][0], FM[i][1], f.x, f.z, Math.atan2(-f.x, -f.z), { facePlayer: true, lines: ['The rain is kind this year. The landlord was not.', 'Come and eat when the hearing is done, mone.'] }));
 
   // ---- villagers
   const VM = CAST.villagerM, VF = CAST.villagerF;
@@ -232,11 +232,11 @@ export async function buildWorld(scene, progress) {
     const keepers = [VM[3], VM[1], VM[4], { ...VM[2], headgear: 'turban', gearColor: 0xeee4c8 }, { ...VM[3], headgear: 'turban', gearColor: 0xe9d9a8 }, VM[0], VF[1], VM[5], VF[2]];
     const buyers = [VF[0], VM[2], VF[3], VM[4], VF[1], VM[6], VF[2], VM[0], VF[0]];
     const say = {
-      provisions: ['Rice, salt, jaggery, coconut oil. Weigh it yourself if you do not trust my scale.', 'Kerosene is dear this month. The Company ships it, the Company sets the price.'],
+      provisions: ['Rice, salt, jaggery, coconut oil. Weigh it yourself if you do not trust my scale.', 'Kerosene is dear this month. The ration card gets you two bottles, the black market the rest.'],
       cloth: ['Mundu from Balaramapuram, double-weave. Kasavu border for a wedding, plain for a working man.', 'Bombay mill cloth is cheap, but it falls apart in one monsoon. Ours will bury you.'],
       vessels: ['Bell-metal from Mannar. Ring it — hear that? That is honest metal.', 'An uruli for the payasam, a kindi for the guest. Every house needs both.'],
       vaidyasala: ['Kurumthotti for the joints, ksheerabala for the nerves. The rains bring the aches out.', 'Sit straight, Madhava. Bombay has put a crook in your back.'],
-      anchal: ['The anchal runner leaves at noon for Quilon. Letters go by his bell, not by the Company\'s post.', 'Two letters for the Company bungalow this week. Thick ones. Sealed.'],
+      anchal: ['The mail bus leaves at noon for Quilon. A telegram reaches Madras before you finish your tea.', 'Postcards are five naya paisa. Write to your mother.'],
       pottery: ['Fired yesterday. Tap it — no cracks. The clay comes from the canal bank.', 'A pot for water, a pot for rice, a pot for the toddy. A house is pots.'],
     };
     const SELLS = { provisions: ['provisions', 'Shop — food for the road'], cloth: ['cloth', 'Shop — clothes'], vaidyasala: ['vaidyasala', 'Shop — medicines'], vessels: ['kollan', 'Blacksmith — blades'] };
@@ -310,7 +310,7 @@ export async function buildWorld(scene, progress) {
   amb('Fisherwoman', CAST.fisherwoman, LOC.hamlet.x - 4, LOC.hamlet.z - 6, 2, { lines: ['The light at Azhimukham has saved more boats than all the prayers in Azhikkal.'], headLoad: true });
   amb('Lighthouse keeper', VM[2], SPOTS.lighthouse.x + 2.5, SPOTS.lighthouse.z + 1, 0.4, { facePlayer: true, lines: ['Steamers for Cochin and Colombo stand off here for the pilot. I count their smoke for the Port Officer.', 'A hundred and eleven steps. I have counted them every evening for nineteen years.'] });
   amb('Toddy-tapper', VM[6], SPOTS.toddy.x - 2.4, SPOTS.toddy.z, 1.6, { pose: 'bench', lines: ['Sweet in the morning, strong by evening. Like most things.', 'Sit. The canal is not going anywhere.'] });
-  amb('Toddy-tapper', VM[0], SPOTS.toddy.x + 2.2, SPOTS.toddy.z, -1.6, { pose: 'bench', lines: ['They say the Company\'s new man came by carriage from Quilon. A carriage! On our roads!'] });
+  amb('Toddy-tapper', VM[0], SPOTS.toddy.x + 2.2, SPOTS.toddy.z, -1.6, { pose: 'bench', lines: ['They say the minister came by car from Trivandrum. A car! On our road! It got stuck at the culvert.'] });
   amb('Pilgrim', VF[3], SPOTS.kavu.x, SPOTS.kavu.z, Math.PI, { pose: 'pray', lines: ['The serpents kept this grove before there was a village. We only borrow the shade.'] });
   amb('Worshipper', VM[5], SPOTS.templeGate.x - 3, SPOTS.templeGate.z - 2.5, -Math.PI / 2, { pose: 'pray', lines: BARKS.priest });
   amb('Old soldier', { ...VM[4], headgear: 'turban', gearColor: 0x7a3a2a }, SPOTS.fort.x + 3, SPOTS.fort.z + 3, 2, { facePlayer: true, lines: ['The Dutch built it, the Raja took it, the rain is finishing it.', 'My grandfather stood on that bastion with a matchlock. Now goats do.'] });

@@ -9,6 +9,7 @@ import { CAST } from './characters.js';
 import { makePickup, fmtMoney } from './story.js';
 import { PLACES } from './places.js';
 import { Shop } from './shop.js';
+import { ERA } from './era.js';
 import { WARDROBE, SLOTS, SLOT_NAME, HAIR, FACE, lookFor } from './wardrobe.js';
 import { ITEMS, BUFF_NAME, useItem, quickUse } from './items.js';
 import { WEAPONS, AMMO } from './weapons.js';
@@ -41,7 +42,7 @@ export function setupActivities(scene, W, amb) {
     [SPOTS.kavu.x + 2, SPOTS.kavu.z + 2], [SPOTS.estateGate.x - 9, SPOTS.estateGate.z + 3], [LOC.tank.x + 14, LOC.tank.z + 15], [SPOTS.cutcherryYard.x - 22, SPOTS.cutcherryYard.z + 4],
     [SPOTS.toddy.x - 5, SPOTS.toddy.z + 3], [SPOTS.hamlet.x - 12, SPOTS.hamlet.z + 14], [SPOTS.pepperYard.x + 24, SPOTS.pepperYard.z - 22], [-30, 402],
   ];
-  W.pages = ps.map(([x, z], i) => {
+  W.pages = (ERA.storyMissions ? ps : []).map(([x, z], i) => {
     const pos = V(x, z);
     const obj = makePickup(scene, pos, 'page');
     const has = () => S() && S().state.pages.includes(i);
@@ -90,7 +91,7 @@ export function setupActivities(scene, W, amb) {
   const FARE = 4;
   A.ferryTo = async (i) => {
     const f = W.ferries[i], st = S();
-    if (!st.canPay(FARE)) { ui().toast('The ferryman wants <b>4 annas</b>. You have not got it.', 4); return; }
+    if (!st.canPay(FARE)) { ui().toast(`The ferryman wants <b>${fmtMoney(FARE)}</b>. You have not got it.`, 4); return; }
     st.addMoney(-FARE);
     p().locked = true;
     await ui().fade(1, 0.7);
@@ -100,7 +101,7 @@ export function setupActivities(scene, W, amb) {
     p().locked = false;
     ui().toast(`The ferry sets you down at <b>${f.name}</b>.`, 4);
   };
-  const ferryman = (name, x, z, yaw, idx) => amb(name, CAST.villagerM[6], x, z, yaw, { facePlayer: true, talkLabel: 'Take the ferry (4 annas)', talkCond: () => free() && S().state.done >= 1, onTalk: () => G.mapUI.open({ ferry: true, from: idx }) });
+  const ferryman = (name, x, z, yaw, idx) => amb(name, CAST.villagerM[6], x, z, yaw, { facePlayer: true, talkLabel: `Take the ferry (${fmtMoney(FARE)})`, talkCond: () => free() && S().state.done >= 1, onTalk: () => G.mapUI.open({ ferry: true, from: idx }) });
   ferryman('Ferryman', SPOTS.arrive.x + 6, SPOTS.arrive.z + 1.0, -Math.PI / 2, 0);
   ferryman('Ferryman', SPOTS.portLanding.x + 1.3, SPOTS.portLanding.z - 9, 0, 1);
   ferryman('Ferryman', SPOTS.hamletJettyEnd.x - 9, 150.9, Math.PI / 2, 2);
@@ -136,7 +137,7 @@ export function setupActivities(scene, W, amb) {
   })) });
   const restore = () => S().dress();
   // weapons: bought once, then equipped from the wheel (Tab) or here
-  const NEED = { 4: 'after the race at Champakulam', 5: 'once you have stood against the Company in the open' };
+  const NEED = { 4: 'later', 5: 'later' };
   const weaponTab = (name, at) => ({ name, items: () => Object.entries(WEAPONS).filter(([, w]) => w.at === at).map(([k, w]) => {
     const own = () => st().weapons.includes(k), cur = () => p().weapon === k, early = () => w.need && st().done < w.need;
     return {
@@ -168,15 +169,15 @@ export function setupActivities(scene, W, amb) {
   }) });
   const KEEPER_SAYS = {
     cloth: ['Feel that weave. Your grandfather wore our cloth.', 'Try it on, try it on. The mirror is free.'],
-    tailor: ['Every stitch by hand, sahib or no sahib.', 'A Bombay man should dress like a Bombay man.'],
+    tailor: ['Every stitch by hand, on a Singer machine from Madras.', 'A Bombay man should dress like a Bombay man.'],
     provisions: ['Weigh it yourself if you like.', 'Fresh this morning from the Kuttanad boats.'],
     vaidyasala: ['Bitter medicine, sweet health.', 'For the body that fights, the oil that the kalari masters use.'],
-    tea: ['Eat. A man cannot fight the Company on an empty stomach.'],
+    tea: ['Eat. A man cannot argue politics on an empty stomach.'],
     market: ['Take two, they are small this week.'],
     kollan: ['Feel the balance. My grandfather forged for the Raja\'s Nair brigade.', 'Iron is honest. It does what the hand asks.'],
     kalari: ['A weapon is the last thing a kalari teaches, not the first.', 'Oil the body, then the blade.'],
     gun: ['You did not buy this from me.', 'Keep it wrapped. The peons have eyes.'],
-    barber: ['Sit, sit. Head still — this razor came from Sheffield.', 'Bombay barbers! They cut hair like they cut cloth. Let me fix it.', 'You know what the Peishkar\'s clerk told me in this chair? Never mind. Head still.'],
+    barber: ['Sit, sit. Head still — this razor came from Sheffield.', 'Bombay barbers! They cut hair like they cut cloth. Let me fix it.', 'You know what the Tahsildar\'s clerk told me in this chair? Never mind. Head still.'],
   };
   A.shop = (kind, n) => {
     if (!S() || S().busy || G.activity || p().mode !== 'foot') return;

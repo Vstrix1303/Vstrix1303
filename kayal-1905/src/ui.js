@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { G } from './state.js';
 import { clamp } from './util.js';
 import { speak, hush } from './voice.js';
+import { fmtMoney } from './money.js';
 
 const $ = (id) => document.getElementById(id);
 // what Madhavan has in hand (drawn for this game)
@@ -72,7 +73,7 @@ export class UI {
   hurt() { this.hurtV = 1; }
   setMoney(text, delta) {
     this.el.money.textContent = text;
-    if (delta) { this.el.moneyDelta.textContent = (delta > 0 ? '+ ' : '− ') + (Math.abs(delta) >= 16 ? 'Rs ' + Math.floor(Math.abs(delta) / 16) + (Math.abs(delta) % 16 ? ' · ' + (Math.abs(delta) % 16) + ' as' : '') : Math.abs(delta) + ' as'); this.el.moneyDelta.className = delta > 0 ? 'on' : 'on neg'; this.moneyT = 3; }
+    if (delta) { this.el.moneyDelta.textContent = (delta > 0 ? '+ ' : '− ') + fmtMoney(Math.abs(delta)); this.el.moneyDelta.className = delta > 0 ? 'on' : 'on neg'; this.moneyT = 3; }
   }
   setTimer(text) { this.el.timer.textContent = text || ''; this.el.timer.classList.toggle('on', !!text); }
   setMeter(label, frac, good) {

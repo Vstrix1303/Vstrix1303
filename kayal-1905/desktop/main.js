@@ -1,4 +1,4 @@
-// Kayal 1905 — the desktop shell. Opens the game in its own window
+// Kayal 1957 — the desktop shell. Opens the game in its own window
 // (fullscreen by default), on the fast GPU, with saves kept on this computer.
 const { app, BrowserWindow, ipcMain, Menu, shell, session, protocol, net } = require('electron');
 const path = require('path');
@@ -29,7 +29,7 @@ function createWindow() {
     width: 1600, height: 900, minWidth: 960, minHeight: 540,
     fullscreen: settings.fullscreen !== false,
     backgroundColor: '#000000', show: false, autoHideMenuBar: true,
-    title: 'Kayal — Travancore, 1905',
+    title: 'Kayal — Kerala, 1957',
     icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

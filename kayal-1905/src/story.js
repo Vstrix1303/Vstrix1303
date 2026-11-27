@@ -11,20 +11,18 @@ import { NPC } from './npc.js';
 import { TEX } from './textures.js';
 import { MISSIONS } from './missions.js';
 import { Director } from './director.js';
+import { ERA } from './era.js';
 import { lookFor, DEFAULT_WEAR, FREE_PIECES, OLD_OUTFITS, WARDROBE, HAIR, FACE } from './wardrobe.js';
 
 export const CANCEL = Symbol('cancel');
-const SAVE_KEY = 'kayal1905.save.v2';
+const SAVE_KEY = ERA.saveKey;
 export { MISSIONS };
 
 export function loadSave() {
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && typeof s.done === 'number' ? s : null; } catch (e) { return null; }
 }
-export function fmtMoney(a) {
-  const r = Math.floor(a / 16), an = a % 16;
-  if (!r && an) return `${an} as`;
-  return `Rs ${r}` + (an ? ` · ${an} as` : '');
-}
+export { fmtMoney } from './money.js';
+import { fmtMoney } from './money.js';
 const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], wear: { ...DEFAULT_WEAR }, owned: [...FREE_PIECES], hair: 'bun', face: 'meesha', items: {}, weapons: ['staff'], weapon: 'staff', fish: 0, jobs: 0, wins: 0 });
 // saves from before the wardrobe: whole outfits become the pieces they were made of
 function migrate(st) {
@@ -112,7 +110,9 @@ export class Story {
   canPay(a) { return this.state.annas >= a; }
 
   dress() { G.player.setLook(lookFor(this.state)); G.player.setWeapon?.(this.state.weapon); }
-  newGame() { this.state = freshState(); this.dress(); this.save(); G.ui.setMoney(fmtMoney(0)); this.startMission(0); }
+  newGame() {
+    if (!ERA.storyMissions) { this.state = freshState(); this.state.done = MISSIONS.length; this.dress(); this.save(); G.ui.setMoney(fmtMoney(0)); this.enterFree({ fresh: true, intro: true }); return; }
+    this.state = freshState(); this.dress(); this.save(); G.ui.setMoney(fmtMoney(0)); this.startMission(0); }
   continueGame(s) { const fresh = freshState(); this.state = migrate({ ...fresh, ...s, owned: [...fresh.owned, ...((s && s.owned) || [])], wear: s && s.wear ? { ...s.wear } : (s && s.outfits ? undefined : { ...fresh.wear }) }); G.ui.setMoney(fmtMoney(this.state.annas)); this.dress(); this.enterFree({ fresh: true }); }
 
   cancel() {
@@ -152,6 +152,10 @@ export class Story {
     W.horse.usable = d >= 4;
     W.horse.call = false;
     G.fx.fireHeat = 0;
+    if (!ERA.storyMissions) {
+      for (const k of ['finch', 'harrow', 'dacre', 'carmichael', 'peishkar', 'velu']) C[k]?.setActive(false);
+      for (const g of [...(C.guards || []), ...(C.estateGuards || [])]) g.setActive(false);
+    }
   }
 
   // ---------------------------------------------------------------- free roam
@@ -171,6 +175,11 @@ export class Story {
           W.boat.pos.set(SPOTS.villageBoat.x, 0, SPOTS.villageBoat.z); W.boat.yaw = -Math.PI / 2; W.boat.speed = 0;
           await A.wait(0.3);
           await A.fade(0, 1.5);
+          if (o.intro) {
+            await A.card('KERALA  ·  APRIL 1957', 'KAYAL', 'കായൽ', 5);
+            await A.narrate('Kerala is a year old, and has just voted in a communist government: among the first anywhere to take power through the ballot box.', 7);
+            await A.narrate('In Thekkumkara the talk is of land, of rice, and of the new naya paisa.', 5);
+          }
         }
         this.tag = 'FREE ROAM';
         const i = this.state.done, def = MISSIONS[i];
@@ -185,10 +194,10 @@ export class Story {
           it.dispose = () => { const k = G.interactables.indexOf(it); if (k >= 0) G.interactables.splice(k, 1); };
           G.interactables.push(it); this.temps.push(it);
         } else {
-          ui.setObjective('FREE ROAM', 'Travancore is yours to wander — by horse, by vallam, or on foot');
+          ui.setObjective('FREE ROAM', `${ERA.region}, ${ERA.year}: yours to wander, on foot or by vallam`);
           ui.setMarker(null);
         }
-        if (o.fresh) A.toast('<b>M</b> map &nbsp;·&nbsp; <b>X</b> whistle for your horse &nbsp;·&nbsp; <b>P</b> photo mode', 9);
+        if (o.fresh) A.toast('<b>M</b> map &nbsp;·&nbsp; <b>I</b> satchel &nbsp;·&nbsp; <b>Tab</b> weapons &nbsp;·&nbsp; <b>P</b> photo mode', 9);
         let t = 150 + Math.random() * 150;
         await A.until((dt) => {
           t -= dt;

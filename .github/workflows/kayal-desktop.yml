@@ -35,7 +35,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - uses: actions/upload-artifact@v4
         with:
-          name: Kayal-1905-windows
+          name: Kayal-1957-windows
           path: |
             kayal-1905/desktop/dist/*.exe
             kayal-1905/desktop/dist/*.zip

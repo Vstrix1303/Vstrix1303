@@ -46,8 +46,8 @@ const SAY = {
   cart: ['Aside, aside! The oxen have no brakes!', 'Madhava, you will be flat as an appam. Move!', 'Hoy! This load is for the Alleppey boat, and the boat will not wait.'],
   jutka: ['Make way! Make way for the jutka!', 'Stand clear, the mare is nervous!'],
   rider: ['Out of the road, man!', 'Mind yourself!'],
-  walker: ['Namaskaram, Madhava.', 'Back from Bombay, and still walking? Buy a horse.', 'They say the bazaar has Balaramapuram cloth this week.', 'Rain before evening. My knee says so.', 'Going far?', 'Is it true about the Company and the pepper lands?'],
-  scare: ['Aiyo! Is this a road or a racecourse?', 'Slow down! There are children on this road!', 'Ente Deivame — he rides like the Company owns him!'],
+  walker: ['Namaskaram, Madhava.', 'Back from Bombay, and still walking? Buy a bicycle.', 'They say the bazaar has Balaramapuram cloth this week.', 'Rain before evening. My knee says so.', 'Going far?', 'Is it true about the Company and the pepper lands?'],
+  scare: ['Aiyo! Is this a road or a racecourse?', 'Slow down! There are children on this road!', 'Ente Deivame — he rides like the road is his!'],
 };
 let barkT = 0;
 const bark = (name, set, preset) => { if (barkT > 0 || G.story?.busy || G.ui.subResolve) return; barkT = 9; G.ui.bark(name, SAY[set][(Math.random() * SAY[set].length) | 0], 3.6, preset); };
@@ -253,7 +253,7 @@ export function setupTraffic(scene, W, mats) {
       crew: [[-0.18, 0.34, 0.5, { ...VM[3], headgear: 'turban', gearColor: 0xd8c8a0 }], [0.14, 0.34, -0.5, { ...CAST.villagerM[5], headgear: 'turban', gearColor: 0xeee4c8, shoulderCloth: 0xe6dfcb }]] }));
   }
   const riders = [{ ...VM[5], headgear: 'turban', gearColor: 0x8a2a20 }, { ...CAST.guard }];
-  for (let i = 0; i < n[2]; i++) list.push(new Horseman(scene, { name: i ? 'Company peon' : 'Rider', roads: WIDE, speed: 3.1 + i * 0.5, half: 0.6, reach: 6, lane: 0.2, turn: [3, 4], look: riders[i % 2], coat: i ? 0x2a1d16 : 0x7a5434, dark: 0x120c08, far: 180 }));
+  for (let i = 0; i < n[2]; i++) list.push(new Horseman(scene, { name: i ? 'Police constable' : 'Rider', roads: WIDE, speed: 3.1 + i * 0.5, half: 0.6, reach: 6, lane: 0.2, turn: [3, 4], look: riders[i % 2], coat: i ? 0x2a1d16 : 0x7a5434, dark: 0x120c08, far: 180 }));
   for (let i = 0; i < n[3]; i++) {
     const fem = i % 3 === 1, look = fem ? VF[(i >> 1) % VF.length] : { ...VM[(i * 2 + 1) % VM.length], skin: SKIN[(i * 5) % SKIN.length] };
     list.push(new Walker(scene, { name: fem ? 'Village woman' : 'Villager', roads: ANY, speed: 1.2 + (i % 4) * 0.08, half: 0.35, reach: 1.5, lane: 0.42, turn: [2, 5], look, headLoad: i % 3 !== 0 }));

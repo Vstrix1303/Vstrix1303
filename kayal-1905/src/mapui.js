@@ -1,3 +1,4 @@
+import { ERA } from './era.js';
 // The survey map (press M): pan, zoom, set a waypoint, take a ferry.
 import { G } from './state.js';
 import { PLACES } from './places.js';
@@ -53,15 +54,15 @@ export class MapUI {
   fillSide() {
     const S = G.story, st = S.state;
     const nx = MISSIONS[st.done];
-    const act = st.done < 4 ? 'Act I — The Red Ledger' : st.done < 9 ? 'Act II — The House of Harrow' : 'The story is told';
+    const act = !ERA.storyMissions ? `${ERA.region} · ${ERA.year}` : st.done < 4 ? 'Act I — The Red Ledger' : st.done < 9 ? 'Act II — The House of Harrow' : 'The story is told';
     const row = (a, b) => `<div class="mrow"><span>${a}</span><b>${b}</b></div>`;
     const places = PLACES.filter((p) => p.r).length;
     this.side.innerHTML = this.mode === 'ferry'
-      ? `<h3>The Ferry</h3><p>Choose a jetty marked <i class="k f">⚓</i> on the map. The fare is <b>4 annas</b>.</p><p class="dim">Esc — stay here</p>`
+      ? `<h3>The Ferry</h3><p>Choose a jetty marked <i class="k f">⚓</i> on the map. The fare is <b>25 naya paisa</b>.</p><p class="dim">Esc — stay here</p>`
       : `<h3>${act}</h3>
          <p>${S.mode === 'mission' ? `<b>${MISSIONS[S.mi].name}</b><br>${G.ui.el.objText.textContent}` : nx ? `Next: <b>${nx.name}</b><br><span class="dim">${nx.where}</span>` : 'Free roam.'}</p>
          <div class="msep"></div>
-         ${row('Purse', fmtMoney(st.annas))}${row('Missions', `${st.done} / ${MISSIONS.length}`)}${row('Places found', `${st.places.length} / ${places}`)}${row('Ledger pages', `${st.pages.length} / 12`)}${row('Fish landed', st.fish)}${row('Cargo runs', st.jobs)}
+         ${row('Purse', fmtMoney(st.annas))}${ERA.storyMissions ? row('Missions', `${st.done} / ${MISSIONS.length}`) : ''}${row('Places found', `${st.places.length} / ${places}`)}${ERA.storyMissions ? row('Ledger pages', `${st.pages.length} / 12`) : ''}${row('Fish landed', st.fish)}${row('Cargo runs', st.jobs)}
          <div class="msep"></div>
          <div class="leg"><i class="k m">R</i> mission &nbsp; <i class="k f">⚓</i> ferry &nbsp; <i class="k b"></i> vallam<br><i class="k h"></i> Sultan &nbsp; <i class="k s">≈</i> fishing &nbsp; <i class="k w"></i> waypoint</div>
          <p class="dim">Click the map to set a waypoint · wheel to zoom · drag to pan · <b>M</b> / Esc to close</p>`;
@@ -137,7 +138,7 @@ export class MapUI {
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(226,210,164,0.86)'; ctx.fillRect(16, 14, 318, 58); ctx.strokeStyle = 'rgba(60,40,20,0.7)'; ctx.lineWidth = 1; ctx.strokeRect(16.5, 14.5, 318, 58); ctx.strokeRect(20.5, 18.5, 310, 50);
     ctx.fillStyle = '#2c1a0a'; ctx.font = 'bold 15px Georgia'; ctx.fillText('A SURVEY OF THE KAYAL COUNTRY', 32, 36);
-    ctx.font = 'italic 12px Georgia'; ctx.fillText('Travancore · surveyed in the monsoon of 1905', 32, 56);
+    ctx.font = 'italic 12px Georgia'; ctx.fillText('Kerala · surveyed in the monsoon of 1957', 32, 56);
     const cx = 62, cy = h - 70;
     ctx.strokeStyle = '#2c1a0a'; ctx.fillStyle = '#2c1a0a'; ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.arc(cx, cy, 26, 0, 7); ctx.stroke();

@@ -369,14 +369,14 @@ export function buildTextures() {
   {
     const [c, g] = mk(1024, 1024);
     const SG = [
-      ['MOIDEEN & SONS', 'SPICES · PEPPER · GINGER', '#e8dcb8', '#3a1c10'], ['HARROW & FINCH', 'TRADING COMPANY · MADRAS', '#1e2c26', '#e6d9a8'],
+      ['MOIDEEN & SONS', 'SPICES · PEPPER · GINGER', '#e8dcb8', '#3a1c10'], ['COIR WORKERS', 'CO-OPERATIVE SOCIETY · PUTHENTHURA', '#7a1c18', '#f0e2b8'],
       ['ചായക്കട', 'TEA & TIFFIN', '#7a1f18', '#f2e6c0'], ['കള്ള് ഷാപ്പ്', 'TODDY', '#e8dcb8', '#1a1a1a'],
       ['തയ്യൽക്കട', 'TAILOR & DRAPER', '#2a3c5a', '#f0e4c0'], ['PUTHENTHURA', 'JETTY  ·  FERRY', '#e8dcb8', '#1c2c4c'],
-      ['KANNIMALA', 'TEA ESTATE · H. & F. Co.', '#243a2a', '#e8dca8'], ['CUTCHERRY', 'HUZUR · TRAVANCORE', '#e8dcb8', '#3a1c10'],
+      ['KANNIMALA', 'TEA ESTATE', '#243a2a', '#e8dca8'], ['TALUK OFFICE', 'GOVERNMENT OF KERALA', '#e8dcb8', '#3a1c10'],
       ['പലചരക്ക്', 'PROVISIONS · RICE · OIL · JAGGERY', '#5a2a14', '#f0dcb0'], ['തുണിക്കട', 'CLOTH · MUNDU · KASAVU', '#e8dcb8', '#5a1a2a'],
       ['പാത്രക്കട', 'BRASS & COPPER VESSELS', '#2a2418', '#e8c870'], ['വൈദ്യശാല', 'AYURVEDA · VAIDYAN', '#e4dcc0', '#1e4a2a'],
-      ['അഞ്ചൽ', 'ANCHAL OFFICE · TRAVANCORE', '#8a1c18', '#f2e2b8'], ['മൺപാത്രം', 'POTTERY · KUSAVAN', '#c8a070', '#3a1a0c'],
-      ['ചന്ത', 'MARKET · THEKKUMKARA', '#e8dcb8', '#2a3a1c'], ['പള്ളിക്കൂടം', 'VILLAGE SCHOOL · ASAN', '#1c2a3a', '#ece0b8'],
+      ['തപാൽ', 'POST & TELEGRAPH OFFICE', '#8a1c18', '#f2e2b8'], ['മൺപാത്രം', 'POTTERY · KUSAVAN', '#c8a070', '#3a1a0c'],
+      ['ചന്ത', 'MARKET · THEKKUMKARA', '#e8dcb8', '#2a3a1c'], ['പള്ളിക്കൂടം', 'GOVT. LOWER PRIMARY SCHOOL', '#1c2a3a', '#ece0b8'],
     ];
     SG.forEach(([a, b, bg, fg], i) => {
       const x = (i % 2) * 512, y = Math.floor(i / 2) * 128;
