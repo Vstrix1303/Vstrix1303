@@ -737,20 +737,26 @@ export const CAST = {
   ],
   rival: { skin: SKIN[1], mundu: 0x2c3a52, shirt: 0x8a8272, sleeves: false, moustache: true, headgear: 'thorthu', gearColor: 0x1c2c4c },
   villagerM: [
-    { skin: SKIN[0], mundu: 0xe6dfcb, moustache: true, pendant: true },
+    { skin: SKIN[0], mundu: 0xe6dfcb, shirt: 0xeeeae0, moustache: true, pendant: true },
     { skin: SKIN[3], mundu: 0xb8b09a, lungi: 0x6a3a2a, headgear: 'thorthu', dirty: true },
     { skin: SKIN[1], mundu: 0xe9e2cf, munduLong: true, knot: true, moustache: 'big', shoulderCloth: 0xe6dfcb, age: true, grey: true },
     { skin: SKIN[4], mundu: 0xdcd6c2, lungi: 0x35506a, munduLong: true, shirt: 0xe6e0d0, style: 'kurta', headgear: 'cap', beard: true, sandals: true },
-    { skin: SKIN[2], mundu: 0x35506a, lungi: 0x1c2c3c, grey: true, beard: true, age: true, receding: true },
-    { skin: SKIN[5], mundu: 0xe2dac4, shirt: 0xcfc8b4, moustache: true, munduLong: true },
+    { skin: SKIN[2], mundu: 0x35506a, lungi: 0x1c2c3c, grey: true, beard: true, age: true, receding: true, shirt: 0xd8d2c0 },
+    { skin: SKIN[5], mundu: 0xe2dac4, shirt: 0x8a9a7a, moustache: true, munduLong: true },
     { skin: SKIN[1], mundu: 0xd9d2bd, beard: 'stubble', headgear: 'thorthu', gearColor: 0x4a6a4a, dirty: true },
+    { skin: SKIN[2], trousers: 0xe8e4d8, shirt: 0xf0ece0, moustache: true, sandals: true },
+    { skin: SKIN[0], mundu: 0xe6dfcb, munduLong: true, shirt: 0x8a4a3a, moustache: true },
+    { skin: SKIN[4], trousers: 0x3a3a40, shirt: 0xe4e6ee, sandals: true },
   ],
   villagerF: [
-    { female: true, skin: SKIN[2], mundu: 0xefe9d8, munduLong: true, kasavu: true, shirt: 0x2f5a4a, style: 'blouse', bun: true, mark: 'pottu', bangles: true, earrings: true, scale: 0.92 },
-    { female: true, skin: SKIN[0], mundu: 0xe9e1cc, munduLong: true, shirt: 0x7a3a5a, style: 'blouse', braid: true, flowers: true, mark: 'pottu', bangles: true, scale: 0.9 },
+    { female: true, skin: SKIN[2], mundu: 0xefe9d8, munduLong: true, kasavu: true, shirt: 0x2f5a4a, style: 'blouse', neriyathu: 0xefe9d8, bun: true, mark: 'pottu', bangles: true, earrings: true, scale: 0.92 },
+    { female: true, skin: SKIN[0], mundu: 0x7a3a5a, munduLong: true, shirt: 0xd8a8a0, style: 'blouse', neriyathu: 0x7a3a5a, braid: true, flowers: true, mark: 'pottu', bangles: true, scale: 0.9 },
     { female: true, skin: SKIN[4], mundu: 0xe5ddc8, munduLong: true, kasavu: true, shirt: 0xb0862a, style: 'blouse', bun: true, earrings: true, necklace: true, age: true, grey: true, scale: 0.9 },
     { female: true, skin: SKIN[5], mundu: 0xf0e8d4, munduLong: true, shirt: 0x3a4a7a, style: 'blouse', neriyathu: 0xe8dcc0, bun: true, bangles: true, scale: 0.93 },
+    { female: true, skin: SKIN[1], mundu: 0x2a5a8a, munduLong: true, shirt: 0xe8dcc0, style: 'blouse', neriyathu: 0x2a5a8a, braid: true, mark: 'pottu', earrings: true, scale: 0.91 },
   ],
+  // the Kerala police of the fifties: khaki shirt and shorts, puttees, a peaked cap, a lathi
+  police: { skin: SKIN[1], shirt: 0x8a7d5a, style: 'uniform', trousers: 0x8a7d5a, shorts: true, puttees: 0x6a5e44, boots: 0x2a1c10, moustache: 'big', headgear: 'cap', gearColor: 0x8a2a20, stern: true },
   // Madhavan's wardrobe, after the outfit sheet (the tailor in Puthenthura sells the rest)
   outfits: {
     everyday: { name: 'Everyday', price: 0, look: { skin: SKIN[0], mundu: 0xe9e0c8, munduLong: true, knot: true, moustache: true, bun: true, pendant: true, muscle: true, shoulderCloth: 0xe4dac0 } },

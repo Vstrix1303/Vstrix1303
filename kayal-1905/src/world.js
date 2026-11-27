@@ -11,7 +11,7 @@ import { Water } from './water.js';
 import { buildFlora } from './flora.js';
 import { NPC } from './npc.js';
 import { Horse, Boat } from './entities.js';
-import { CAST, Quadruped, Elephant, Bird, makeVallam, makeKettuvallam, SKIN } from './characters.js';
+import { CAST, Quadruped, Elephant, Bird, makeVallam, makeKettuvallam, SKIN, makeStick } from './characters.js';
 import { makeRng, TAU, damp, angleDamp } from './util.js';
 import { groundAt, interiorAt, pointInBox } from './physics.js';
 import { Ride } from './vehicles.js';
@@ -307,6 +307,14 @@ export async function buildWorld(scene, progress) {
   amb('Villager', VF[1], 10, 3, 1, { umbrella: true, headLoad: true, route: [new THREE.Vector3(36, 0, -4.4), new THREE.Vector3(10, 0, 2.6), new THREE.Vector3(-24, 0, 12), new THREE.Vector3(-58, 0, 19), new THREE.Vector3(-24, 0, 12), new THREE.Vector3(10, 0, 2.6)], speed: 1.2, lines: BARKS.bazaar });
   // ---- carts, riders, walkers and boats on every road
   setupTraffic(scene, W, st.mats);
+  // ---- the police: one at the bus stand, one walking the bazaar, lathis in hand
+  {
+    const POL = ['Move along now. The bus will come when it comes.', 'Elections or no elections, there will be order in this bazaar.', 'Your papers? No, no — I am only joking. Go on.'];
+    const cop = (x, z, yaw, o) => { const n = amb('Police constable', CAST.police, x, z, yaw, { facePlayer: true, lines: POL, ...o }); n.h.hold(makeStick(1.15, 0x4a3018)); n.h.grip = true; return n; };
+    const bs = SPOTS.busStand;
+    if (bs) cop(bs.x + Math.cos(SPOTS.busStandRy) * 4, bs.z - Math.sin(SPOTS.busStandRy) * 4, SPOTS.busStandRy + Math.PI);
+    cop(-30, 8, 1.4, { route: [new THREE.Vector3(-44, 0, 12.4), new THREE.Vector3(-10, 0, 6.4), new THREE.Vector3(16, 0, 1.4), new THREE.Vector3(-10, 0, 6.4)], speed: 1.1 });
+  }
   amb('Priest', CAST.priest, SPOTS.templeGate.x, SPOTS.templeGate.z + 2, Math.PI / 2, { facePlayer: true, lines: BARKS.priest });
   for (let i = 0; i < 6; i++) {
     const x = -100 + i * 34 + rng() * 10, z = 250 + rng() * 60 + (i % 2) * 70;

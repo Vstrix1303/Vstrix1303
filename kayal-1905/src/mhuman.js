@@ -272,7 +272,7 @@ vec3 clothe(out float rough, out float metal) {
   }
   // legs: trousers, mundu underneath its cloth, boots, puttees
   bool belowWaist = y < waistY + 0.02 && (leg || torso);
-  if (uF2.x > 0.5 && belowWaist && y > ankleY - 0.04 && !(torso && y > waistY + 0.02)) { wear = 1.0; cc = uTrou * (0.92 + 0.08 * vn(vec2(p.x * 40.0, y * 8.0))); cr = 0.9; }
+  if (uF2.x > 0.5 && belowWaist && y > (uF2.x > 1.5 ? kneeY + 0.04 : ankleY - 0.04) && !(torso && y > waistY + 0.02)) { /* uF2.x 2 = shorts, to the knee */ wear = 1.0; cc = uTrou * (0.92 + 0.08 * vn(vec2(p.x * 40.0, y * 8.0))); cr = 0.9; }
   if (uF6.y > 0.5 && belowWaist && !leg && y > (uF1.w > 0.5 ? ankleY + 0.02 : kneeY + 0.03)) { wear = 1.0; cc = uMundu; cr = 0.92;
     if (uF3.x > 0.5) { vec2 q = fract(vec2(atan(p.x, p.z) * 4.0, y * 18.0)); if (q.x < 0.33 || q.y < 0.33) cc = mix(cc, uLungi, 0.6); } }
   if (uF2.z > 0.5 && leg && y < kneeY - 0.02 && y > ankleY - 0.01) { wear = 1.0; cc = uPut * (0.9 + 0.1 * step(0.5, fract(y * 40.0 + p.x * 15.0))); cr = 0.95; }
@@ -309,7 +309,7 @@ export function clothingMaterial(o, d) {
     uPut: { value: col(o.puttees) }, uScloth: { value: col(o.shoulderCloth, 0xefe8d4) }, uNeri: { value: col(o.neriyathu, 0xefe8d4) }, uBag: { value: col(o.bag) },
     uHair: { value: col(o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e)) }, uLip: { value: o.female ? new THREE.Color(0.78, 0.48, 0.47) : new THREE.Color(0.72, 0.52, 0.5) },
     uF1: { value: new THREE.Vector4(o.shirt != null ? 1 : 0, STYLE[o.style] || 0, sleeve, o.munduLong ? 1 : 0) },
-    uF2: { value: new THREE.Vector4(o.trousers != null ? 1 : 0, o.boots != null ? (o.tallBoots ? 2 : 1) : 0, o.puttees != null ? 1 : 0, o.kasavu ? 1 : 0) },
+    uF2: { value: new THREE.Vector4(o.trousers != null ? (o.shorts ? 2 : 1) : 0, o.boots != null ? (o.tallBoots ? 2 : 1) : 0, o.puttees != null ? 1 : 0, o.kasavu ? 1 : 0) },
     uF3: { value: new THREE.Vector4(o.lungi != null ? 1 : 0, o.shoulderCloth != null ? 1 : 0, o.thread ? 1 : 0, o.pendant ? 1 : 0) },
     uF4: { value: new THREE.Vector4(o.moustache === 'big' ? 2 : o.moustache ? 1 : 0, o.beard === 'stubble' ? 1 : o.beard ? 2 : 0, { chandanam: 1, pottu: 2, bhasmam: 3 }[o.mark] || 0, o.bangles ? 1 : 0) },
     uF5: { value: new THREE.Vector4(o.dirty ? 1 : 0, o.sandals ? 1 : 0, o.rosary ? 1 : 0, o.bag != null && o.shirt != null ? 1 : 0) },

@@ -23,7 +23,7 @@ export function loadSave() {
 }
 export { fmtMoney } from './money.js';
 import { fmtMoney } from './money.js';
-const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], wear: { ...DEFAULT_WEAR }, owned: [...FREE_PIECES], hair: 'bun', face: 'meesha', items: {}, weapons: ['staff'], weapon: 'staff', fish: 0, jobs: 0, wins: 0 });
+const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], wear: { ...DEFAULT_WEAR }, owned: [...FREE_PIECES], hair: 'crop', face: 'meesha', items: {}, weapons: ['staff'], weapon: 'staff', fish: 0, jobs: 0, wins: 0 });
 // saves from before the wardrobe: whole outfits become the pieces they were made of
 function migrate(st) {
   if (st.outfits && !st.wear) {
@@ -33,7 +33,7 @@ function migrate(st) {
   delete st.outfits; delete st.outfit;
   st.owned = [...new Set([...FREE_PIECES, ...(st.owned || [])])];
   for (const sl in DEFAULT_WEAR) if (!WARDROBE[sl][st.wear[sl]]) st.wear[sl] = DEFAULT_WEAR[sl];
-  if (!HAIR[st.hair]) st.hair = 'bun';
+  if (!HAIR[st.hair]) st.hair = 'crop';
   if (!FACE[st.face]) st.face = 'meesha';
   st.items = st.items || {};
   st.weapons = [...new Set(['staff', ...(st.weapons || [])])];

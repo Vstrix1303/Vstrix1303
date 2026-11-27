@@ -11,6 +11,36 @@ partner when he comes from Madras to undo it.
 It is a browser game: **one self-contained file, no installs, no downloads, no image or audio assets** —
 every texture, model, animation, sound effect and note of music is generated procedurally at load time.
 
+
+> **Now set in Kerala, 1957.** The game has moved fifty years on. The 1905 game, with its nine missions,
+> is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
+
+## Kerala, 1957 (version 12)
+
+- **The time:** April 1957. Kerala is a year old and has just voted in a communist government, one of the first anywhere to
+  come to power through the ballot box. Land reform is the talk of every tea shop, and the decimal naya paisa
+  has just replaced the anna (money is shown in rupees and naye paise).
+- **The village:**
+  - Electric poles and wires along the roads, with street bulbs.
+  - A bus stand with a timetable.
+  - Lakshmi Talkies, a tent cinema with posters for 1950s Malayalam films.
+  - A ration shop, a reading room and the panchayat office.
+  - It's election season: the C.P.I. and Congress offices fly their flags, slogans are painted on walls,
+    and bunting is strung across the bazaar.
+  - The 1905 colonial cast is gone. The trading company's compound is now the coir workers' co-operative, and
+    the royal court building is the Taluk Office.
+- **Vehicles:**
+  - In traffic: state transport buses (they stop at the bus stand), lorries, a jeep, saloon cars, cyclists everywhere, and a
+    passenger launch on the canal. Bullock carts are still on the road.
+  - Yours to use: a **bicycle** outside the tharavadu gate and the **panchayat's jeep** by its office. E gets on or
+    off, WASD steers relative to the camera, holding the jeep's opposite direction reverses it, and
+    left-click or F sounds the horn or the bell.
+- **People:**
+  - Madhavan now wears a short crop and a half-sleeve shirt over his mundu.
+  - Villagers wear shirts, trousers and bush shirts, and women wear saris alongside the set-mundu.
+  - Police wear khaki shirts, shorts and puttees, with a lathi.
+  - The wardrobe adds trousers, bush shirts, a vest and a Gandhi cap.
+
 ## Play
 
 1. Open **`index.html`** in a recent desktop browser (Chrome, Edge, Firefox, Safari 17+).
