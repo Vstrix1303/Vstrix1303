@@ -51,7 +51,7 @@ function baseMaterials(std) {
   };
 }
 
-const TILE = 150;
+const TILE = 150, STILE = 50, SMALL = 1.25;
 export class Builder {
   constructor() {
     this.g = {};
@@ -61,7 +61,12 @@ export class Builder {
   }
   // geometry is merged per material *per 150 m tile*, so whatever is off-screen or outside the
   // shadow camera is skipped instead of the whole world being drawn every pass
-  gb(mat) { const k = mat + '@' + Math.floor(this.ox / TILE) + ',' + Math.floor(this.oz / TILE); return this.g[k] || (this.g[k] = new GB()); }
+  // geometry is merged per material per tile; small things (props, furniture, trim under ~1.25 m) go into
+  // their own finer tiles, which are switched off beyond a short distance (see finish / structures.js)
+  gb(mat, small = false) {
+    const T = small ? STILE : TILE, k = mat + (small ? '~s' : '') + '@' + Math.floor(this.ox / T) + ',' + Math.floor(this.oz / T);
+    return this.g[k] || (this.g[k] = new GB());
+  }
   place(x, z, ry = 0, y = null) {
     this.ox = x; this.oz = z; this.ry = ry; this.oy = y ?? getHeight(x, z);
     this.m = TRS(x, this.oy, z, 0, ry, 0);
@@ -72,28 +77,28 @@ export class Builder {
   box(mat, w, h, d, x, y, z, o = {}) {
     const geo = boxGeo(w, h, d, o.tile || 2);
     const m = this.m.clone().multiply(TRS(x, y + h / 2, z, o.rx || 0, o.ry || 0, o.rz || 0));
-    this.gb(mat).add(geo, m, o.col);
+    this.gb(mat, !o.big && Math.max(w, h, d) < SMALL).add(geo, m, o.col);
     geo.dispose();
     return this;
   }
   cyl(mat, rt, rb, h, x, y, z, o = {}) {
     const geo = new THREE.CylinderGeometry(rt, rb, h, o.seg || 8, 1, o.open || false);
     const m = this.m.clone().multiply(TRS(x, y + h / 2, z, o.rx || 0, o.ry || 0, o.rz || 0));
-    this.gb(mat).add(geo, m, o.col, o.uv || [Math.max(1, Math.round(rb * 3)), Math.max(1, h / 2)]);
+    this.gb(mat, !o.big && Math.max(rt, rb) * 2 < SMALL && h < SMALL).add(geo, m, o.col, o.uv || [Math.max(1, Math.round(rb * 3)), Math.max(1, h / 2)]);
     geo.dispose();
     return this;
   }
   sphere(mat, r, x, y, z, o = {}) {
     const geo = new THREE.SphereGeometry(r, o.seg || 8, o.rings || 6);
     const m = this.m.clone().multiply(TRS(x, y, z, 0, 0, 0, o.sx || 1, o.sy || 1, o.sz || 1));
-    this.gb(mat).add(geo, m, o.col, [1, 1]);
+    this.gb(mat, !o.big && r * 2 * Math.max(o.sx || 1, o.sy || 1, o.sz || 1) < SMALL).add(geo, m, o.col, [1, 1]);
     geo.dispose();
     return this;
   }
   cone(mat, r, h, x, y, z, o = {}) {
     const geo = new THREE.ConeGeometry(r, h, o.seg || 8);
     const m = this.m.clone().multiply(TRS(x, y + h / 2, z, o.rx || 0, o.ry || 0, o.rz || 0));
-    this.gb(mat).add(geo, m, o.col, [1, 1]);
+    this.gb(mat, !o.big && r * 2 < SMALL && h < SMALL).add(geo, m, o.col, [1, 1]);
     geo.dispose();
     return this;
   }
@@ -196,8 +201,9 @@ export class Builder {
   finish(scene, mats) {
     const out = {};
     for (const k in this.g) {
-      const mat = k.split('@')[0];
+      const mat = k.split('@')[0].replace('~s', '');
       const mesh = new THREE.Mesh(this.g[k].build(), mats[mat]);
+      mesh.userData.small = k.includes('~s@');
       mesh.castShadow = mat !== 'net' && mat !== 'leaf';
       mesh.boundingSphere = mesh.geometry.boundingSphere;          // world space: the reflection pass culls by it
       mesh.receiveShadow = true;
