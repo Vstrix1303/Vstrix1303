@@ -9,6 +9,13 @@ const $ = (id) => document.getElementById(id);
 // what Madhavan has in hand (drawn for this game)
 const svg = (inner) => `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 export const EQUIP = {
+  fists: svg('<path d="M18 30 Q18 20 26 20 H40 Q48 20 48 28 V40 Q48 50 38 52 H28 Q18 50 18 40 Z" fill="#d9b08a" stroke="#0b0806" stroke-width="3.5"/><path d="M26 20 V30 M33 20 V30 M40 21 V30 M18 34 Q24 30 30 34" stroke="#0b0806" stroke-width="2.5"/>'),
+  pistol: svg('<path d="M10 22 H52 V31 H30 L27 34 L30 50 H19 L16 34 L10 31 Z" fill="#cfc8b6" stroke="#0b0806" stroke-width="3.5"/><path d="M24 31 Q24 39 30 39" stroke="#0b0806" stroke-width="2.5"/><path d="M16 36 H28" stroke="#6a4a2a" stroke-width="5"/>'),
+  shotgun: svg('<path d="M4 25 H44 V30 H4 Z M4 31 H44 V35 H4 Z" fill="#cfc8b6" stroke="#0b0806" stroke-width="2.5"/><path d="M44 24 H52 L60 36 L58 46 L48 40 L44 36 Z" fill="#8a5a32" stroke="#0b0806" stroke-width="3"/><path d="M20 35 H38 V39 H20 Z" fill="#8a5a32" stroke="#0b0806" stroke-width="2.5"/>'),
+  rifle: svg('<path d="M4 26 H40 V32 H4 Z" fill="#cfc8b6" stroke="#0b0806" stroke-width="2.5"/><path d="M14 22 H30 V26" stroke="#0b0806" stroke-width="2.5"/><path d="M40 24 H50 L60 32 L58 42 L50 36 L44 34 Z" fill="#8a5a32" stroke="#0b0806" stroke-width="3"/><path d="M28 32 Q26 44 20 50 L15 47 Q20 40 21 32 Z" fill="#3a3a3a" stroke="#0b0806" stroke-width="2.5"/><path d="M36 32 L38 40 H43 L41 32" fill="#8a5a32" stroke="#0b0806" stroke-width="2.5"/>'),
+  sniper: svg('<path d="M2 28 H42 V32 H2 Z" fill="#cfc8b6" stroke="#0b0806" stroke-width="2.5"/><path d="M16 18 H38 V24 H16 Z" fill="#2a2a2a" stroke="#0b0806" stroke-width="2.5"/><path d="M20 24 V28 M34 24 V28" stroke="#0b0806" stroke-width="2.5"/><path d="M12 32 H44 L60 30 L60 42 L46 38 L40 36 H12 Z" fill="#8a5a32" stroke="#0b0806" stroke-width="3"/>'),
+  rocket: svg('<path d="M4 24 H58 V34 H4 Z" fill="#6a7448" stroke="#0b0806" stroke-width="3"/><path d="M2 22 L8 24 V34 L2 36 Z" fill="#4a5232" stroke="#0b0806" stroke-width="2.5"/><path d="M58 26 L63 29 L58 32 Z" fill="#b8a878" stroke="#0b0806" stroke-width="2"/><path d="M26 34 V44 H31 V34 M40 34 V42 H45 V34" fill="#8a5a32" stroke="#0b0806" stroke-width="2.5"/>'),
+  satchel: svg('<path d="M14 26 H50 L46 54 H18 Z" fill="#a07a4a" stroke="#0b0806" stroke-width="3.5"/><path d="M14 26 Q32 34 50 26" stroke="#0b0806" stroke-width="3"/><path d="M22 26 Q32 6 42 26" stroke="#0b0806" stroke-width="3.5"/><circle cx="32" cy="36" r="3" fill="#e9c15a" stroke="#0b0806" stroke-width="2"/>'),
   staff: svg('<path d="M12 54 L52 10" stroke="#0b0806" stroke-width="9"/><path d="M12 54 L52 10" stroke="#b98a52" stroke-width="5"/><path d="M46 17 L52 10 M12 54 L18 47" stroke="#e9c15a" stroke-width="5"/>'),
   paddle: svg('<path d="M14 54 L40 22" stroke="#0b0806" stroke-width="8"/><path d="M14 54 L40 22" stroke="#b98a52" stroke-width="4"/><ellipse cx="46" cy="15" rx="7" ry="12" transform="rotate(38 46 15)" fill="#b98a52" stroke="#0b0806" stroke-width="3"/>'),
   horse: svg('<path d="M18 52 V30 a14 14 0 0 1 28 0 V52" stroke="#0b0806" stroke-width="13"/><path d="M18 52 V30 a14 14 0 0 1 28 0 V52" stroke="#c9c2b0" stroke-width="7"/><g fill="#0b0806"><circle cx="18" cy="42" r="1.6"/><circle cx="46" cy="42" r="1.6"/><circle cx="21" cy="24" r="1.6"/><circle cx="43" cy="24" r="1.6"/><circle cx="32" cy="17" r="1.6"/></g>'),
@@ -50,11 +57,12 @@ export class UI {
   loading(p, text) { this.el.loadBar.style.width = Math.round(p * 100) + '%'; if (text) this.el.loadText.textContent = text; }
   hideLoading() { this.el.loading.classList.add('gone'); setTimeout(() => (this.el.loading.style.display = 'none'), 900); }
 
+  // the objective shows at the foot of the screen when it changes, then fades (M or the pause screen keep it)
   setObjective(tag, text) {
     this.el.chapterTag.textContent = tag || '';
     if (this.el.objText.textContent !== text) {
       this.el.objText.textContent = text || '';
-      this.el.objText.classList.remove('pulse'); void this.el.objText.offsetWidth; this.el.objText.classList.add('pulse');
+      this.objT = text ? 9 : 0;
     }
   }
   setMarker(pos, label = '') {
@@ -181,6 +189,11 @@ export class UI {
     if (this.moneyT > 0) { this.moneyT -= dt; if (this.moneyT <= 0) this.el.moneyDelta.className = ''; }
     this.el.hp.style.width = p.health + '%';
     this.el.st.style.width = p.stamina + '%';
+    // the cores: a ring that empties as the bar does, red and pulsing when nearly gone
+    if (!this._cores) this._cores = { hp: document.querySelector('#coreHp'), st: document.querySelector('#coreSt') };
+    for (const [k, v] of [['hp', p.health], ['st', p.stamina]]) { const c = this._cores[k]; if (!c) continue; c.querySelector('.val').style.strokeDashoffset = 125.66 * (1 - clamp(v / 100, 0, 1)); c.classList.toggle('low', v < 25); }
+    if (this.objT > 0) this.objT -= dt;
+    document.getElementById('objective').classList.toggle('show', this.objT > 0 && !this.hudHidden);
     const h = G.env.hour, hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
     const ap = hh >= 12 ? 'PM' : 'AM', h12 = ((hh + 11) % 12) + 1;
     this.el.clock.textContent = `${h12}:${String(mm).padStart(2, '0')} ${ap}`;
@@ -236,7 +249,7 @@ export class UI {
     const scale = p.mode === 'horse' ? 0.42 : 0.6;       // px per metre
     ctx.clearRect(0, 0, S, S);
     ctx.save();
-    ctx.beginPath(); ctx.rect(0, 0, S, S); ctx.clip();
+    ctx.beginPath(); ctx.arc(c, c, R, 0, 7); ctx.clip();
     ctx.fillStyle = '#5d8088'; ctx.fillRect(0, 0, S, S);
     ctx.translate(c, c); ctx.rotate(p.camYaw);
     const ipm = W.mapImage.width / 1600;
@@ -250,8 +263,8 @@ export class UI {
     const tm = (x, z, clampEdge) => {
       let dx = (x - pp.x) * scale, dz = (z - pp.z) * scale;
       let mx = dx * cs - dz * sn, mz = dx * sn + dz * cs;
-      const l = Math.max(Math.abs(mx), Math.abs(mz));
-      if (l > R - 4) { if (!clampEdge) return null; mx *= (R - 4) / l; mz *= (R - 4) / l; }
+      const l = Math.hypot(mx, mz);
+      if (l > R - 6) { if (!clampEdge) return null; mx *= (R - 6) / l; mz *= (R - 6) / l; }
       return [c + mx, c + mz];
     };
     // actors
@@ -289,9 +302,11 @@ export class UI {
     ctx.fillStyle = '#fff6e0'; ctx.strokeStyle = '#1a120a'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(5.5, 6); ctx.lineTo(0, 3); ctx.lineTo(-5.5, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
-    // north tab rides the frame
+    // the rim, and the north tab riding it
+    ctx.strokeStyle = 'rgba(11,8,6,.9)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(c, c, R - 1, 0, 7); ctx.stroke();
+    ctx.strokeStyle = 'rgba(244,236,214,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(c, c, R - 4.5, 0, 7); ctx.stroke();
     let ndx = sn, ndz = -cs;
-    const nk = (R - 7) / Math.max(Math.abs(ndx), Math.abs(ndz));
+    const nk = (R - 3) / Math.hypot(ndx, ndz);
     const nx = c + ndx * nk, nz = c + ndz * nk;
     ctx.fillStyle = '#0b0806'; ctx.beginPath(); ctx.arc(nx, nz, 9.5, 0, 7); ctx.fill();
     ctx.fillStyle = '#f4e6c0'; ctx.font = 'bold 13px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

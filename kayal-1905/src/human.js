@@ -556,7 +556,7 @@ export class Human {
       buildBody(this, o, bodyKey);
       const an = legacyAnchors(this, o, RIG);
       this.head.add(an.head); this.chest.add(an.chest); this.hips.add(an.hips); this.armL.hand.add(an.handL); this.armR.hand.add(an.handR);
-      AH = an.head; AC = an.chest; AP = an.hips; this.handAnchor = [an.handL, an.handR]; this.chestAnchor = an.chest;
+      AH = an.head; AC = an.chest; AP = an.hips; this.handAnchor = [an.handL, an.handR]; this.chestAnchor = an.chest; this.hipAnchor = an.hips;
       initMotion(this);
     } else {
     const hips = this.hips = bone(this.body, 0, RIG.hipY, 0);

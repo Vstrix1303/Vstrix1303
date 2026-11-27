@@ -23,7 +23,7 @@ export function loadSave() {
 }
 export { fmtMoney } from './money.js';
 import { fmtMoney } from './money.js';
-const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], wear: { ...DEFAULT_WEAR }, owned: [...FREE_PIECES], hair: 'crop', face: 'meesha', items: {}, weapons: ['staff'], weapon: 'staff', fish: 0, jobs: 0, wins: 0 });
+const freshState = () => ({ done: 0, annas: 0, pages: [], places: [], wear: { ...DEFAULT_WEAR }, owned: [...FREE_PIECES], hair: 'crop', face: 'meesha', items: {}, weapons: ['fists', 'staff'], weapon: 'fists', ammo: {}, mag: {}, mods: {}, modsOwned: [], fish: 0, jobs: 0, wins: 0, v: 14 });
 // saves from before the wardrobe: whole outfits become the pieces they were made of
 function migrate(st) {
   if (st.outfits && !st.wear) {
@@ -36,8 +36,17 @@ function migrate(st) {
   if (!HAIR[st.hair]) st.hair = 'crop';
   if (!FACE[st.face]) st.face = 'meesha';
   st.items = st.items || {};
-  st.weapons = [...new Set(['staff', ...(st.weapons || [])])];
-  if (!st.weapons.includes(st.weapon)) st.weapon = 'staff';
+  // version 14: bare hands to start, the five guns, ammunition by kind, the gunsmith's parts; the new clothes
+  if (!(st.v >= 14)) {
+    if (typeof st.ammo === 'number') st.ammo = { pistol: st.ammo };
+    if ((st.weapons || []).includes('revolver')) { st.weapons.push('pistol'); st.mag = { pistol: st.rounds || 0 }; }
+    if (st.weapon === 'staff' || st.weapon === 'revolver') st.weapon = 'fists';
+    if (st.wear && st.wear.lower === 'cream' && st.wear.upper === 'shirt') { st.wear.lower = 'lungiOld'; st.wear.upper = 'vintage'; }
+    st.v = 14;
+  }
+  st.ammo = typeof st.ammo === 'object' && st.ammo ? st.ammo : {}; st.mag = st.mag || {}; st.mods = st.mods || {}; st.modsOwned = st.modsOwned || [];
+  st.weapons = [...new Set(['fists', 'staff', ...(st.weapons || []).filter((k) => k !== 'revolver')])];
+  if (!st.weapons.includes(st.weapon)) st.weapon = 'fists';
   return st;
 }
 

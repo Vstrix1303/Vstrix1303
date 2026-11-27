@@ -232,8 +232,19 @@ export function updateMotion(h, dt) {
 
   // ---- fighting
   if (h.aim) {            // a revolver held out at arm's length, the other hand steadying the wrist
-    g.armR = -1.5; g.elR = -0.04; g.armRz = -0.08; g.wristR = 0.05; g.fingR = 1.3;
-    g.armL = -1.32; g.elL = -0.75; g.armLz = -0.42; g.fingL = 1.0; g.twist = 0.18; g.head = 0.02; g.spine += 0.04;
+    const P = G.poseAim || [-1.5, -0.04, -0.08, 0.05, -1.32, -0.75, -0.42, 0.18];
+    g.armR = P[0]; g.elR = P[1]; g.armRz = P[2]; g.wristR = P[3]; g.fingR = 1.3;
+    g.armL = P[4]; g.elL = P[5]; g.armLz = P[6]; g.fingL = 1.0; g.twist = P[7]; g.head = 0.02; g.spine += 0.04;
+    k = 26;
+  }
+  if (h.longGun === 1 && (s === 'idle' || s === 'move')) {    // a long gun carried low across the body, both hands on it
+    g.armR = -0.55; g.elR = -1.05; g.armRz = -0.12; g.wristR = 0.2; g.fingR = 1.3;
+    g.armL = -0.75; g.elL = -1.25; g.armLz = -0.55; g.fingL = 1.2; g.twist += 0.08;
+  }
+  if (h.longGun >= 2) {                                         // shouldered: the right hand at the grip by the cheek, the left out along the fore-end
+    const rk = h.longGun === 3, P = G.poseLong || (rk ? [-1.2, -1.9, -0.55, 0.3, -1.4, -1.2, -0.75, 0.12] : [-0.7, -1.3, -0.45, 0.2, -1.25, -0.45, -0.55, 0.1]);
+    g.armR = P[0]; g.elR = P[1]; g.armRz = P[2]; g.wristR = P[3]; g.fingR = 1.3;
+    g.armL = P[4]; g.elL = P[5]; g.armLz = P[6]; g.fingL = 1.0; g.twist = P[7]; g.head = 0.06; g.headY = -0.08;
     k = 26;
   }
   if (h.blocking && h.strikeT < 0) {
@@ -244,7 +255,15 @@ export function updateMotion(h, dt) {
     h.strikeT += dt;
     const u = h.strikeT / h.strikeDur, wind = h.strikeDur > 0.6 ? 0.6 : 0.35;
     if (u >= 1) { h.strikeT = -1; h.strikeN++; }
-    else {
+    else if (h.punch) {                                // bare fists: a jab, left then right, the body turning into it
+      const left = h.strikeN % 2 === 0, e2 = u < 0.35 ? ease(u / 0.35) : 1 - ease((u - 0.35) / 0.65);
+      const guardR = [-1.25, -1.6, -0.35], guardL = [-1.2, -1.55, 0.35];
+      g.armR = guardR[0]; g.elR = guardR[1]; g.armRz = guardR[2]; g.armL = guardL[0]; g.elL = guardL[1]; g.armLz = guardL[2]; g.fingL = g.fingR = 1.3;
+      if (left) { g.armL = lerp(guardL[0], -1.55, e2); g.elL = lerp(guardL[1], -0.08, e2); g.armLz = lerp(guardL[2], 0.05, e2); }
+      else { g.armR = lerp(guardR[0], -1.55, e2); g.elR = lerp(guardR[1], -0.08, e2); g.armRz = lerp(guardR[2], -0.05, e2); }
+      g.twist = (left ? -0.35 : 0.35) * e2; g.spine += 0.12 * e2; g.hipY -= 0.04 * e2; g.head = 0.05;
+      k = 34;
+    } else {
       const side = h.strikeN % 2 === 1;               // alternate an overhead cut with a swing from the shoulder
       const a = u < wind ? ease(u / wind) : 1, b = u < wind ? 0 : ease(Math.min(1, (u - wind) / (0.3 * (1 - wind) + 0.08))), rec = u < wind ? 0 : clamp((u - wind - 0.45 * (1 - wind)) / (0.55 * (1 - wind)), 0, 1);
       const hit = b * (1 - rec * 0.6);

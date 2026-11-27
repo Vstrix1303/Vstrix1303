@@ -21,10 +21,10 @@ export class Input {
     canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
       if (!this.locked) { this.dragging = true; this.requestLock(); }
-      else if (e.button === 0) this.hits.add('Attack');
+      else if (e.button === 0) { this.hits.add('Attack'); this.keys.add('AttackHeld'); }
       else if (e.button === 2) this.keys.add('Block');
     });
-    addEventListener('mouseup', (e) => { this.dragging = false; if (e.button === 2) this.keys.delete('Block'); });
+    addEventListener('mouseup', (e) => { this.dragging = false; if (e.button === 2) this.keys.delete('Block'); if (e.button === 0) this.keys.delete('AttackHeld'); });
     addEventListener('mousemove', (e) => {
       if (!this.enabled) return;
       if (this.locked || this.dragging) { this.dx += e.movementX || 0; this.dy += e.movementY || 0; }

@@ -307,7 +307,7 @@ async function boot() {
     requestAnimationFrame(frame);
     const rawDt = (now - last) / 1000;
     last = now;
-    const dt = Math.min(rawDt, 0.05);
+    const dt = Math.min(rawDt, 0.05) * (G.wheelOpen ? 0.25 : 1);     // the weapon wheel slows the world
     G.dt = dt;
 
     if (G.mapOpen) mapUI.draw();

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { G } from './state.js';
 import { Human, CAST, makeStick, makePaddle, makeBucket, makeRod } from './characters.js';
 import { lookFor, OLD_OUTFITS } from './wardrobe.js';
-import { WEAPONS, makeWeapon, makeShield } from './weapons.js';
+import { WEAPONS, GUNS, makeWeapon, makeGun, makeShield, gunStats } from './weapons.js';
 import { segmentBlocked } from './physics.js';
 import { getHeight, PLAY_LIMIT } from './heightfield.js';
 import { groundAt, resolve, pointInBox, interiorAt } from './physics.js';
@@ -14,16 +14,20 @@ export class Player {
     this.scene = scene; this.camera = camera;
     this.root = new THREE.Group();
     scene.add(this.root);
-    this.stick = new THREE.Group();          // holds whichever weapon is in hand
+    this.stick = new THREE.Group();          // the right hand's holder; hidden while the hands are busy (fishing, riding)
+    this.hand = new THREE.Group(); this.stick.add(this.hand);     // the weapon actually drawn
+    this.shoulder = new THREE.Group(); this.root.add(this.shoulder);   // a long gun, carried or shouldered
+    this.slung = new THREE.Group();          // on the back: the long gun or the staff
+    this.holster = new THREE.Group();        // on the hip: the pistol, the billhook
     this.shield = makeShield(); this.shield.visible = false;
-    this.rounds = 0; this.reloadT = 0; this.aiming = false; this.marmaN = 0;
+    this.rounds = 0; this.reloadT = 0; this.aiming = false; this.marmaN = 0; this.drawn = false; this.combatT = -99; this.fireT = 0;
     this.paddle = makePaddle(); this.paddle.visible = false;
     this.bucket = makeBucket(); this.bucket.visible = false;
     this.rod = makeRod(); this.rod.visible = false;
     this.bucketFull = false; this.blocking = false; this.blockStart = 0; this.poseOverride = null;
     this.buffs = {};
     this.setLook(lookFor(null));
-    this.setWeapon('staff');
+    this.setWeapon('fists');
     this.pos = new THREE.Vector3(0, 3, 0);
     this.vel = new THREE.Vector3();
     this.vy = 0; this.yaw = 0; this.grounded = true;
@@ -52,60 +56,89 @@ export class Player {
     this.h = new Human({ ...look, build: 1.03, hero: G.quality === 'high' || G.quality === 'ultra' });
     if (old) {
       this.root.remove(old.root); this.h.state = old.state; this.h.mountQ = old.mountQ;
-      for (const m of [this.stick, this.paddle, this.rod, this.bucket, this.shield]) m?.parent?.remove(m);
+      for (const m of [this.stick, this.paddle, this.rod, this.bucket, this.shield, this.slung, this.holster]) m?.parent?.remove(m);
     }
     this.h.near = true; this.h.grip = true; this.h.heroLOD = true;
     this.h.onStep = () => { if (this.mode === 'foot' && this.grounded && this.speedNow > 0.4) G.audio?.sfx(this.swimming || this.pos.y < -0.1 ? 'wade' : 'step', this.crouch ? 0.3 : this.speedNow > 5 ? 0.85 : 0.6); };
     this.root.add(this.h.root);
     this.h.hold(this.stick); this.h.hold(this.paddle); this.h.hold(this.rod); this.h.hold(this.bucket, false);
     if (this.shield) this.h.hold(this.shield, false);
+    (this.h.chestAnchor || this.h.chest).add(this.slung); (this.h.hipAnchor || this.h.hips).add(this.holster);
     this.onLook?.();
   }
   setWeapon(key) {
-    if (!WEAPONS[key]) key = 'staff';
-    this.weapon = key; this.wdef = WEAPONS[key];
-    this.stick.clear(); this.wmesh = makeWeapon(key); this.stick.add(this.wmesh);
-    this.stick.traverse((o) => { o.castShadow = true; });
-    this.aiming = false; this.reloadT = 0;
+    if (!WEAPONS[key]) key = 'fists';
     const st = G.story?.state;
-    if (st && this.wdef.gun) this.rounds = st.rounds ?? 0;
+    this.weapon = key;
+    this.wdef = GUNS[key] ? gunStats(key, { ...(st?.mods?.[key] || {}), ...(this.previewMods || {}) }) : WEAPONS[key];
+    this.hand.clear(); this.shoulder.clear();
+    this.wmesh = GUNS[key] ? makeGun(key, this.wdef.mods) : makeWeapon(key);
+    this.long = !!GUNS[key] && GUNS[key].pose !== 'pistol';
+    (this.long ? this.shoulder : this.hand).add(this.wmesh);
+    if (key === 'pistol') { this.wmesh.rotation.x = -Math.PI / 2; this.wmesh.position.set(0, -0.02, -0.14); }          // along the forearm, not across the fingers
+    this.aiming = false; this.reloadT = 0;
+    if (st && GUNS[key]) { st.mag = st.mag || {}; this.rounds = Math.min(st.mag[key] ?? 0, this.wdef.mag); }
+    if (st && this.long) st.lastLong = key;
+    if (key === 'fists') this.drawn = false;
+    this.buildHolsters();
   }
-  // the revolver: aimed down the camera's line, or at the nearest enemy in front when fired from the hip
-  fire() {
-    const st = G.story.state, W = this.wdef;
-    if (this.reloadT > 0 || this.strikeCd > 0) return;
-    if (!(this.rounds > 0)) { if ((st.ammo || 0) > 0) this.reload(); else { G.audio?.sfx('ui'); G.ui.toast('Click. No cartridges — the trader at the Puthenthura godown sells them.', 3); this.strikeCd = 0.5; } return; }
-    this.rounds--; st.rounds = this.rounds; this.strikeCd = W.cd;
-    G.audio?.sfx('shot'); this.shake = Math.max(this.shake, 0.35);
-    const fl = this.wmesh.userData.flash; if (fl) { fl.visible = true; setTimeout(() => (fl.visible = false), 60); }
-    const cam = this.camera, o = cam.position, dir = new THREE.Vector3(); cam.getWorldDirection(dir);
-    let best = null, bt = 1e9;
-    for (const n of G.npcs) {
-      if (!n.canBeHit || n.ko || !n.active) continue;
-      const cx = n.pos.x - o.x, cy = n.pos.y + 1.25 * (n.h.S || 1) - o.y, cz = n.pos.z - o.z;
-      const dx = n.pos.x - this.pos.x, dz = n.pos.z - this.pos.z, d = Math.hypot(dx, dz);
-      if (d > W.reach || segmentBlocked(this.pos.x, this.pos.z, n.pos.x, n.pos.z)) continue;
-      let score;
-      if (this.aiming) {
-        const t = cx * dir.x + cy * dir.y + cz * dir.z; if (t < 0.5) continue;
-        const px = cx - dir.x * t, py = cy - dir.y * t, pz = cz - dir.z * t;
-        if (Math.hypot(px, py, pz) > 0.6 + t * 0.006) continue;
-        score = t;
-      } else {
-        if (d > 18 || (dx * Math.sin(this.yaw) + dz * Math.cos(this.yaw)) / (d || 1) < 0.82) continue;
-        score = d;
-      }
-      if (score < bt) { bt = score; best = n; }
+  // what hangs on the body: the pistol at the hip, a long gun or the staff across the back
+  buildHolsters() {
+    const st = G.story?.state, owns = (k) => st?.weapons?.includes(k);
+    this.slung.clear(); this.holster.clear();
+    const mods = (k) => ({ ...(st?.mods?.[k] || {}) });
+    if (owns('pistol') && !(this.weapon === 'pistol' && this.drawn)) {
+      const g = makeGun('pistol', mods('pistol')); g.position.set(-0.2, -0.04, 0.03); g.rotation.set(Math.PI / 2 + 0.1, 0, 0); this.holster.add(g);
     }
-    if (best) { best.takeHit(W.dmg, this.pos.x, this.pos.z); G.audio?.sfx('thud'); G.fx?.dust(best.pos, 2, 0.6); }
-    // a shot carries: every guard within earshot comes for you
-    for (const n of G.npcs) if (n.guard && n.active && !n.ko && !n.hostile && Math.hypot(n.pos.x - this.pos.x, n.pos.z - this.pos.z) < 48) n.becomeHostile(false);
-    if (!this.rounds && (st.ammo || 0) > 0) setTimeout(() => this.reload(), 350);
+    const W = WEAPONS[this.weapon];
+    const back = this.long && !this.drawn ? this.weapon : (!GUNS[this.weapon] && this.weapon !== 'fists' && !this.drawn && !W.fists ? this.weapon : (st?.lastLong && owns(st.lastLong) && st.lastLong !== this.weapon ? st.lastLong : null));
+    if (back) {
+      const g = GUNS[back] ? makeGun(back, mods(back)) : makeWeapon(back);
+      if (back === 'kathi' || back === 'cheruvadi' || back === 'otta') { g.position.set(0.19, -0.02, 0.0); g.rotation.set(Math.PI / 2 + 0.2, 0, 0); this.holster.add(g); }
+      else { g.rotation.order = 'ZYX'; g.rotation.set(-Math.PI / 2, 0, back === 'rocket' ? 0.35 : 0.62); g.position.set(0, back === 'rocket' ? 0.02 : -0.08, -0.17); this.slung.add(g); }
+    }
+    this.slung.traverse((o) => { if (o.isMesh) o.castShadow = true; }); this.holster.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  }
+  draw() {
+    this.combatT = G.time;
+    if (this.drawn || this.weapon === 'fists') return;
+    this.drawn = true; this.buildHolsters();
+    G.audio?.sfx(GUNS[this.weapon] ? 'reload' : 'swing', 0.3);
+  }
+  holsterWeapon() { if (!this.drawn) return; this.drawn = false; this.aiming = false; this.buildHolsters(); G.audio?.sfx('click', 0.6); }
+  // a gun goes off: down the camera's line through the reticle, spread by how steady the aim is
+  fire() {
+    const st = G.story.state, W = this.wdef, key = this.weapon;
+    if (this.reloadT > 0 || this.fireT > 0) return;
+    if (!(this.rounds > 0)) {
+      this.fireT = 0.3;
+      if ((st.ammo?.[key] || 0) > 0) this.reload(); else { G.audio?.sfx('click'); G.ui.toast(`Click. No ${GUNS[key].ammo === 'rocket' ? 'rockets' : 'ammunition'} — the gunsmith sells it.`, 2.5); }
+      return;
+    }
+    this.rounds--; st.mag[key] = this.rounds; this.fireT = W.rate;
+    G.audio?.sfx(W.sup ? 'silenced' : key === 'shotgun' ? 'shotgun' : key === 'sniper' ? 'sniper' : key === 'rifle' ? 'rifleshot' : key === 'rocket' ? 'launch' : 'shot', key === 'rifle' ? 0.8 : 1);
+    this.shake = Math.max(this.shake, key === 'rocket' ? 0.6 : key === 'shotgun' || key === 'sniper' ? 0.45 : 0.25);
+    const fl = this.wmesh.userData.flash; if (fl) { fl.visible = true; fl.rotation.z = Math.random() * 3; setTimeout(() => (fl.visible = false), 45); }
+    const cam = this.camera, o = cam.position.clone(), dir = new THREE.Vector3(); cam.getWorldDirection(dir);
+    const muzzle = new THREE.Vector3(); (this.wmesh.userData.muzzle || this.wmesh).getWorldPosition(muzzle);
+    const moving = Math.min(1, this.speedNow / 4);
+    const spreadDeg = (this.aiming ? W.aim : W.hip) * (1 + moving * 0.8) * (this.crouch ? 0.7 : 1) * (1 + (this.heat || 0) * 1.5);
+    const sp = (deg) => { const a = Math.random() * Math.PI * 2, r = Math.tan(deg * Math.PI / 180) * Math.sqrt(Math.random()); const up = new THREE.Vector3(0, 1, 0), right = new THREE.Vector3().crossVectors(dir, up).normalize(), u2 = new THREE.Vector3().crossVectors(right, dir); return dir.clone().addScaledVector(right, Math.cos(a) * r).addScaledVector(u2, Math.sin(a) * r).normalize(); };
+    // start the ray at the player's shoulder plane so walls between camera and player don't eat it
+    const fwd = new THREE.Vector3().subVectors(this.pos, o); const skip = Math.max(0, fwd.dot(dir) - 0.3); o.addScaledVector(dir, skip);
+    if (key === 'rocket') G.combat.fireRocket(W, muzzle, sp(spreadDeg));
+    else for (let i = 0; i < (W.pellets || 1); i++) G.combat.shoot(W, o, sp(spreadDeg), muzzle, this.pos);
+    G.combat.noise(this.pos, key === 'rocket' ? 80 : 50, W.sup);
+    // recoil kicks the aim up; sustained fire climbs and spreads
+    this.camPitch -= W.recoil * (0.7 + Math.random() * 0.6); this.camYaw += (Math.random() - 0.5) * W.recoil * 0.6;
+    this.heat = Math.min(1, (this.heat || 0) + (W.auto ? 0.09 : 0.2));
+    if (!this.rounds && (st.ammo?.[key] || 0) > 0) setTimeout(() => this.reload(), 300);
+    this.combatT = G.time;
     G.story.save();
   }
   reload() {
-    const st = G.story.state;
-    if (this.reloadT > 0 || !(st.ammo > 0) || this.rounds >= this.wdef.shots) return;
+    const st = G.story.state, key = this.weapon;
+    if (!GUNS[key] || this.reloadT > 0 || !((st.ammo?.[key] || 0) > 0) || this.rounds >= this.wdef.mag) return;
     this.reloadT = this.wdef.reload; G.audio?.sfx('reload');
   }
   setCarry(what) {
@@ -130,7 +163,7 @@ export class Player {
       this.mode = 'horse'; this.mount = horse; horse.rider = this;
       horse.seatNode.add(this.root); this.root.position.set(...horse.seat); this.root.rotation.set(0, 0, 0);
       this.h.state = horse.pose; this.crouch = false; this.h.mountQ = null; this.h.mountT = null;
-      this.stick.visible = false;
+      this.stick.visible = false; this.holsterWeapon();
       G.audio?.sfx(horse.engine ? 'horn' : 'cycbell', 0.25);
       return;
     }
@@ -220,9 +253,16 @@ export class Player {
     const free = !this.locked && !this.photo && this.health > 0 && G.input.enabled;
     // --- camera angles
     if (!this.cine && !G.wheelOpen) {
-      this.camYaw -= inp.dx * 0.0026;
-      this.camPitch = clamp(this.camPitch + inp.dy * 0.0022, -0.32, 1.25);
+      const sens = this.aiming ? (this.wdef.zoom || 44) / 60 : 1;
+      this.camYaw -= inp.dx * 0.0026 * sens;
+      this.camPitch = clamp(this.camPitch + inp.dy * 0.0022 * sens, -0.6, 1.25);
       this.zoom = clamp(this.zoom + inp.wheel * 0.08, 0.6, 1.8);
+    }
+    // a telescope never sits still; Shift holds the breath and steadies it, at a cost
+    if (this.scoped) {
+      const steady = inp.sprint() && this.stamina > 4, amp = (steady ? 0.15 : 1) * 0.0035 * (16 / (this.wdef.zoom || 16));
+      if (steady) this.stamina = Math.max(0, this.stamina - 14 * dt);
+      this.camYaw += Math.cos(G.time * 0.8) * amp * dt * 6; this.camPitch += Math.sin(G.time * 1.25) * amp * dt * 5;
     }
     let [ix, iy] = free ? inp.move() : [0, 0];
     const sprintKey = free && inp.sprint();
@@ -239,9 +279,18 @@ export class Player {
       this.swimming = deepWater && this.pos.y < 0.1;
       if (this.stamina <= 0) this.sprintLock = true;
       if (this.stamina > 25) this.sprintLock = false;
-      const rmb = free && (inp.down('Block') || inp.down('KeyQ')) && !this.swimming;
-      const gun = this.wdef.gun && this.stick.visible;
-      this.aiming = gun && rmb && !this.h.carry; this.h.aim = this.aiming;
+      const rmb = free && (inp.down('Block') || inp.down('KeyQ')) && !this.swimming && !G.wheelOpen;
+      const gun = !!this.wdef.gun && this.stick.visible;
+      if (rmb && this.weapon !== 'fists') this.draw();
+      const wasAiming = this.aiming;
+      this.aiming = gun && rmb && !this.h.carry;
+      if (this.aiming && !wasAiming) this.aimAssist();
+      this.h.aim = this.aiming && !this.long;
+      this.h.longGun = this.long && this.drawn && this.stick.visible ? (this.aiming ? (this.weapon === 'rocket' ? 3 : 2) : 1) : 0;
+      this.heat = Math.max(0, (this.heat || 0) - dt * (this.wdef.auto ? 2.2 : 1.4));
+      this.fireT -= dt;
+      // put the weapon away after a while without a fight
+      if (this.drawn && !this.aiming && this.h.strikeT < 0 && G.time - this.combatT > (gun ? 12 : 8) && !this.nearestHostile(14)) this.holsterWeapon();
       const wantBlock = rmb && !gun && this.stamina > 1;
       if (wantBlock && !this.blocking) this.blockStart = G.time;
       this.blocking = wantBlock; this.h.blocking = wantBlock;
@@ -277,12 +326,16 @@ export class Player {
       // attack
       if (this.reloadT > 0) {
         this.reloadT -= dt;
-        if (this.reloadT <= 0) { const st = G.story.state, take = Math.min(this.wdef.shots - this.rounds, st.ammo || 0); st.ammo -= take; this.rounds += take; st.rounds = this.rounds; G.audio?.sfx('reload'); G.story.save(); }
+        if (this.reloadT <= 0 && GUNS[this.weapon]) { const st = G.story.state, k = this.weapon, take = Math.min(this.wdef.mag - this.rounds, st.ammo?.[k] || 0); st.ammo[k] -= take; this.rounds += take; st.mag[k] = this.rounds; G.audio?.sfx('reload'); G.story.save(); }
       }
       if (free && gun && inp.consume('KeyR')) this.reload();
-      if (free && gun && (inp.consume('Attack') || inp.consume('KeyF')) && !this.swimming && !this.h.carry) this.fire();
-      else if (free && (inp.consume('Attack') || inp.consume('KeyF')) && this.strikeCd <= 0 && !this.swimming && this.stamina > 6 && !this.blocking && !this.h.carry) {
+      if (free && gun && !G.wheelOpen && !this.swimming && !this.h.carry) {
+        const tap = inp.consume('Attack') | inp.consume('KeyF');
+        if (tap || (this.wdef.auto && (inp.down('AttackHeld') || inp.down('KeyF')) && this.drawn)) { const was = this.drawn; this.draw(); if (was || tap) this.fire(); }
+      } else if (free && !G.wheelOpen && (inp.consume('Attack') || inp.consume('KeyF')) && this.strikeCd <= 0 && !this.swimming && this.stamina > 6 && !this.blocking && !this.h.carry) {
         const W = this.wdef;
+        this.draw();
+        this.h.punch = !!W.fists;
         this.h.strikeDur = W.dur; this.h.strikeT = 0; this.strikeCd = W.cd; this.pendingHit = W.dur * 0.4; this.stamina -= 7 * Math.max(0.6, W.dur / 0.42); this.crouch = false;
         // face the camera direction when striking from standstill
         if (wl < 0.1) { const tgt = this.nearestHostile(this.wdef.reach + 1); if (tgt) this.yaw = Math.atan2(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z); }
@@ -334,8 +387,20 @@ export class Player {
         this.h.gaze = best ? { x: best.pos.x, y: best.pos.y + 1.55 * best.h.S, z: best.pos.z } : null;
       }
     } else { this.h.air = false; this.h.gaze = null; }
-    this.h.staff = this.stick.visible && this.mode === 'foot' && !!this.wdef.low;
-    this.shield.visible = this.stick.visible && this.mode === 'foot' && !!this.wdef.shield;
+    const out = this.stick.visible && this.mode === 'foot' && this.drawn;
+    this.hand.visible = out; this.shoulder.visible = out && this.long;
+    this.slung.visible = this.holster.visible = this.mode !== 'boat' || true;
+    if (this.shoulder.visible) {
+      // a long gun: shouldered along the aim when aiming, otherwise carried low across the body
+      const lg = this.h.longGun;
+      if (lg >= 2) {
+        const dy = this.camera.getWorldDirection(this._cd || (this._cd = new THREE.Vector3())).y;
+        this.shoulder.position.set(-0.15, lg === 3 ? 1.5 : 1.38, lg === 3 ? -0.02 : 0.16);
+        this.shoulder.rotation.set(-Math.asin(clamp(dy, -0.9, 0.9)), 0.03, 0);
+      } else { this.shoulder.position.set(-0.2, 0.98, 0.24); this.shoulder.rotation.set(0.62, 0.35, -0.1); }
+    }
+    this.h.staff = out && !!this.wdef.low;
+    this.shield.visible = out && !!this.wdef.shield;
     this.h.update(dt);
     this.updateCamera(dt);
   }
@@ -365,7 +430,19 @@ export class Player {
     let dmg = W.dmg;
     if (W.marma && inReach.length) { this.marmaN = (this.marmaN + 1) % W.marma; if (!this.marmaN) { dmg *= 3; G.ui.toast('<b>Marma!</b>', 1.2); } }
     for (const [, n] of (W.multi ? inReach : inReach.slice(0, 2))) if (n.takeHit(dmg, this.pos.x, this.pos.z)) any = true;
-    if (any) { G.audio?.sfx('thud'); this.shake = Math.max(this.shake, 0.25); }
+    if (any) { G.audio?.sfx(W.fists ? 'punch' : 'thud'); this.shake = Math.max(this.shake, 0.25); this.combatT = G.time; }
+  }
+  // starting to aim snaps toward the nearest enemy in front, the way a revolver finds its man
+  aimAssist() {
+    const cam = this.camera, dir = cam.getWorldDirection(new THREE.Vector3());
+    let best = null, ba = 0.42;
+    for (const n of G.npcs) {
+      if (!n.hostile || n.ko || !n.active) continue;
+      const v = new THREE.Vector3(n.pos.x - cam.position.x, n.pos.y + 1.3 * (n.h.S || 1) - cam.position.y, n.pos.z - cam.position.z), d = v.length();
+      if (d > this.wdef.range) continue; v.divideScalar(d);
+      const a = Math.acos(clamp(v.dot(dir), -1, 1)); if (a < ba) { ba = a; best = v; }
+    }
+    if (best) { this.camYaw = Math.atan2(-best.x, -best.z); this.camPitch = clamp(-Math.asin(best.y) + 0.05, -0.32, 1.25); }
   }
 
   updateCamera(dt) {
@@ -373,7 +450,9 @@ export class Player {
     const focus = this.worldPos(new THREE.Vector3());
     const mode = this.mode;
     const headY = mode === 'horse' ? (this.mount.camHead ?? 2.35) : mode === 'boat' ? 1.25 : this.crouch ? 1.15 : 1.55;
-    const baseDist = (mode === 'horse' ? (this.mount.camDist ?? 6.2) : mode === 'boat' ? (this.mount.chundan ? 13.5 : 7.6) : this.aiming ? 1.9 : 3.7) * (this.aiming ? 1 : this.zoom);
+    this.scoped = this.aiming && !!this.wdef.scoped;
+    const baseDist = (mode === 'horse' ? (this.mount.camDist ?? 6.2) : mode === 'boat' ? (this.mount.chundan ? 13.5 : 7.6) : this.scoped ? 0.05 : this.aiming ? (this.long ? 1.5 : 1.9) : 3.7) * (this.aiming ? 1 : this.zoom);
+    this.h.root.visible = !this.scoped;
     if (this.photo) {
       this.photoAng += dt * 0.12;
       this.camYaw += dt * 0.12;
@@ -396,7 +475,7 @@ export class Player {
       if ((b && py < b.top + 0.3) || py < getHeight(px, pz) + 0.3) { dist = Math.max(0.9, dist * (i - 1) / steps); break; }
     }
     this.camDistCur = this.snapCam ? dist : (dist < this.camDistCur ? damp(this.camDistCur, dist, 20, dt) : damp(this.camDistCur, dist, 4, dt));
-    const side = mode === 'foot' && !this.photo ? (this.aiming ? 0.62 : 0.42) : 0;
+    const side = mode === 'foot' && !this.photo ? (this.scoped ? 0.12 : this.aiming ? 0.62 : 0.42) : 0;
     const desired = new THREE.Vector3(
       this.camTarget.x + dir.x * this.camDistCur + Math.cos(this.camYaw) * side,
       this.camTarget.y + dir.y * this.camDistCur,
@@ -409,7 +488,7 @@ export class Player {
 
     this.shake = Math.max(0, this.shake - dt * 1.6);
     const sprintFov = mode === 'horse' ? smoothstep(6, 12, this.speedNow) * 9 : smoothstep(4.5, 7, this.speedNow) * 5;
-    let fov = this.aiming ? 44 : 60 + sprintFov;
+    let fov = this.aiming ? (this.wdef.zoom || 44) : 60 + sprintFov;
 
     if (this.cine) {
       this.cineBlend = Math.min(1, this.cineBlend + dt / (this.cine.blend ?? 1.2));

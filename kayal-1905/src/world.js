@@ -17,6 +17,7 @@ import { makeRng, TAU, damp, angleDamp } from './util.js';
 import { groundAt, interiorAt, pointInBox } from './physics.js';
 import { Ride } from './vehicles.js';
 import { FX } from './fx.js';
+import { Combat } from './combat.js';
 import { setupActivities } from './activities.js';
 import { setupInteriors } from './interiors.js';
 import { setupEncounters } from './encounters.js';
@@ -136,6 +137,7 @@ export async function buildWorld(scene, progress) {
   await progress(0.78, 'Waking the village…');
   buildLamps(scene, st.lamps);
   const fx = G.fx = new FX(scene);
+  G.combat = new Combat(scene); G.updaters.push((dt) => G.combat.update(dt));
   const hearth = () => { const h = env.hour; return (h > 5.6 && h < 9.4) || (h > 16.6 && h < 21.5); };
   st.smokes.forEach((p, i) => fx.addEmitter({ pos: p, type: 'smoke', rate: p.y > 40 ? 3.2 : 1.6, cond: p.y > 40 ? null : hearth, o: { size: p.y > 40 ? 0.9 : 0.45, alpha: 0.2 } }));
 

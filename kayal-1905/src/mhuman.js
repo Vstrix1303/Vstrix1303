@@ -424,7 +424,7 @@ function choosePieces(o, d) {
   if (coat && trousers && G.suit) { out.push(['suit', o.shirt, o.waistcoat != null ? 0xeeeae0 : 0xeeeae0, o.tie ?? 0x3a2a48]); }
   else {
     // over a mundu the shirt is worn out, its hem short of the mundu's waist; with trousers it is tucked in
-    if (o.shirt != null && o.sleeves !== false && (!o.style || o.style === 'uniform')) out.push([(o.longSleeves ? 'cs01U' : 'cs01H') + (o.trousers == null ? 'M' : ''), o.shirt]);
+    if (o.shirt != null && o.sleeves !== false && (!o.style || o.style === 'uniform')) out.push([(o.longSleeves ? 'cs01U' : 'cs01H') + (o.trousers == null ? 'M' : ''), o.shirt, null, null, o.shirtPat ? [o.shirtPat, o.shirtPatCol ?? 0x3a2a20] : null]);
     if (trousers && G.cs01L) out.push(['cs01L', o.trousers]);
     else if (o.trousers != null && o.shorts && G.cs01S) out.push(['cs01S', o.trousers]);
   }
@@ -432,19 +432,25 @@ function choosePieces(o, d) {
   return out.filter((q) => G[q[0]]);
 }
 const garMats = new Map();
-function garmentMaterial(tex, c1, c2, c3, dirty) {
-  const key = [tex, c1, c2, c3, dirty].join('|');
+function garmentMaterial(tex, c1, c2, c3, dirty, pat) {
+  const key = [tex, c1, c2, c3, dirty, pat && pat.join(',')].join('|');
   if (garMats.has(key)) return garMats.get(key);
   const t = HUMANS.clothTex?.[tex] || null;
   const m = new THREE.MeshStandardMaterial({ color: c1 ?? 0xeeeeee, map: t, roughness: tex === 'shoes' ? 0.45 : 0.88, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.7 });
-  const U = { uC2: { value: col(c2, 0xeeeae0) }, uC3: { value: col(c3, 0x3a2a48) }, uDirt: { value: dirty ? 1 : 0 } };
+  const U = { uC2: { value: col(c2, 0xeeeae0) }, uC3: { value: col(c3, 0x3a2a48) }, uDirt: { value: dirty ? 1 : 0 }, uPat: { value: pat ? pat[0] : 0 }, uPatC: { value: col(pat ? pat[1] : 0) } };
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uC2, uC3; uniform float uDirt;')
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uC2, uC3, uPatC; uniform float uDirt, uPat;')
       .replace('#include <map_fragment>', `#ifdef USE_MAP
         vec4 gT = texture2D(map, vMapUv); float gd = gT.r / 0.75;
         vec3 gc = diffuseColor.rgb;
         gc = mix(gc, uC2, gT.g); gc = mix(gc, uC3, gT.b);
+        if (uPat > 0.5) {            // woven patterns, in the cloth's own texture space: 1 windowpane, 2 bold checks, 3 stripes
+          vec2 q = vMapUv * vec2(46.0, 46.0);
+          float lx = smoothstep(0.41, 0.46, abs(fract(q.x) - 0.5)), ly = smoothstep(0.41, 0.46, abs(fract(q.y) - 0.5));
+          float m = uPat < 1.5 ? max(lx, ly) * 0.85 : uPat < 2.5 ? (step(0.5, fract(q.x * 0.5)) * 0.5 + step(0.5, fract(q.y * 0.5)) * 0.5) : step(0.72, fract(q.x * 0.9));
+          gc = mix(gc, uPatC, m);
+        }
         diffuseColor.rgb = gc * gd * (1.0 - uDirt * 0.18 * (1.0 - gd));
       #endif`);
   };
@@ -523,8 +529,8 @@ export function buildBody(h, o, key) {
   // garments: fitted pieces over the body, the skin they cover discarded, the painted version turned off
   h.garments = [];
   let bits = 0;
-  for (const [pn, c1, c2, c3] of pieces) {
-    const info = m.garments[pn], gm = extra(d.garments[pn][0], garmentMaterial(info.tex, c1, c2, c3, o.dirty));
+  for (const [pn, c1, c2, c3, pat] of pieces) {
+    const info = m.garments[pn], gm = extra(d.garments[pn][0], garmentMaterial(info.tex, c1, c2, c3, o.dirty, pat));
     gm.userData.lods = d.garments[pn]; gm.receiveShadow = true; gm.castShadow = false; h.garments.push(gm); bits |= info.bit;
     if (pn.startsWith('cs01U') || pn.startsWith('cs01H') || pn === 'suit' || pn === 'blouse' || pn === 'chatta') mat.userData.U.uF1.value.x = 0;
     if (pn === 'cs01L' || pn === 'cs01S' || pn === 'suit') mat.userData.U.uF2.value.x = 0;

@@ -179,6 +179,35 @@ body.touch #touch{display:block}
 .tb{position:absolute;width:62px;height:62px;border-radius:50%;border:2px solid rgba(244,230,192,.55);background:rgba(20,13,6,.45);color:var(--cream);font:600 15px var(--serif);display:flex;align-items:center;justify-content:center;pointer-events:auto}
 .tb.on{background:rgba(233,185,73,.5)}
 @media (max-width:760px){#objText{font-size:15px}#mapWrap{transform:scale(.7);transform-origin:left bottom}#bars{left:170px;bottom:22px;width:100px}button{min-width:240px;font-size:16px}}
+/* ---- HUD, fourth pass, after the big westerns: a round radar with the cores above it, prompts at the
+   lower right, the weapon and rounds beneath them, the objective at the foot of the screen, tips top-left ---- */
+#objective{top:auto;left:50%;bottom:4.2vh;transform:translateX(-50%);text-align:center;background:none;max-width:min(760px,86vw);padding:0;opacity:0;transition:opacity .8s}
+#objective.show{opacity:1}
+#chapterTag{display:none}
+#objText{font-family:var(--serif);font-size:clamp(16px,1.6vw,21px);font-weight:600;color:#f4ecd6;-webkit-text-stroke:3.5px #0b0806;paint-order:stroke fill}
+#objText.pulse{animation:none}
+#stat{top:22px;right:26px;width:auto;display:block;text-align:right}
+#statR,#equip,#bars{display:none}
+#money{font-size:24px}
+#mapWrap{left:30px;bottom:30px;width:190px}
+#minimap{border-radius:50%;border:0;outline:0;box-shadow:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.55))}
+#radarClock{position:absolute;left:0;right:0;bottom:-20px;text-align:center;font:700 13px var(--hud);letter-spacing:.06em;color:#f4ecd6;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill}
+#cores{position:absolute;left:30px;bottom:232px;display:flex;gap:10px}
+.core{position:relative;width:48px;height:48px}
+.core svg{position:absolute;inset:0;width:48px;height:48px;transform:rotate(-90deg)}
+.core .trk{stroke:rgba(11,8,6,.75);stroke-width:6;fill:rgba(11,8,6,.55)}
+.core .val{stroke:#f4ecd6;stroke-width:4;fill:none;stroke-linecap:butt;transition:stroke-dashoffset .15s}
+.core .ic{position:absolute;inset:11px;display:flex;align-items:center;justify-content:center}
+.core .ic svg{position:static;transform:none;width:26px;height:26px}
+.core.low .val{stroke:#d8261c}
+.core.low{animation:corepulse .7s infinite alternate}
+@keyframes corepulse{to{filter:drop-shadow(0 0 6px #d8261c)}}
+#prompt{left:auto;right:28px;bottom:108px;transform:none;background:none;padding:0;font-size:16px;color:#f4ecd6;-webkit-text-stroke:3px #0b0806;paint-order:stroke fill}
+#prompt b{-webkit-text-stroke:0;background:#f4ecd6;color:#0b0806;border-radius:4px;min-width:26px;padding:2px 7px;margin-right:9px;font:800 14px var(--hud);box-shadow:0 0 0 2px #0b0806}
+#toast{left:26px;top:22px;transform:none;max-width:min(380px,70vw);text-align:left;background:rgba(10,8,6,.78);border:0;border-left:3px solid #c9302c;padding:12px 16px;font-size:15px}
+#area{right:28px;bottom:auto;top:62px}
+#areaName{font-size:clamp(20px,2.2vw,30px)}
+@media (max-width:760px){#cores{transform:scale(.72);transform-origin:left bottom;bottom:160px}#prompt{bottom:90px}}
 </style>
 </head>
 <body>
@@ -191,12 +220,16 @@ body.touch #touch{display:block}
   <div id="prompt"></div>
   <div id="marker"><i></i><div id="markerDist"></div></div>
   <div id="marker2"><i></i><div id="marker2Dist"></div></div>
-  <div id="stat"><div id="equip"></div><div id="statR"><div id="clock"></div><div id="bars"><div class="bar st"><i id="st"></i></div><div class="bar"><i id="hp"></i></div></div></div><div id="money">Rs 0</div><div id="moneyDelta"></div></div>
+  <div id="stat"><div id="equip"></div><div id="statR"><div id="bars"><div class="bar st"><i id="st"></i></div><div class="bar"><i id="hp"></i></div></div></div><div id="money">Rs 0</div><div id="moneyDelta"></div></div>
+  <div id="cores">
+    <div class="core" id="coreHp"><svg viewBox="0 0 48 48"><circle class="trk" cx="24" cy="24" r="20"/><circle class="val" cx="24" cy="24" r="20" stroke-dasharray="125.66" stroke-dashoffset="0"/></svg><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21 C4 14 2 10 2 7 a5 5 0 0 1 10 -1 a5 5 0 0 1 10 1 c0 3 -2 7 -10 14z" fill="#f4ecd6" stroke="#0b0806" stroke-width="1.6"/></svg></div></div>
+    <div class="core" id="coreSt"><svg viewBox="0 0 48 48"><circle class="trk" cx="24" cy="24" r="20"/><circle class="val" cx="24" cy="24" r="20" stroke-dasharray="125.66" stroke-dashoffset="0"/></svg><div class="ic"><svg viewBox="0 0 24 24"><path d="M14 3 a2 2 0 1 1 0 .1 M13 7 L9 12 L12 14 L10 21 M13 7 L16 11 L20 11 M9 12 L5 12" fill="none" stroke="#f4ecd6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
   <div id="timer"></div>
   <div id="meter"><div id="meterLabel"></div><div class="trk"><div id="meterFill"></div></div></div>
   <div id="boss"><div id="bossName"></div><div class="trk"><div id="bossFill"></div></div></div>
   <div id="area"><div id="areaName"></div><div id="areaSub"></div></div>
-  <div id="mapWrap"><canvas id="minimap" width="200" height="200"></canvas></div>
+  <div id="mapWrap"><canvas id="minimap" width="200" height="200"></canvas><div id="radarClock"><span id="clock"></span></div></div>
 </div>
 <div id="letterTop" class="layer"></div><div id="letterBot" class="layer"></div>
 <div id="bark"><div id="barkName"></div><div id="barkText"></div></div>
@@ -233,7 +266,7 @@ body.touch #touch{display:block}
     <button id="btnFull" class="small desk" style="display:none">Fullscreen: On</button>
     <button id="btnQuit" class="small desk" style="display:none">Quit to desktop</button>
   </div>
-  <div class="foot">WASD move · Mouse look · Shift run / gallop · Space jump · C crouch · E interact · Left-click / F strike · Right-click / Q block (aim with the revolver) · Tab weapon wheel · 1–7 weapons · I satchel · V eat · M map · P photo mode · Esc pause<span class="desk" style="display:none"> · F11 fullscreen · F3 frame rate</span><br>Headphones recommended.</div>
+  <div class="foot">WASD move · Mouse look · Shift run / gallop · Space jump · C crouch · E interact · Left-click / F punch, strike or fire · Right-click / Q block or aim (Shift steadies a scope) · R reload · Tab weapon wheel (time slows) · 1–7 weapons · I satchel · V eat · M map · P photo mode · Esc pause<span class="desk" style="display:none"> · F11 fullscreen · F3 frame rate</span><br>Headphones recommended.</div>
 </div>
 
 <div id="pause" class="screen">
@@ -254,9 +287,9 @@ body.touch #touch{display:block}
     <tr><td>Shift</td><td>Run · Gallop · Paddle hard</td></tr>
     <tr><td>Space / C</td><td>Jump / Crouch (stealth)</td></tr>
     <tr><td>E</td><td>Talk · Gather · Ride the bicycle · Drive the jeep · Board · Get off</td></tr>
-    <tr><td>LMB / F</td><td>Strike · fire the revolver · horn / bell when riding</td></tr>
-    <tr><td>RMB / Q</td><td>Block (time it to stagger) · aim the revolver</td></tr>
-    <tr><td>Tab / 1–7</td><td>Weapon wheel · choose a weapon · R reload</td></tr>
+    <tr><td>LMB / F</td><td>Punch · strike · fire (hold for the rifle) · horn / bell when riding</td></tr>
+    <tr><td>RMB / Q</td><td>Block (time it to stagger) · aim a gun · Shift holds your breath in a scope</td></tr>
+    <tr><td>Tab / 1–7</td><td>Weapon wheel (the world slows) · choose a weapon · R reload</td></tr>
     <tr><td>I / V</td><td>Satchel · eat or drink the best thing for your wounds</td></tr>
     <tr><td>M</td><td>Map — click to set a waypoint</td></tr>
     <tr><td>P / H</td><td>Photo mode / Hide HUD</td></tr>

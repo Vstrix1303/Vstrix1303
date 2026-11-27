@@ -147,6 +147,14 @@ export class AudioSys {
       case 'frog': for (let k = 0; k < 4; k++) this.tone('square', 260, 210, 0.03 * v, 0.01, 0.07, k * 0.16); break;
       case 'elephant': this.tone('sawtooth', 300, 560, 0.14 * v, 0.2, 0.9); this.tone('square', 310, 590, 0.05 * v, 0.2, 0.9, 0.03); break;
       case 'shot': this.burst('lowpass', 2600, 0.5, 1.0 * v, 0.001, 0.32, null, 0, 300); this.tone('sine', 120, 38, 0.8 * v, 0.002, 0.3); this.burst('highpass', 3500, 0.4, 0.35 * v, 0.001, 0.08); this.burst('bandpass', 700, 0.6, 0.18 * v, 0.12, 1.4, null, 0.05, 200); break;
+      case 'boom': this.burst('lowpass', 900, 0.5, 1.2 * v, 0.002, 1.6, null, 0, 120); this.tone('sine', 90, 30, 1.0 * v, 0.004, 1.2); this.burst('lowpass', 260, 0.6, 0.8 * v, 0.05, 2.8, null, 0.08, 60); this.burst('highpass', 3000, 0.4, 0.3 * v, 0.001, 0.2); break;
+      case 'shotgun': this.burst('lowpass', 1600, 0.5, 1.1 * v, 0.001, 0.45, null, 0, 200); this.tone('sine', 100, 34, 0.9 * v, 0.002, 0.35); this.burst('bandpass', 600, 0.6, 0.25 * v, 0.1, 1.2, null, 0.05, 160); break;
+      case 'rifleshot': this.burst('lowpass', 3200, 0.5, 0.8 * v, 0.001, 0.22, null, 0, 400); this.tone('sine', 140, 50, 0.5 * v, 0.002, 0.18); break;
+      case 'sniper': this.burst('lowpass', 2400, 0.5, 1.1 * v, 0.001, 0.5, null, 0, 250); this.tone('sine', 110, 36, 0.9 * v, 0.002, 0.4); this.burst('bandpass', 500, 0.6, 0.25 * v, 0.2, 2.2, null, 0.1, 120); break;
+      case 'silenced': this.burst('bandpass', 1400, 1.2, 0.35 * v, 0.001, 0.09, null, 0, 600); break;
+      case 'launch': this.burst('bandpass', 900, 0.7, 0.7 * v, 0.01, 0.9, null, 0, 300); this.burst('highpass', 2500, 0.5, 0.3 * v, 0.02, 0.6); break;
+      case 'click': this.burst('highpass', 4200, 1.5, 0.18 * v, 0.001, 0.03); break;
+      case 'punch': this.tone('sine', 160, 60, 0.45 * v, 0.002, 0.1); this.burst('lowpass', 900, 0.7, 0.25 * v, 0.002, 0.06); break;
       case 'reload': for (let k = 0; k < 3; k++) this.burst('highpass', 3800, 1.5, 0.16 * v, 0.001, 0.035, null, k * 0.11); break;
       case 'horn': this.tone('sawtooth', 392, null, 0.16 * v, 0.02, 0.42); this.tone('sawtooth', 494, null, 0.12 * v, 0.02, 0.42); break;
       case 'cycbell': for (let k = 0; k < 2; k++) [2380, 3170, 4400].forEach((f, i) => this.tone('sine', f, null, 0.09 * v / (i + 1), 0.002, 0.5, k * 0.16)); break;

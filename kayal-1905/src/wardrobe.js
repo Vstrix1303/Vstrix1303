@@ -9,6 +9,7 @@ export const WARDROBE = {
   lower: {
     cream: { name: 'Cream mundu', desc: 'Hand-loom cotton, worn long and knotted at the waist. What you came home in.', price: 0, look: { mundu: 0xe9e0c8, munduLong: true, knot: true } },
     short: { name: 'Work mundu, folded up', desc: 'The same cloth doubled to the knee, the way a man wears it to work a boat.', price: 0, look: { mundu: 0xe2d8be, knot: true } },
+    lungiOld: { name: 'Old checked lungi', desc: 'Faded blue-and-brown checks, soft from a hundred washings at the canal steps. What you came home in.', price: 0, look: { mundu: 0x5a6a72, lungi: 0x3a2a22 } },
     lungiBlue: { name: 'Checked lungi, indigo', desc: 'Coloured checks from the Malabar looms. Hides the mud of the paddy bunds.', price: 28, look: { mundu: 0x4a6a8a, lungi: 0x24384c } },
     lungiRed: { name: 'Checked lungi, madder red', desc: 'Red checks, a favourite on the coast.', price: 28, look: { mundu: 0x8a4a3a, lungi: 0x4a1c14 } },
     lungiGreen: { name: 'Checked lungi, bottle green', desc: 'Green checks, long to the ankle.', price: 32, look: { mundu: 0x3f6a52, lungi: 0x1c3a2a, munduLong: true } },
@@ -24,11 +25,12 @@ export const WARDROBE = {
     cloth: { name: 'Shoulder cloth', desc: 'A folded cotton thorthu over the left shoulder.', price: 0, look: { shoulderCloth: 0xe4dac0 } },
     clothRed: { name: 'Shoulder cloth, red border', desc: 'A finer melmundu with a woven border.', price: 14, look: { shoulderCloth: 0xa8442e } },
     clothGold: { name: 'Festival shoulder cloth', desc: 'White, with a gold edge to match a kasavu mundu.', price: 48, look: { shoulderCloth: 0xf6f0dc } },
+    vintage: { name: 'Camp-collar shirt', desc: 'A mustard rayon shirt with a brown windowpane check and a wide open collar, bought off a Bombay sailor. Worn loose over the lungi.', price: 0, look: { shirt: 0xc4a464, shirtPat: 1, shirtPatCol: 0x5a3a22 } },
     shirt: { name: 'Half-sleeve shirt', desc: 'White mill cloth, sleeves to the elbow. What most men wear to the bazaar now.', price: 0, look: { shirt: 0xeeeae0 } },
     bushShirt: { name: 'Bush shirt', desc: 'Loose and worn outside the trousers or mundu, pockets on the chest. The film heroes wear them.', price: 58, look: { shirt: 0x8a9a7a } },
-    bushShirtCheck: { name: 'Checked bush shirt', desc: 'Red and brown checks. Loud, but it is 1957.', price: 64, look: { shirt: 0x8a4a3a } },
+    bushShirtCheck: { name: 'Checked bush shirt', desc: 'Red and brown checks. Loud, but it is 1957.', price: 64, look: { shirt: 0x9a4a36, shirtPat: 2, shirtPatCol: 0x3a1c14 } },
     banian: { name: 'Vest (banian)', desc: 'A sleeveless cotton vest for hot afternoons.', price: 12, look: { shirt: 0xf2eee4, sleeves: false } },
-    shirtBlue: { name: 'Striped shirt, blue', desc: 'A coloured shirt, sleeves to the elbow.', price: 60, look: { shirt: 0x6a84a0 } },
+    shirtBlue: { name: 'Striped shirt, blue', desc: 'A coloured shirt, sleeves to the elbow.', price: 60, look: { shirt: 0x7a92ae, shirtPat: 3, shirtPatCol: 0xe8e4d8 } },
     kurta: { name: 'Long kurta', desc: 'Loose and long-sleeved, as the traders of the port wear.', price: 80, look: { shirt: 0xeae6da, style: 'kurta', longSleeves: true }, at: 'tailor' },
     jacket: { name: 'Bombay jacket', desc: 'Cut by a Parsi tailor\'s pattern. A man in this is taken for somebody.', price: 220, look: { shirt: 0x4a4436, style: 'jacket', longSleeves: true }, at: 'tailor' },
     cape: { name: 'Palm-leaf rain cape', desc: 'Woven screw-pine over the shoulders. The monsoon runs off it like off a duck.', price: 96, look: { cape: true } },
@@ -63,8 +65,8 @@ export const FACE = {
   stubble: { name: 'Moustache and stubble', desc: 'A few days\' growth, left on purpose.', price: 1, look: { moustache: true, beard: 'stubble' } },
   beard: { name: 'Full beard', desc: 'Grown out and combed.', price: 2, look: { moustache: true, beard: true } },
 };
-export const DEFAULT_WEAR = { lower: 'cream', upper: 'shirt', head: 'none', extra: 'none' };
-export const FREE_PIECES = ['lower:cream', 'lower:short', 'upper:bare', 'upper:cloth', 'upper:shirt', 'head:none', 'head:thorthu', 'extra:none'];
+export const DEFAULT_WEAR = { lower: 'lungiOld', upper: 'vintage', head: 'none', extra: 'none' };
+export const FREE_PIECES = ['lower:lungiOld', 'lower:cream', 'lower:short', 'upper:vintage', 'upper:bare', 'upper:cloth', 'upper:shirt', 'head:none', 'head:thorthu', 'extra:none'];
 // the old complete outfits, as pieces (saves from before the wardrobe)
 export const OLD_OUTFITS = {
   everyday: { lower: 'cream', upper: 'cloth', head: 'none', extra: 'none' },

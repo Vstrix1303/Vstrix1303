@@ -15,6 +15,44 @@ every texture, model, animation, sound effect and note of music is generated pro
 > **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
+## Version 15 — Madhavan rearmed, and a new HUD
+
+- **Hands free.** You start with nothing in your hands: left-click punches (jab left, jab right), and right-click
+  keeps your guard up. Weapons hang on the body until you use them: the pistol in a hip holster, a long gun or the
+  lathi across the back. They come out the moment you aim or strike, and go back after a quiet spell.
+- **Five guns.** Each has its own ammunition, handling and sound:
+  - a Colt .45 automatic
+  - a double-barrel 12-bore
+  - a Kalashnikov assault rifle (hold to keep firing)
+  - a Lee-Enfield No. 4 (T) sniper rifle with a telescope view (Shift holds your breath)
+  - an M9 bazooka whose rockets throw everything about
+- **How shooting works:**
+  - Bullets go through the reticle. Headshots count extra. Recoil climbs and spread grows while you keep firing.
+  - The dot turns red over an enemy, and a cross marks a hit (red for a knock-down).
+  - Starting to aim snaps onto the nearest enemy in front.
+  - Gunfire brings guards running and sends villagers ducking for cover. A suppressor keeps it quiet.
+- **The gunsmith.** The trader behind the Puthenthura godown, and a new arms dealer by the bus stand, sell guns,
+  ammunition and parts. Every part shows in Madhavan's hands before you pay, with what it does to the gun's numbers:
+  - finish: blued, black, nickel, case-hardened or gold
+  - wood: walnut, teak, rosewood or ebony, or ivory grips
+  - barrels: long, cut-down or suppressor
+  - telescopes: 2.5x, 4x or 8x
+  - extended or drum magazines
+  - recoil pads, a folding stock, a heavy rocket warhead, and gold or silver engraving
+- **The weapon wheel.**
+  - Hold **Tab** and the world slows. Eight segments: unarmed, melee, pistol, shotgun, rifle, sniper, launcher and the
+    satchel.
+  - The middle shows the weapon's rounds and its damage, range, fire rate and accuracy.
+  - The mouse wheel cycles your melee weapons. **1–7** choose directly.
+- **The HUD:**
+  - a round radar with the time beneath it
+  - health and stamina cores above it, which empty as a ring and pulse red when low
+  - prompts at the lower right, with the weapon and its rounds beneath them while it is out
+  - the objective at the foot of the screen when it changes
+  - tips in a box at the top left
+- **New clothes to start in:** a mustard camp-collar shirt with a brown windowpane check, over an old checked lungi.
+  Shirts can now carry woven checks and stripes.
+
 ## Version 14 — every building open, and strangers on the road
 
 - **Walk into the big buildings.**
