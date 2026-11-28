@@ -293,7 +293,16 @@ export class Env {
     this.hemi.groundColor.copy(c.hemi).multiplyScalar(0.55).lerp(new THREE.Color(0.2, 0.15, 0.09), 0.35);
     this.scene.fog.color.copy(c.fog);
     this.scene.fog.density = fogD;
-    { const st = (this.sun.shadow.camera.right * 2) / this.sun.shadow.mapSize.x * 8; this.sun.target.position.set(Math.round(focus.x / st) * st, focus.y, Math.round(focus.z / st) * st); }
+    // the shadow map follows the player in whole texels of its own grid (in the light's frame, not the world's),
+    // so shadow edges stay put instead of crawling and jumping as you walk
+    {
+      const sc = this.sun.shadow.camera, tex = (sc.right - sc.left) / this.sun.shadow.mapSize.x, L = this.lightDir;
+      const ax = this._sx || (this._sx = new THREE.Vector3()), ay = this._sy || (this._sy = new THREE.Vector3());
+      ax.set(L.z, 0, -L.x); if (ax.lengthSq() < 1e-6) ax.set(1, 0, 0); ax.normalize();       // up × light
+      ay.crossVectors(L, ax);
+      const u = Math.round(focus.dot(ax) / tex) * tex, v = Math.round(focus.dot(ay) / tex) * tex, w = focus.dot(L);
+      this.sun.target.position.copy(ax).multiplyScalar(u).addScaledVector(ay, v).addScaledVector(L, w);
+    }
     this.sun.position.copy(this.sun.target.position).addScaledVector(this.lightDir, 200);
 
     const u = this.u;

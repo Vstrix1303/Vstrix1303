@@ -6,6 +6,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { N8AOPass } from 'n8ao';
 import { G, QUALITY } from './state.js';
 
@@ -75,7 +76,7 @@ const GradeShader = {
       float vig = smoothstep(0.85, 0.2, length(q * vec2(1.0, 0.85)) );
       c *= mix(1.0, vig, uVig * 0.35);
       c = mix(c, vec3(0.5, 0.03, 0.02), uHurt * smoothstep(0.25, 0.75, length(q)) * 0.75);
-      c += (hash(vUv * vec2(1920.0, 1080.0) + fract(uTime) * 100.0) - 0.5) * 0.034;
+      c += (hash(vUv * vec2(1920.0, 1080.0) + fract(uTime) * 100.0) - 0.5) * 0.02;
       gl_FragColor = vec4(c, 1.0);
     }`,
 };
@@ -102,6 +103,8 @@ export class Post {
     this.composer.addPass(this.grade);
     // the AO path renders without MSAA, so smooth the edges after grading
     if (q.ao) { this.smaa = new SMAAPass(size.x, size.y); this.composer.addPass(this.smaa); }
+    // no multisampling (integrated graphics, Low): without this every edge, wire and palm frond is a staircase
+    else if (!q.msaa) { this.fxaa = new ShaderPass(FXAAShader); this.composer.addPass(this.fxaa); }
     this.u = this.grade.uniforms;
     this.renderer = renderer; this.scene = scene; this.camera = camera;
   }
@@ -113,7 +116,10 @@ export class Post {
     r.toneMappingExposure = on ? 1.05 : 1;
     this.scene.traverse((o) => { const m = o.material; if (m) (Array.isArray(m) ? m : [m]).forEach((x) => (x.needsUpdate = true)); });
   }
-  setSize(w, h) { this.composer.setSize(w, h); this.u.uAspect.value = w / h; }
+  setSize(w, h) {
+    this.composer.setSize(w, h); this.u.uAspect.value = w / h;
+    if (this.fxaa) { const pr = this.renderer.getPixelRatio(); this.fxaa.uniforms.resolution.value.set(1 / (w * pr), 1 / (h * pr)); }
+  }
   render(dt) {
     if (this.safe) { this.renderer.setRenderTarget(null); this.renderer.render(this.scene, this.camera); }
     else this.composer.render(dt);

@@ -82,7 +82,7 @@ async function boot() {
   G.shadowPeople = G.quality === 'low' ? 26 : light ? 40 : 52;
   G.shadowEvery = 1;
   const basePR = () => (G.quality === 'low' ? 0.75 * Math.min(devicePixelRatio || 1, 1) : G.quality === 'medium' ? Math.min(devicePixelRatio || 1, 1) : Math.min(devicePixelRatio || 1, 1.5));
-  let prScale = G.integrated ? 0.85 : 1, stage = 0, frameN = 0;
+  let prScale = G.integrated ? 0.9 : 1, stage = 0, frameN = 0;
   renderer.setPixelRatio(basePR() * prScale);
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
@@ -390,12 +390,15 @@ async function boot() {
         const old = prScale;
         if (fpsEl) fpsEl.textContent = `${Math.round(fps)} fps · ${G.quality}${G.integrated ? ' (integrated GPU)' : ''} · ${Math.round(prScale * 100)}% resolution${stage ? ' · effects trimmed ' + stage : ''}${G.safeRender ? ' · screen effects off' : ''}${G.compat ? ' · compatibility ' + G.compat : ''} · ${(G.gpuName || 'unknown GPU').replace(/^ANGLE \(|\)$/g, '').slice(0, 70)}`;
         // aim for at least 40 frames a second: first lower the resolution, then trim the costliest effects
+        // (below about 80% resolution the picture turns blocky, so effects go first, then the last bit of resolution)
         if (fps < 41) {
-          if (prScale > 0.6) prScale = Math.max(0.6, prScale * 0.88);
+          if (prScale > 0.8) prScale = Math.max(0.8, prScale * 0.92);
           else if (stage < 3) degrade(++stage);
-        } else if (fps > 62) {
-          if (stage > 0 && prScale >= 0.75) degrade(--stage);
-          else if (prScale < 1) prScale = Math.min(1, prScale * 1.07);
+          else if (prScale > 0.7) prScale = Math.max(0.7, prScale * 0.93);
+        } else if (fps > 60) {
+          if (prScale < 0.8) prScale = Math.min(0.8, prScale * 1.05);
+          else if (stage > 0) degrade(--stage);
+          else if (prScale < 1) prScale = Math.min(1, prScale * 1.05);
         }
         if (old !== prScale) resize();
       }

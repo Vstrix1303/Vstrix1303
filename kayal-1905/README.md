@@ -15,6 +15,16 @@ every texture, model, animation, sound effect and note of music is generated pro
 > **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
+## Version 19 — a steadier, smoother picture
+
+- **Shadows no longer crawl as you walk.** The shadow map now follows the player in whole steps of its own grid,
+  so shadow edges stay fixed on the ground instead of sliding and shimmering with every step.
+- **Smoothed edges without multisampling.** Integrated graphics and Low quality had no anti-aliasing at all, so
+  every roof edge, ledge and rail was a staircase. A light FXAA pass now smooths them.
+- **Resolution stays sharper.** When the frame rate dips, the game now trims effects before it drops below 80%
+  resolution, and never goes below 70% (it used to fall to 60%, which looked blocky). Integrated graphics start at 90%.
+- Lighter film grain.
+
 ## Version 18 — towns, big and small
 
 - **Puthenthura is a proper port town now.** The levelled ground reaches north of the old quay, and a tarred bazaar
