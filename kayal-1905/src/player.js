@@ -53,7 +53,7 @@ export class Player {
     if (key === this.lookKey) return;
     this.lookKey = key;
     const old = this.h;
-    this.h = new Human({ ...look, build: 1.03, hero: G.quality === 'high' || G.quality === 'ultra' });
+    this.h = new Human({ ...look, build: 1.03, hero: G.quality === 'high' || G.quality === 'ultra', protagonist: true });
     if (old) {
       this.root.remove(old.root); this.h.state = old.state; this.h.mountQ = old.mountQ;
       for (const m of [this.stick, this.paddle, this.rod, this.bucket, this.shield, this.slung, this.holster]) m?.parent?.remove(m);

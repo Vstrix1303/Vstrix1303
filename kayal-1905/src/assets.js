@@ -51,6 +51,10 @@ export async function loadHumans(onProgress) {
     // the clothes' detail maps (folds, seams, weave; dyed in the shader): data, not colour
     HUMANS.clothTex = {};
     await Promise.all((man.clothTex || []).map(async (f) => { const t = await new THREE.TextureLoader().loadAsync('assets/humans/cl_' + f).catch(() => null); if (t) { t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; HUMANS.clothTex[f.replace('.png', '')] = t; } }));
+    // skin detail (pores, creases, lips, nails; a multiplier over each complexion) and hair / brow / lash cards
+    HUMANS.skinTex = {}; HUMANS.pxTex = {};
+    await Promise.all((man.skinTex || []).map(async (k) => { const t = await new THREE.TextureLoader().loadAsync('assets/humans/skin_' + k + '.jpg').catch(() => null); if (t) { t.colorSpace = THREE.NoColorSpace; t.anisotropy = 8; HUMANS.skinTex[k] = t; } }));
+    await Promise.all((man.proxyTex || []).map(async (k) => { const t = await new THREE.TextureLoader().loadAsync('assets/humans/px_' + k + '.png').catch(() => null); if (t) { t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; HUMANS.pxTex[k] = t; } }));
   } catch (e) { console.warn('realistic people unavailable', e); return false; }
   HUMANS.presets = man.presets; HUMANS.ready = true;
   return true;

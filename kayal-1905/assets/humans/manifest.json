@@ -342,6 +342,156 @@
      "off": 1552388,
      "len": 2520,
      "type": "Uint16Array"
+    },
+    "px_short04_p": {
+     "off": 1557428,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_n": {
+     "off": 1569320,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_u": {
+     "off": 1581212,
+     "len": 1982,
+     "type": "Float32Array"
+    },
+    "px_short04_i": {
+     "off": 1589140,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_w": {
+     "off": 1593104,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_x": {
+     "off": 1597068,
+     "len": 3150,
+     "type": "Uint16Array"
+    },
+    "px_short02_p": {
+     "off": 1603368,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_n": {
+     "off": 1628100,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_u": {
+     "off": 1652832,
+     "len": 4122,
+     "type": "Float32Array"
+    },
+    "px_short02_i": {
+     "off": 1669320,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_w": {
+     "off": 1677564,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_x": {
+     "off": 1685808,
+     "len": 10032,
+     "type": "Uint16Array"
+    },
+    "px_short01_p": {
+     "off": 1705872,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_n": {
+     "off": 1743996,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_u": {
+     "off": 1782120,
+     "len": 6354,
+     "type": "Float32Array"
+    },
+    "px_short01_i": {
+     "off": 1807536,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_w": {
+     "off": 1820244,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_x": {
+     "off": 1832952,
+     "len": 11034,
+     "type": "Uint16Array"
+    },
+    "px_brow1_p": {
+     "off": 1855020,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_n": {
+     "off": 1856532,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_u": {
+     "off": 1858044,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow1_i": {
+     "off": 1859052,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_w": {
+     "off": 1859556,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_x": {
+     "off": 1860060,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 1861212,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 1864212,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 1867212,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 1869212,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 1870212,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 1871212,
+     "len": 1104,
+     "type": "Uint16Array"
     }
    },
    "bones": [
@@ -568,7 +718,30 @@
       840
      ]
     }
-   }
+   },
+   "proxies": {
+    "short04": {
+     "kind": "hair",
+     "tris": 1050
+    },
+    "short02": {
+     "kind": "hair",
+     "tris": 3344
+    },
+    "short01": {
+     "kind": "hair",
+     "tris": 3678
+    },
+    "brow1": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "m"
   },
   "m_lean": {
    "verts": 14517,
@@ -917,6 +1090,156 @@
      "off": 1817416,
      "len": 2520,
      "type": "Uint16Array"
+    },
+    "px_short04_p": {
+     "off": 1822456,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_n": {
+     "off": 1834348,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_u": {
+     "off": 1846240,
+     "len": 1982,
+     "type": "Float32Array"
+    },
+    "px_short04_i": {
+     "off": 1854168,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_w": {
+     "off": 1858132,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_x": {
+     "off": 1862096,
+     "len": 3150,
+     "type": "Uint16Array"
+    },
+    "px_short02_p": {
+     "off": 1868396,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_n": {
+     "off": 1893128,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_u": {
+     "off": 1917860,
+     "len": 4122,
+     "type": "Float32Array"
+    },
+    "px_short02_i": {
+     "off": 1934348,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_w": {
+     "off": 1942592,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_x": {
+     "off": 1950836,
+     "len": 10032,
+     "type": "Uint16Array"
+    },
+    "px_short01_p": {
+     "off": 1970900,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_n": {
+     "off": 2009024,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_u": {
+     "off": 2047148,
+     "len": 6354,
+     "type": "Float32Array"
+    },
+    "px_short01_i": {
+     "off": 2072564,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_w": {
+     "off": 2085272,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_x": {
+     "off": 2097980,
+     "len": 11034,
+     "type": "Uint16Array"
+    },
+    "px_brow1_p": {
+     "off": 2120048,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_n": {
+     "off": 2121560,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_u": {
+     "off": 2123072,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow1_i": {
+     "off": 2124080,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_w": {
+     "off": 2124584,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_x": {
+     "off": 2125088,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 2126240,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 2129240,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 2132240,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 2134240,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 2135240,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 2136240,
+     "len": 1104,
+     "type": "Uint16Array"
     }
    },
    "bones": [
@@ -1151,7 +1474,30 @@
       840
      ]
     }
-   }
+   },
+   "proxies": {
+    "short04": {
+     "kind": "hair",
+     "tris": 1050
+    },
+    "short02": {
+     "kind": "hair",
+     "tris": 3344
+    },
+    "short01": {
+     "kind": "hair",
+     "tris": 3678
+    },
+    "brow1": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "m"
   },
   "m_heavy": {
    "verts": 14517,
@@ -1500,6 +1846,156 @@
      "off": 1817984,
      "len": 2520,
      "type": "Uint16Array"
+    },
+    "px_short04_p": {
+     "off": 1823024,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_n": {
+     "off": 1834916,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_u": {
+     "off": 1846808,
+     "len": 1982,
+     "type": "Float32Array"
+    },
+    "px_short04_i": {
+     "off": 1854736,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_w": {
+     "off": 1858700,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_x": {
+     "off": 1862664,
+     "len": 3150,
+     "type": "Uint16Array"
+    },
+    "px_short02_p": {
+     "off": 1868964,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_n": {
+     "off": 1893696,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_u": {
+     "off": 1918428,
+     "len": 4122,
+     "type": "Float32Array"
+    },
+    "px_short02_i": {
+     "off": 1934916,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_w": {
+     "off": 1943160,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_x": {
+     "off": 1951404,
+     "len": 10032,
+     "type": "Uint16Array"
+    },
+    "px_short01_p": {
+     "off": 1971468,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_n": {
+     "off": 2009592,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_u": {
+     "off": 2047716,
+     "len": 6354,
+     "type": "Float32Array"
+    },
+    "px_short01_i": {
+     "off": 2073132,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_w": {
+     "off": 2085840,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_x": {
+     "off": 2098548,
+     "len": 11034,
+     "type": "Uint16Array"
+    },
+    "px_brow1_p": {
+     "off": 2120616,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_n": {
+     "off": 2122128,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_u": {
+     "off": 2123640,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow1_i": {
+     "off": 2124648,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_w": {
+     "off": 2125152,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_x": {
+     "off": 2125656,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 2126808,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 2129808,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 2132808,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 2134808,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 2135808,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 2136808,
+     "len": 1104,
+     "type": "Uint16Array"
     }
    },
    "bones": [
@@ -1734,7 +2230,30 @@
       840
      ]
     }
-   }
+   },
+   "proxies": {
+    "short04": {
+     "kind": "hair",
+     "tris": 1050
+    },
+    "short02": {
+     "kind": "hair",
+     "tris": 3344
+    },
+    "short01": {
+     "kind": "hair",
+     "tris": 3678
+    },
+    "brow1": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "m"
   },
   "m_old": {
    "verts": 14517,
@@ -2048,6 +2567,156 @@
      "off": 1551180,
      "len": 2472,
      "type": "Uint16Array"
+    },
+    "px_short04_p": {
+     "off": 1556124,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_n": {
+     "off": 1568016,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_u": {
+     "off": 1579908,
+     "len": 1982,
+     "type": "Float32Array"
+    },
+    "px_short04_i": {
+     "off": 1587836,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_w": {
+     "off": 1591800,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_x": {
+     "off": 1595764,
+     "len": 3150,
+     "type": "Uint16Array"
+    },
+    "px_short02_p": {
+     "off": 1602064,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_n": {
+     "off": 1626796,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_u": {
+     "off": 1651528,
+     "len": 4122,
+     "type": "Float32Array"
+    },
+    "px_short02_i": {
+     "off": 1668016,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_w": {
+     "off": 1676260,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_x": {
+     "off": 1684504,
+     "len": 10032,
+     "type": "Uint16Array"
+    },
+    "px_short01_p": {
+     "off": 1704568,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_n": {
+     "off": 1742692,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_u": {
+     "off": 1780816,
+     "len": 6354,
+     "type": "Float32Array"
+    },
+    "px_short01_i": {
+     "off": 1806232,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_w": {
+     "off": 1818940,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_x": {
+     "off": 1831648,
+     "len": 11034,
+     "type": "Uint16Array"
+    },
+    "px_brow1_p": {
+     "off": 1853716,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_n": {
+     "off": 1855228,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_u": {
+     "off": 1856740,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow1_i": {
+     "off": 1857748,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_w": {
+     "off": 1858252,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_x": {
+     "off": 1858756,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 1859908,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 1862908,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 1865908,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 1867908,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 1868908,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 1869908,
+     "len": 1104,
+     "type": "Uint16Array"
     }
    },
    "bones": [
@@ -2274,7 +2943,30 @@
       824
      ]
     }
-   }
+   },
+   "proxies": {
+    "short04": {
+     "kind": "hair",
+     "tris": 1050
+    },
+    "short02": {
+     "kind": "hair",
+     "tris": 3344
+    },
+    "short01": {
+     "kind": "hair",
+     "tris": 3678
+    },
+    "brow1": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "mo"
   },
   "f_young": {
    "verts": 14517,
@@ -2412,6 +3104,96 @@
     "chatta_x1": {
      "off": 898376,
      "len": 1512,
+     "type": "Uint16Array"
+    },
+    "px_braid01_p": {
+     "off": 901400,
+     "len": 12948,
+     "type": "Float32Array"
+    },
+    "px_braid01_n": {
+     "off": 953192,
+     "len": 12948,
+     "type": "Float32Array"
+    },
+    "px_braid01_u": {
+     "off": 1004984,
+     "len": 8632,
+     "type": "Float32Array"
+    },
+    "px_braid01_i": {
+     "off": 1039512,
+     "len": 17264,
+     "type": "Uint8Array"
+    },
+    "px_braid01_w": {
+     "off": 1056776,
+     "len": 17264,
+     "type": "Uint8Array"
+    },
+    "px_braid01_x": {
+     "off": 1074040,
+     "len": 14751,
+     "type": "Uint16Array"
+    },
+    "px_brow3_p": {
+     "off": 1103544,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow3_n": {
+     "off": 1105056,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow3_u": {
+     "off": 1106568,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow3_i": {
+     "off": 1107576,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow3_w": {
+     "off": 1108080,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow3_x": {
+     "off": 1108584,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 1109736,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 1112736,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 1115736,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 1117736,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 1118736,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 1119736,
+     "len": 1104,
      "type": "Uint16Array"
     }
    },
@@ -2599,7 +3381,22 @@
       504
      ]
     }
-   }
+   },
+   "proxies": {
+    "braid01": {
+     "kind": "hair",
+     "tris": 4917
+    },
+    "brow3": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "f"
   },
   "f_old": {
    "verts": 14517,
@@ -2737,6 +3534,96 @@
     "chatta_x1": {
      "off": 899208,
      "len": 1512,
+     "type": "Uint16Array"
+    },
+    "px_braid01_p": {
+     "off": 902232,
+     "len": 12969,
+     "type": "Float32Array"
+    },
+    "px_braid01_n": {
+     "off": 954108,
+     "len": 12969,
+     "type": "Float32Array"
+    },
+    "px_braid01_u": {
+     "off": 1005984,
+     "len": 8646,
+     "type": "Float32Array"
+    },
+    "px_braid01_i": {
+     "off": 1040568,
+     "len": 17292,
+     "type": "Uint8Array"
+    },
+    "px_braid01_w": {
+     "off": 1057860,
+     "len": 17292,
+     "type": "Uint8Array"
+    },
+    "px_braid01_x": {
+     "off": 1075152,
+     "len": 14778,
+     "type": "Uint16Array"
+    },
+    "px_brow3_p": {
+     "off": 1104708,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow3_n": {
+     "off": 1106220,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow3_u": {
+     "off": 1107732,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow3_i": {
+     "off": 1108740,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow3_w": {
+     "off": 1109244,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow3_x": {
+     "off": 1109748,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 1110900,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 1113900,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 1116900,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 1118900,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 1119900,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 1120900,
+     "len": 1104,
      "type": "Uint16Array"
     }
    },
@@ -2924,7 +3811,22 @@
       504
      ]
     }
-   }
+   },
+   "proxies": {
+    "braid01": {
+     "kind": "hair",
+     "tris": 4926
+    },
+    "brow3": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "fo"
   },
   "c_m": {
    "verts": 14517,
@@ -3238,6 +4140,156 @@
      "off": 1551792,
      "len": 2664,
      "type": "Uint16Array"
+    },
+    "px_short04_p": {
+     "off": 1557120,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_n": {
+     "off": 1569012,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_u": {
+     "off": 1580904,
+     "len": 1982,
+     "type": "Float32Array"
+    },
+    "px_short04_i": {
+     "off": 1588832,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_w": {
+     "off": 1592796,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_x": {
+     "off": 1596760,
+     "len": 3150,
+     "type": "Uint16Array"
+    },
+    "px_short02_p": {
+     "off": 1603060,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_n": {
+     "off": 1627792,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_u": {
+     "off": 1652524,
+     "len": 4122,
+     "type": "Float32Array"
+    },
+    "px_short02_i": {
+     "off": 1669012,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_w": {
+     "off": 1677256,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_x": {
+     "off": 1685500,
+     "len": 10032,
+     "type": "Uint16Array"
+    },
+    "px_short01_p": {
+     "off": 1705564,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_n": {
+     "off": 1743688,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_u": {
+     "off": 1781812,
+     "len": 6354,
+     "type": "Float32Array"
+    },
+    "px_short01_i": {
+     "off": 1807228,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_w": {
+     "off": 1819936,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_x": {
+     "off": 1832644,
+     "len": 11034,
+     "type": "Uint16Array"
+    },
+    "px_brow1_p": {
+     "off": 1854712,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_n": {
+     "off": 1856224,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_u": {
+     "off": 1857736,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow1_i": {
+     "off": 1858744,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_w": {
+     "off": 1859248,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_x": {
+     "off": 1859752,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 1860904,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 1863904,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 1866904,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 1868904,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 1869904,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 1870904,
+     "len": 1104,
+     "type": "Uint16Array"
     }
    },
    "bones": [
@@ -3464,7 +4516,30 @@
       888
      ]
     }
-   }
+   },
+   "proxies": {
+    "short04": {
+     "kind": "hair",
+     "tris": 1050
+    },
+    "short02": {
+     "kind": "hair",
+     "tris": 3344
+    },
+    "short01": {
+     "kind": "hair",
+     "tris": 3678
+    },
+    "brow1": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "m"
   },
   "c_f": {
    "verts": 14517,
@@ -3602,6 +4677,96 @@
     "chatta_x1": {
      "off": 902520,
      "len": 1512,
+     "type": "Uint16Array"
+    },
+    "px_braid01_p": {
+     "off": 905544,
+     "len": 12963,
+     "type": "Float32Array"
+    },
+    "px_braid01_n": {
+     "off": 957396,
+     "len": 12963,
+     "type": "Float32Array"
+    },
+    "px_braid01_u": {
+     "off": 1009248,
+     "len": 8642,
+     "type": "Float32Array"
+    },
+    "px_braid01_i": {
+     "off": 1043816,
+     "len": 17284,
+     "type": "Uint8Array"
+    },
+    "px_braid01_w": {
+     "off": 1061100,
+     "len": 17284,
+     "type": "Uint8Array"
+    },
+    "px_braid01_x": {
+     "off": 1078384,
+     "len": 14775,
+     "type": "Uint16Array"
+    },
+    "px_brow3_p": {
+     "off": 1107936,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow3_n": {
+     "off": 1109448,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow3_u": {
+     "off": 1110960,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow3_i": {
+     "off": 1111968,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow3_w": {
+     "off": 1112472,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow3_x": {
+     "off": 1112976,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 1114128,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 1117128,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 1120128,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 1122128,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 1123128,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 1124128,
+     "len": 1104,
      "type": "Uint16Array"
     }
    },
@@ -3789,7 +4954,22 @@
       504
      ]
     }
-   }
+   },
+   "proxies": {
+    "braid01": {
+     "kind": "hair",
+     "tris": 4925
+    },
+    "brow3": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "f"
   },
   "e_m": {
    "verts": 14517,
@@ -4138,6 +5318,156 @@
      "off": 1818636,
      "len": 2508,
      "type": "Uint16Array"
+    },
+    "px_short04_p": {
+     "off": 1823652,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_n": {
+     "off": 1835544,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_u": {
+     "off": 1847436,
+     "len": 1982,
+     "type": "Float32Array"
+    },
+    "px_short04_i": {
+     "off": 1855364,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_w": {
+     "off": 1859328,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_x": {
+     "off": 1863292,
+     "len": 3150,
+     "type": "Uint16Array"
+    },
+    "px_short02_p": {
+     "off": 1869592,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_n": {
+     "off": 1894324,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_u": {
+     "off": 1919056,
+     "len": 4122,
+     "type": "Float32Array"
+    },
+    "px_short02_i": {
+     "off": 1935544,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_w": {
+     "off": 1943788,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_x": {
+     "off": 1952032,
+     "len": 10032,
+     "type": "Uint16Array"
+    },
+    "px_short01_p": {
+     "off": 1972096,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_n": {
+     "off": 2010220,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_u": {
+     "off": 2048344,
+     "len": 6354,
+     "type": "Float32Array"
+    },
+    "px_short01_i": {
+     "off": 2073760,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_w": {
+     "off": 2086468,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_x": {
+     "off": 2099176,
+     "len": 11034,
+     "type": "Uint16Array"
+    },
+    "px_brow1_p": {
+     "off": 2121244,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_n": {
+     "off": 2122756,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_u": {
+     "off": 2124268,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow1_i": {
+     "off": 2125276,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_w": {
+     "off": 2125780,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_x": {
+     "off": 2126284,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 2127436,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 2130436,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 2133436,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 2135436,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 2136436,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 2137436,
+     "len": 1104,
+     "type": "Uint16Array"
     }
    },
    "bones": [
@@ -4372,7 +5702,30 @@
       836
      ]
     }
-   }
+   },
+   "proxies": {
+    "short04": {
+     "kind": "hair",
+     "tris": 1050
+    },
+    "short02": {
+     "kind": "hair",
+     "tris": 3344
+    },
+    "short01": {
+     "kind": "hair",
+     "tris": 3678
+    },
+    "brow1": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "e"
   },
   "e_old": {
    "verts": 14517,
@@ -4721,6 +6074,156 @@
      "off": 1818892,
      "len": 2490,
      "type": "Uint16Array"
+    },
+    "px_short04_p": {
+     "off": 1823872,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_n": {
+     "off": 1835764,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_u": {
+     "off": 1847656,
+     "len": 1982,
+     "type": "Float32Array"
+    },
+    "px_short04_i": {
+     "off": 1855584,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_w": {
+     "off": 1859548,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_x": {
+     "off": 1863512,
+     "len": 3150,
+     "type": "Uint16Array"
+    },
+    "px_short02_p": {
+     "off": 1869812,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_n": {
+     "off": 1894544,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_u": {
+     "off": 1919276,
+     "len": 4122,
+     "type": "Float32Array"
+    },
+    "px_short02_i": {
+     "off": 1935764,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_w": {
+     "off": 1944008,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_x": {
+     "off": 1952252,
+     "len": 10032,
+     "type": "Uint16Array"
+    },
+    "px_short01_p": {
+     "off": 1972316,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_n": {
+     "off": 2010440,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_u": {
+     "off": 2048564,
+     "len": 6354,
+     "type": "Float32Array"
+    },
+    "px_short01_i": {
+     "off": 2073980,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_w": {
+     "off": 2086688,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_x": {
+     "off": 2099396,
+     "len": 11034,
+     "type": "Uint16Array"
+    },
+    "px_brow1_p": {
+     "off": 2121464,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_n": {
+     "off": 2122976,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_u": {
+     "off": 2124488,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow1_i": {
+     "off": 2125496,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_w": {
+     "off": 2126000,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_x": {
+     "off": 2126504,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 2127656,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 2130656,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 2133656,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 2135656,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 2136656,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 2137656,
+     "len": 1104,
+     "type": "Uint16Array"
     }
    },
    "bones": [
@@ -4955,7 +6458,743 @@
       830
      ]
     }
-   }
+   },
+   "proxies": {
+    "short04": {
+     "kind": "hair",
+     "tris": 1050
+    },
+    "short02": {
+     "kind": "hair",
+     "tris": 3344
+    },
+    "short01": {
+     "kind": "hair",
+     "tris": 3678
+    },
+    "brow1": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "e"
+  },
+  "p_hero": {
+   "verts": 14517,
+   "tris": [
+    26756,
+    8026,
+    2674
+   ],
+   "layout": {
+    "eyeP": {
+     "off": 0,
+     "len": 288,
+     "type": "Float32Array"
+    },
+    "eyeUV": {
+     "off": 1152,
+     "len": 192,
+     "type": "Float32Array"
+    },
+    "eyeI": {
+     "off": 1920,
+     "len": 516,
+     "type": "Uint16Array"
+    },
+    "pos": {
+     "off": 2952,
+     "len": 43551,
+     "type": "Float32Array"
+    },
+    "nrm": {
+     "off": 177156,
+     "len": 43551,
+     "type": "Float32Array"
+    },
+    "uv": {
+     "off": 351360,
+     "len": 29034,
+     "type": "Float32Array"
+    },
+    "ski": {
+     "off": 467496,
+     "len": 58068,
+     "type": "Uint8Array"
+    },
+    "skw": {
+     "off": 525564,
+     "len": 58068,
+     "type": "Uint8Array"
+    },
+    "i0": {
+     "off": 583632,
+     "len": 80268,
+     "type": "Uint16Array"
+    },
+    "i1": {
+     "off": 744168,
+     "len": 24078,
+     "type": "Uint16Array"
+    },
+    "i2": {
+     "off": 792324,
+     "len": 8022,
+     "type": "Uint16Array"
+    },
+    "cov": {
+     "off": 808368,
+     "len": 14517,
+     "type": "Uint8Array"
+    },
+    "cs01U_p": {
+     "off": 822888,
+     "len": 7647,
+     "type": "Float32Array"
+    },
+    "cs01U_n": {
+     "off": 853476,
+     "len": 7647,
+     "type": "Float32Array"
+    },
+    "cs01U_u": {
+     "off": 884064,
+     "len": 5098,
+     "type": "Float32Array"
+    },
+    "cs01U_i": {
+     "off": 904456,
+     "len": 10196,
+     "type": "Uint8Array"
+    },
+    "cs01U_w": {
+     "off": 914652,
+     "len": 10196,
+     "type": "Uint8Array"
+    },
+    "cs01U_x0": {
+     "off": 924848,
+     "len": 13218,
+     "type": "Uint16Array"
+    },
+    "cs01U_x1": {
+     "off": 951284,
+     "len": 4806,
+     "type": "Uint16Array"
+    },
+    "cs01L_p": {
+     "off": 960896,
+     "len": 7935,
+     "type": "Float32Array"
+    },
+    "cs01L_n": {
+     "off": 992636,
+     "len": 7935,
+     "type": "Float32Array"
+    },
+    "cs01L_u": {
+     "off": 1024376,
+     "len": 5290,
+     "type": "Float32Array"
+    },
+    "cs01L_i": {
+     "off": 1045536,
+     "len": 10580,
+     "type": "Uint8Array"
+    },
+    "cs01L_w": {
+     "off": 1056116,
+     "len": 10580,
+     "type": "Uint8Array"
+    },
+    "cs01L_x0": {
+     "off": 1066696,
+     "len": 14286,
+     "type": "Uint16Array"
+    },
+    "cs01L_x1": {
+     "off": 1095268,
+     "len": 5196,
+     "type": "Uint16Array"
+    },
+    "cs01H_p": {
+     "off": 1105660,
+     "len": 5271,
+     "type": "Float32Array"
+    },
+    "cs01H_n": {
+     "off": 1126744,
+     "len": 5271,
+     "type": "Float32Array"
+    },
+    "cs01H_u": {
+     "off": 1147828,
+     "len": 3514,
+     "type": "Float32Array"
+    },
+    "cs01H_i": {
+     "off": 1161884,
+     "len": 7028,
+     "type": "Uint8Array"
+    },
+    "cs01H_w": {
+     "off": 1168912,
+     "len": 7028,
+     "type": "Uint8Array"
+    },
+    "cs01H_x0": {
+     "off": 1175940,
+     "len": 8685,
+     "type": "Uint16Array"
+    },
+    "cs01H_x1": {
+     "off": 1193312,
+     "len": 3159,
+     "type": "Uint16Array"
+    },
+    "cs01S_p": {
+     "off": 1199632,
+     "len": 3165,
+     "type": "Float32Array"
+    },
+    "cs01S_n": {
+     "off": 1212292,
+     "len": 3165,
+     "type": "Float32Array"
+    },
+    "cs01S_u": {
+     "off": 1224952,
+     "len": 2110,
+     "type": "Float32Array"
+    },
+    "cs01S_i": {
+     "off": 1233392,
+     "len": 4220,
+     "type": "Uint8Array"
+    },
+    "cs01S_w": {
+     "off": 1237612,
+     "len": 4220,
+     "type": "Uint8Array"
+    },
+    "cs01S_x0": {
+     "off": 1241832,
+     "len": 5424,
+     "type": "Uint16Array"
+    },
+    "cs01S_x1": {
+     "off": 1252680,
+     "len": 1974,
+     "type": "Uint16Array"
+    },
+    "cs01UM_p": {
+     "off": 1256628,
+     "len": 6939,
+     "type": "Float32Array"
+    },
+    "cs01UM_n": {
+     "off": 1284384,
+     "len": 6939,
+     "type": "Float32Array"
+    },
+    "cs01UM_u": {
+     "off": 1312140,
+     "len": 4626,
+     "type": "Float32Array"
+    },
+    "cs01UM_i": {
+     "off": 1330644,
+     "len": 9252,
+     "type": "Uint8Array"
+    },
+    "cs01UM_w": {
+     "off": 1339896,
+     "len": 9252,
+     "type": "Uint8Array"
+    },
+    "cs01UM_x0": {
+     "off": 1349148,
+     "len": 11865,
+     "type": "Uint16Array"
+    },
+    "cs01UM_x1": {
+     "off": 1372880,
+     "len": 4311,
+     "type": "Uint16Array"
+    },
+    "cs01HM_p": {
+     "off": 1381504,
+     "len": 5271,
+     "type": "Float32Array"
+    },
+    "cs01HM_n": {
+     "off": 1402588,
+     "len": 5271,
+     "type": "Float32Array"
+    },
+    "cs01HM_u": {
+     "off": 1423672,
+     "len": 3514,
+     "type": "Float32Array"
+    },
+    "cs01HM_i": {
+     "off": 1437728,
+     "len": 7028,
+     "type": "Uint8Array"
+    },
+    "cs01HM_w": {
+     "off": 1444756,
+     "len": 7028,
+     "type": "Uint8Array"
+    },
+    "cs01HM_x0": {
+     "off": 1451784,
+     "len": 8685,
+     "type": "Uint16Array"
+    },
+    "cs01HM_x1": {
+     "off": 1469156,
+     "len": 3159,
+     "type": "Uint16Array"
+    },
+    "shoes_p": {
+     "off": 1475476,
+     "len": 4689,
+     "type": "Float32Array"
+    },
+    "shoes_n": {
+     "off": 1494232,
+     "len": 4689,
+     "type": "Float32Array"
+    },
+    "shoes_u": {
+     "off": 1512988,
+     "len": 3126,
+     "type": "Float32Array"
+    },
+    "shoes_i": {
+     "off": 1525492,
+     "len": 6252,
+     "type": "Uint8Array"
+    },
+    "shoes_w": {
+     "off": 1531744,
+     "len": 6252,
+     "type": "Uint8Array"
+    },
+    "shoes_x0": {
+     "off": 1537996,
+     "len": 6810,
+     "type": "Uint16Array"
+    },
+    "shoes_x1": {
+     "off": 1551616,
+     "len": 2556,
+     "type": "Uint16Array"
+    },
+    "px_short04_p": {
+     "off": 1556728,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_n": {
+     "off": 1568620,
+     "len": 2973,
+     "type": "Float32Array"
+    },
+    "px_short04_u": {
+     "off": 1580512,
+     "len": 1982,
+     "type": "Float32Array"
+    },
+    "px_short04_i": {
+     "off": 1588440,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_w": {
+     "off": 1592404,
+     "len": 3964,
+     "type": "Uint8Array"
+    },
+    "px_short04_x": {
+     "off": 1596368,
+     "len": 3150,
+     "type": "Uint16Array"
+    },
+    "px_short02_p": {
+     "off": 1602668,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_n": {
+     "off": 1627400,
+     "len": 6183,
+     "type": "Float32Array"
+    },
+    "px_short02_u": {
+     "off": 1652132,
+     "len": 4122,
+     "type": "Float32Array"
+    },
+    "px_short02_i": {
+     "off": 1668620,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_w": {
+     "off": 1676864,
+     "len": 8244,
+     "type": "Uint8Array"
+    },
+    "px_short02_x": {
+     "off": 1685108,
+     "len": 10032,
+     "type": "Uint16Array"
+    },
+    "px_short01_p": {
+     "off": 1705172,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_n": {
+     "off": 1743296,
+     "len": 9531,
+     "type": "Float32Array"
+    },
+    "px_short01_u": {
+     "off": 1781420,
+     "len": 6354,
+     "type": "Float32Array"
+    },
+    "px_short01_i": {
+     "off": 1806836,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_w": {
+     "off": 1819544,
+     "len": 12708,
+     "type": "Uint8Array"
+    },
+    "px_short01_x": {
+     "off": 1832252,
+     "len": 11034,
+     "type": "Uint16Array"
+    },
+    "px_brow1_p": {
+     "off": 1854320,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_n": {
+     "off": 1855832,
+     "len": 378,
+     "type": "Float32Array"
+    },
+    "px_brow1_u": {
+     "off": 1857344,
+     "len": 252,
+     "type": "Float32Array"
+    },
+    "px_brow1_i": {
+     "off": 1858352,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_w": {
+     "off": 1858856,
+     "len": 504,
+     "type": "Uint8Array"
+    },
+    "px_brow1_x": {
+     "off": 1859360,
+     "len": 576,
+     "type": "Uint16Array"
+    },
+    "px_lash_p": {
+     "off": 1860512,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_n": {
+     "off": 1863512,
+     "len": 750,
+     "type": "Float32Array"
+    },
+    "px_lash_u": {
+     "off": 1866512,
+     "len": 500,
+     "type": "Float32Array"
+    },
+    "px_lash_i": {
+     "off": 1868512,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_w": {
+     "off": 1869512,
+     "len": 1000,
+     "type": "Uint8Array"
+    },
+    "px_lash_x": {
+     "off": 1870512,
+     "len": 1104,
+     "type": "Uint16Array"
+    }
+   },
+   "bones": [
+    [
+     0,
+     0.9142199735395321,
+     0
+    ],
+    [
+     0,
+     1.0137021585274493,
+     0.032275469371668426
+    ],
+    [
+     0,
+     1.1422492727619893,
+     0.03184420554541584
+    ],
+    [
+     0,
+     1.4826364129964849,
+     0.07179414688869962
+    ],
+    [
+     0,
+     1.5778280864509628,
+     0.104875982443373
+    ],
+    [
+     -0.02268749536483312,
+     1.4085344761674834,
+     0.08350347768322287
+    ],
+    [
+     -0.20500942592212656,
+     1.3792152290539044,
+     0.07770398770575858
+    ],
+    [
+     -0.21994335216507954,
+     1.1303164583380214,
+     0.07770398770575858
+    ],
+    [
+     -0.23311106372444193,
+     0.8669622271507723,
+     0.08823815695324842
+    ],
+    [
+     -0.23532931627224274,
+     0.7560495997607317,
+     0.09045640950104925
+    ],
+    [
+     0.02268749536483312,
+     1.4085344761674834,
+     0.08350347768322287
+    ],
+    [
+     0.20500942592212656,
+     1.3792152290539044,
+     0.07770398770575858
+    ],
+    [
+     0.21994335216507954,
+     1.1303164583380214,
+     0.07770398770575858
+    ],
+    [
+     0.23311106372444193,
+     0.8669622271507723,
+     0.08823815695324842
+    ],
+    [
+     0.23532931627224274,
+     0.7560495997607317,
+     0.09045640950104925
+    ],
+    [
+     -0.10818439224351405,
+     0.9211012411120347,
+     0.053366405093916186
+    ],
+    [
+     -0.10818439224351405,
+     0.5082797992894136,
+     0.053366405093916186
+    ],
+    [
+     -0.10818439224351403,
+     0.07110124111203492,
+     0.05336640509391616
+    ],
+    [
+     -0.11717444402565298,
+     0.02962455329386309,
+     0.1948639559135943
+    ],
+    [
+     0.10818439224351405,
+     0.9211012411120347,
+     0.053366405093916186
+    ],
+    [
+     0.10818439224351405,
+     0.5082797992894136,
+     0.053366405093916186
+    ],
+    [
+     0.10818439224351403,
+     0.07110124111203492,
+     0.05336640509391616
+    ],
+    [
+     0.11717444402565298,
+     0.02962455329386309,
+     0.1948639559135943
+    ],
+    [
+     0,
+     0.35421997353953205,
+     0
+    ],
+    [
+     0,
+     1.5852032291777909,
+     0.11871601015986324
+    ],
+    [
+     -0.028743499667960363,
+     1.6172169730548123,
+     0.18444087972457884
+    ],
+    [
+     0.028743499667960363,
+     1.6172169730548123,
+     0.18444087972457884
+    ]
+   ],
+   "landmarks": {
+    "eyeL": [
+     -0.028743499667960363,
+     1.6172169730548123,
+     0.18444087972457884
+    ],
+    "eyeR": [
+     0.028743499667960363,
+     1.6172169730548123,
+     0.18444087972457884
+    ],
+    "mouth": [
+     -1.5799526082316645e-18,
+     1.5505769750092895,
+     0.20973146016656077
+    ],
+    "head": [
+     0,
+     1.5778280864509628,
+     0.104875982443373
+    ],
+    "neck": [
+     0,
+     1.4826364129964849,
+     0.07179414688869962
+    ],
+    "top": 1.720869716535547,
+    "front": 0.22749633464463406
+   },
+   "scale": 0.9803935860110725,
+   "garments": {
+    "cs01U": {
+     "bit": 1,
+     "tex": "cs01",
+     "tris": [
+      4406,
+      1602
+     ]
+    },
+    "cs01L": {
+     "bit": 2,
+     "tex": "cs01",
+     "tris": [
+      4762,
+      1732
+     ]
+    },
+    "cs01H": {
+     "bit": 4,
+     "tex": "cs01",
+     "tris": [
+      2895,
+      1053
+     ]
+    },
+    "cs01S": {
+     "bit": 8,
+     "tex": "cs01",
+     "tris": [
+      1808,
+      658
+     ]
+    },
+    "cs01UM": {
+     "bit": 16,
+     "tex": "cs01",
+     "tris": [
+      3955,
+      1437
+     ]
+    },
+    "cs01HM": {
+     "bit": 128,
+     "tex": "cs01",
+     "tris": [
+      2895,
+      1053
+     ]
+    },
+    "shoes": {
+     "bit": 64,
+     "tex": "shoes",
+     "tris": [
+      2270,
+      852
+     ]
+    }
+   },
+   "proxies": {
+    "short04": {
+     "kind": "hair",
+     "tris": 1050
+    },
+    "short02": {
+     "kind": "hair",
+     "tris": 3344
+    },
+    "short01": {
+     "kind": "hair",
+     "tris": 3678
+    },
+    "brow1": {
+     "kind": "eyebrows",
+     "tris": 192
+    },
+    "lash": {
+     "kind": "eyelashes",
+     "tris": 368
+    }
+   },
+   "skin": "m"
   }
  },
  "clothTex": [
@@ -4964,5 +7203,22 @@
   "shoes.png",
   "fcs01.png"
  ],
+ "skinTex": [
+  "m",
+  "f",
+  "mo",
+  "fo",
+  "e"
+ ],
+ "proxyTex": [
+  "short04",
+  "short02",
+  "short01",
+  "brow1",
+  "lash",
+  "braid01",
+  "brow3"
+ ],
+ "extras": "MakeHuman system skins, hair, eyebrows and eyelashes (CC0) — skins reduced to detail and laid over each complexion; hair dyed in game",
  "clothes": "MakeHuman system clothes (CC0): male_casualsuit01, male_elegantsuit01, shoes03, female_casualsuit01 — fitted per body, dyed in game"
 }

@@ -33,6 +33,7 @@ def mhclo(path):
         if mode == 'v':
             if len(w) == 9: refs.append([int(w[0]), int(w[1]), int(w[2]), float(w[3]), float(w[4]), float(w[5]), float(w[6]), float(w[7]), float(w[8])])
             elif len(w) == 1 and w[0].isdigit(): refs.append([int(w[0]), int(w[0]), int(w[0]), 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            elif w[0][0].isalpha(): continue          # a keyword line inside the list (hair files put 'material' there)
             else: mode = None
         elif mode == 'd':
             i = 0
@@ -92,3 +93,87 @@ for name, (folder, base, tex) in GARMENTS.items():
     json.dump({'refs': refs, 'scales': scales, 'delete': sorted(set(delete)), 'tris': tris, 'uv': np.round(texco, 5).tolist(), 'tex': texfile},
               open(os.path.join(OUT, name + '.json'), 'w'))
     print(name, len(coord), 'verts', len(tris), 'tris', len(delete), 'hidden', texfile)
+
+# ---------------------------------------------------------------- hair, eyebrows, eyelashes
+# Fitted exactly like the clothes. Textures: grey strand detail (0.5 = the dye colour as given) in RGB,
+# coverage in alpha, so one texture serves every hair colour.
+PROXIES = {  # name: (folder kind, folder, texture size)
+    'short04': ('hair', 'short04', 1024),        # oiled, combed back with a side parting: the 1950s cut
+    'short02': ('hair', 'short02', 1024),        # short, a soft fringe pushed aside
+    'short01': ('hair', 'short01', 1024),        # cropped close
+    'braid01': ('hair', 'braid01', 1024),        # women: a long plait down the back
+    'brow1': ('eyebrows', 'eyebrow001', 256),    # a man's full brow
+    'brow3': ('eyebrows', 'eyebrow003', 256),    # a woman's arched brow
+    'lash': ('eyelashes', 'eyelashes01', 256),
+}
+for name, (kind, folder, size) in PROXIES.items():
+    d = os.path.join(DATA, kind, folder)
+    refs, scales, delete = mhclo(os.path.join(d, folder + '.mhclo'))
+    z = np.load(os.path.join(d, folder + '.npz'))
+    coord, fvert, fuvs, texco = z['coord'], z['fvert'], z['fuvs'], z['texco']
+    assert len(refs) == len(coord), (name, len(refs), len(coord))
+    mat = open(os.path.join(d, folder + '.mhmat')).read()
+    tname = next(l.split()[1] for l in mat.splitlines() if l.startswith('diffuseTexture'))
+    im = Image.open(os.path.join(d, os.path.basename(tname))).convert('RGBA').resize((size, size), Image.LANCZOS)
+    a = np.asarray(im).astype(np.float32) / 255.0
+    lum = a[..., :3] @ np.array([0.299, 0.587, 0.114], np.float32)
+    al = a[..., 3]
+    ref = (lum * al).sum() / max(al.sum(), 1)
+    det = np.clip(lum / max(ref, 1e-3) * 0.5, 0, 1)
+    # bleed the strand colour into the transparent texels so mipmaps do not darken the edges
+    rgb = Image.fromarray((det * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5))
+    det2 = np.where(al > 0.05, det, np.asarray(rgb).astype(np.float32) / 255.0)
+    out = np.dstack([det2 * 255] * 3 + [al * 255]).astype(np.uint8)
+    texfile = 'px_' + name + '.png'
+    Image.fromarray(out, 'RGBA').save(os.path.join(OUT, texfile), optimize=True)
+    tris = []
+    for f, u in zip(fvert.tolist(), fuvs.tolist()):
+        if f[3] == f[0] or f[3] == f[2]: tris.append([f[0], f[1], f[2], u[0], u[1], u[2]])
+        else: tris += [[f[0], f[1], f[2], u[0], u[1], u[2]], [f[0], f[2], f[3], u[0], u[2], u[3]]]
+    json.dump({'refs': refs, 'scales': scales, 'tris': tris, 'uv': np.round(texco, 5).tolist(), 'tex': texfile, 'kind': kind},
+              open(os.path.join(OUT, 'px_' + name + '.json'), 'w'))
+    print(name, len(coord), 'verts', len(tris), 'tris', texfile)
+
+# ---------------------------------------------------------------- skin detail
+# MakeHuman's photographic skins, reduced to their detail relative to the local skin tone (pores, creases,
+# lips, nails, the paler palms and soles), so the game can lay them over any complexion.
+# Stored as a multiplier: 128 = 1.0. The painted scalp hair is flattened out (real hair goes on top).
+SKINS = {'m': 'young_darkskinned_male', 'f': 'young_darkskinned_female', 'mo': 'old_darkskinned_male', 'fo': 'old_darkskinned_female', 'e': 'young_lightskinned_male'}
+for key, src in SKINS.items():
+    im = Image.open(os.path.join(DATA, 'skins', 'textures', src + '_diffuse.png')).convert('RGB').resize((1024, 1024), Image.LANCZOS)
+    a = np.asarray(im).astype(np.float32) / 255.0 + 0.01
+    blur = np.asarray(im.filter(ImageFilter.GaussianBlur(28))).astype(np.float32) / 255.0 + 0.01
+    lum, blum = a @ np.array([0.299, 0.587, 0.114], np.float32), blur @ np.array([0.299, 0.587, 0.114], np.float32)
+    ratio = a / blur
+    # keep the hue shifts of lips and palms against the surrounding skin: compare with a much wider blur
+    wide = np.asarray(im.filter(ImageFilter.GaussianBlur(90))).astype(np.float32) / 255.0 + 0.01
+    tone = np.clip((blur / wide), 0.55, 1.6) ** 0.6
+    m = ratio * tone
+    # the painted hair on the scalp (and the dark background outside the islands): neutral
+    median = np.median(blum[blum > 0.15])
+    # dark at a coarse scale = painted hair; grown a little so the curly fringe at its edge goes too
+    dark = np.clip((median * 0.8 - blum) / (median * 0.18), 0, 1)
+    hairy = np.asarray(Image.fromarray((dark * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(5))).astype(np.float32) / 255.0
+    # curls: strong fine-scale contrast against a dark-ish neighbourhood
+    curl = np.asarray(Image.fromarray((np.clip((np.abs(lum / blum - 1) - 0.12) / 0.15, 0, 1) * np.clip((median * 0.84 - blum) / (median * 0.1), 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(10))).astype(np.float32) / 255.0
+    hairy = np.maximum(hairy, np.clip(curl * 1.6, 0, 1))
+    m = m * (1 - hairy[..., None]) + hairy[..., None]
+    m = 1 + (np.clip(m, 0.35, 1.9) - 1) * 0.85
+    Image.fromarray(np.clip(m * 128, 0, 255).astype(np.uint8)).save(os.path.join(OUT, 'skin_' + key + '.jpg'), quality=88)
+    print('skin', key)
+
+# ---------------------------------------------------------------- shape targets used by mh-build presets
+# (MakeHuman 1.1 ships them compiled into targets.npz: vertex offsets in thousandths)
+WANT = ['chin/chin-prominent-incr', 'chin/chin-width-incr', 'chin/chin-bones-incr', 'head/head-square', 'head/head-oval',
+        'cheek/l-cheek-bones-incr', 'cheek/r-cheek-bones-incr', 'cheek/l-cheek-inner-decr', 'cheek/r-cheek-inner-decr',
+        'nose/nose-hump-incr', 'nose/nose-scale-vert-incr', 'nose/nose-width1-decr', 'nose/nose-point-down', 'eyebrows/eyebrows-trans-down', 'eyebrows/eyebrows-angle-down',
+        'mouth/mouth-lowerlip-volume-incr', 'mouth/mouth-upperlip-volume-incr', 'neck/neck-scale-horiz-incr', 'neck/neck-scale-depth-incr',
+        'torso/torso-vshape-incr', 'torso/torso-muscle-pectoral-incr', 'torso/torso-scale-horiz-incr', 'measure/measure-shoulder-dist-incr',
+        'armslegs/l-upperarm-muscle-incr', 'armslegs/r-upperarm-muscle-incr', 'armslegs/l-lowerarm-muscle-incr', 'armslegs/r-lowerarm-muscle-incr']
+tz = np.load(os.path.join(DATA, 'targets.npz'))
+for t in WANT:
+    idx, vec = tz['targets/' + t + '.index'], tz['targets/' + t + '.vector'].astype(np.float64) / 1000
+    os.makedirs(os.path.join(OUT, 'targets', os.path.dirname(t)), exist_ok=True)
+    with open(os.path.join(OUT, 'targets', t + '.target'), 'w') as f:
+        for i, v in zip(idx.tolist(), vec.tolist()): f.write('%d %.4f %.4f %.4f\n' % (i, v[0], v[1], v[2]))
+print('targets', len(WANT))

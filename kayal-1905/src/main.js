@@ -1,5 +1,6 @@
 // RAAPAKAL — Kerala, 1957. Entry point & main loop.
 import * as THREE from 'three';
+import { Human, CAST } from './human.js';
 import { loadRealTextures, loadHumans } from './assets.js';
 import { G, QUALITY } from './state.js';
 import { UI, EQUIP } from './ui.js';
@@ -264,6 +265,7 @@ async function boot() {
     spots: SPOTS,
     encounter: (t) => G.world.encounter?.(t),
     h: getHeight,
+    Human, CAST,                       // testing: build people to look at
   };
 
   ui.hideLoading();

@@ -9,7 +9,7 @@ export const WARDROBE = {
   lower: {
     cream: { name: 'Cream mundu', desc: 'Hand-loom cotton, worn long and knotted at the waist. What you came home in.', price: 0, look: { mundu: 0xe9e0c8, munduLong: true, knot: true } },
     short: { name: 'Work mundu, folded up', desc: 'The same cloth doubled to the knee, the way a man wears it to work a boat.', price: 0, look: { mundu: 0xe2d8be, knot: true } },
-    lungiOld: { name: 'Old checked lungi', desc: 'Faded blue-and-brown checks, soft from a hundred washings at the canal steps. What you came home in.', price: 0, look: { mundu: 0x5a6a72, lungi: 0x3a2a22 } },
+    lungiOld: { name: 'Old checked lungi', desc: 'Faded blue-and-brown checks, soft from a hundred washings at the canal steps. What you came home in.', price: 0, look: { mundu: 0x5a6a72, lungi: 0x3a2a22, munduLong: true } },
     lungiBlue: { name: 'Checked lungi, indigo', desc: 'Coloured checks from the Malabar looms. Hides the mud of the paddy bunds.', price: 28, look: { mundu: 0x4a6a8a, lungi: 0x24384c } },
     lungiRed: { name: 'Checked lungi, madder red', desc: 'Red checks, a favourite on the coast.', price: 28, look: { mundu: 0x8a4a3a, lungi: 0x4a1c14 } },
     lungiGreen: { name: 'Checked lungi, bottle green', desc: 'Green checks, long to the ankle.', price: 32, look: { mundu: 0x3f6a52, lungi: 0x1c3a2a, munduLong: true } },
@@ -52,7 +52,9 @@ export const WARDROBE = {
   },
 };
 export const HAIR = {
-  crop: { name: 'Short crop', desc: 'Cut close all round, the way young men wear it now — as you do.', price: 0, look: {} },
+  crop: { name: 'Side parting', desc: 'Short at the sides, oiled and combed back from a side parting, the way young men wear it now — as you do.', price: 0, look: { hairStyle: 'short04' } },
+  fringe: { name: 'Soft fringe', desc: 'Short, the front left a little longer and pushed aside.', price: 2, look: { hairStyle: 'short02' } },
+  close: { name: 'Close crop', desc: 'Cut close all round. No oil needed.', price: 2, look: { hairStyle: 'short01' } },
   bun: { name: 'Knotted behind', desc: 'Long hair tied in a knot at the back, the way your grandfather wore it.', price: 3, look: { bun: true } },
   long: { name: 'Loose to the shoulders', desc: 'Oiled and left down.', price: 3, look: { longHair: true } },
   kudumi: { name: 'Kudumi', desc: 'The old style: the head shaved but for a tuft knotted at the front.', price: 4, look: { bald: true, tuft: true } },
@@ -78,7 +80,7 @@ export const OLD_OUTFITS = {
 
 export function lookFor(st, over) {
   const wear = { ...DEFAULT_WEAR, ...(st && st.wear), ...(over && over.wear) };
-  const look = { skin: SKIN[0], pendant: true, muscle: true };
+  const look = { skin: SKIN[0], muscle: true };
   Object.assign(look, (HAIR[(over && over.hair) || (st && st.hair)] || HAIR.crop).look, (FACE[(over && over.face) || (st && st.face)] || FACE.meesha).look);
   for (const s of SLOTS) Object.assign(look, (WARDROBE[s][wear[s]] || WARDROBE[s][DEFAULT_WEAR[s]]).look);
   return look;

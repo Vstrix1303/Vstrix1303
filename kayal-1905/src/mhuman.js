@@ -9,6 +9,7 @@ import { SGB } from './geo.js';
 import { HUMANS } from './assets.js';
 import { hairMat } from './wear.js';
 import { clamp, lerp } from './util.js';
+import { G, QUALITY } from './state.js';
 
 export const PARENT = [-1, 0, 1, 2, 3, 2, 5, 6, 7, 8, 2, 10, 11, 12, 13, 0, 15, 16, 17, 0, 19, 20, 21, 0, 4, 4, 4];
 const R_SKIRT = [256, 256, 512, 448];
@@ -16,6 +17,7 @@ const R_SKIRT = [256, 256, 512, 448];
 export function pickBody(o) {
   if (!HUMANS.ready) return null;
   let k;
+  if (o.protagonist && HUMANS.presets.p_hero) return 'p_hero';
   if (o.child) k = o.female ? 'c_f' : 'c_m';
   else if (o.female) k = (o.age || o.grey) ? 'f_old' : 'f_young';
   else if (o.eye != null) k = (o.age || o.belly) ? 'e_old' : 'e_m';
@@ -62,7 +64,17 @@ function bodyData(key) {
       g.setIndex(new THREE.BufferAttribute(A(pn + x), 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.2); return g;
     });
   }
-  const d = { m, pos, nrm, ski, skw, i0: A('i0'), attrs, lods, eyes: eg, hair: new Map(), skirts: new Map(), garments };
+  // hair, brows and lashes fitted to this body
+  const proxies = {};
+  for (const pn in m.proxies || {}) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(A('px_' + pn + '_p'), 3)); g.setAttribute('normal', new THREE.BufferAttribute(A('px_' + pn + '_n'), 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(A('px_' + pn + '_u'), 2));
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(A('px_' + pn + '_i'), 4)); g.setAttribute('skinWeight', new THREE.BufferAttribute(A('px_' + pn + '_w'), 4, true));
+    g.setIndex(new THREE.BufferAttribute(A('px_' + pn + '_x'), 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1.6, 0), 0.5);
+    proxies[pn] = { g, kind: m.proxies[pn].kind };
+  }
+  const d = { m, pos, nrm, ski, skw, i0: A('i0'), attrs, lods, eyes: eg, hair: new Map(), skirts: new Map(), garments, proxies };
   shared.set(key, d);
   return d;
 }
@@ -171,6 +183,7 @@ uniform vec4 uF3;   // lungi, shoulder cloth, thread, pendant
 uniform vec4 uF4;   // moustache (1, 2 big), beard (1 stubble, 2 full), mark (1 chandanam, 2 pottu, 3 bhasmam), bangles
 uniform vec4 uF5;   // dirty, sandals, rosary, bag
 uniform vec4 uF6;   // female, mundu on, scalp painted (no hair shell), sleeves end y
+uniform vec4 uF7;   // skin detail map, brow meshes, -, -
 uniform vec3 uEyeL, uEyeR, uMouth;
 uniform vec4 uY;    // waist y, knee y, ankle y, neck y
 uniform vec4 uY2;   // elbow y, wrist y, chest y, shirt hem y
@@ -178,7 +191,7 @@ varying vec3 vRest; varying vec3 vRestN; flat varying float vPart;
 float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
 // returns albedo; writes roughness / metalness
-vec3 clothe(out float rough, out float metal) {
+vec3 clothe(out float rough, out float metal, vec3 skD) {
   vec3 p = vRest, n = normalize(vRestN + vec3(0.0, 1e-6, 0.0));
   float part = vPart;
   bool arm = (part > 5.5 && part < 9.5) || (part > 10.5 && part < 14.5);
@@ -189,16 +202,25 @@ vec3 clothe(out float rough, out float metal) {
   bool torso = !arm && !leg && !head;
   float y = p.y, ax = abs(p.x);
   // ---- skin
-  vec3 c = uSkin * (0.94 + 0.12 * vn(p.xy * 60.0 + p.z * 40.0)) * (0.97 + 0.06 * vn(p.yz * 9.0));
-  rough = 0.52; metal = 0.0;
-  if (hand && n.z < -0.2) c *= 1.12;                     // paler palms
+  vec3 c;
+  if (uF7.x > 0.5) {
+    // photographic detail over this person's complexion: pores, creases, lips, nails, paler palms and soles
+    c = uSkin * skD;
+    float dl = dot(skD, vec3(0.3, 0.55, 0.15));
+    rough = clamp(0.64 + (1.0 - dl) * 0.2, 0.48, 0.82); metal = 0.0;
+  } else {
+    c = uSkin * (0.94 + 0.12 * vn(p.xy * 60.0 + p.z * 40.0)) * (0.97 + 0.06 * vn(p.yz * 9.0));
+    rough = 0.52; metal = 0.0;
+    if (hand && n.z < -0.2) c *= 1.12;                     // paler palms
+  }
   if (head) {
     vec3 e = (uEyeL + uEyeR) * 0.5;
     vec2 m = vec2(p.x - uMouth.x, (p.y - uMouth.y));
     float lips = smoothstep(1.0, 0.75, length(m / vec2(0.025, 0.0095))) * step(0.2, n.z);
-    c = mix(c, c * uLip, lips * 0.65); rough = mix(rough, 0.35, lips);
+    c = mix(c, c * uLip, lips * (uF7.x > 0.5 ? 0.25 : 0.65)); rough = mix(rough, 0.35, lips);
     // eyebrows: an arc above each eye
     for (int s = 0; s < 2; s++) {
+      if (uF7.y > 0.5) break;
       vec3 eye = s == 0 ? uEyeL : uEyeR;
       float dx = (p.x - eye.x) * (s == 0 ? -1.0 : 1.0);
       float arc = eye.y + 0.021 + 0.004 * (1.0 - pow(abs(dx - 0.002) / 0.02, 2.0)) - (uF6.x > 0.5 ? 0.0 : 0.0015);
@@ -213,8 +235,11 @@ vec3 clothe(out float rough, out float metal) {
       // thicker at the middle, tapering and drooping toward the corners of the mouth
       float droop = (0.004 + 0.006 * big) * smoothstep(0.012, lim, ux);
       float lo = 0.004 - droop, hi = 0.0175 - droop * 0.7 - 0.004 * smoothstep(0.014, lim, ux);
-      float mo = smoothstep(lim, lim - 0.005, ux) * smoothstep(lo - 0.001, lo + 0.0015, uy) * smoothstep(hi + 0.0015, hi - 0.0012, uy) * step(0.1, n.z);
-      c = mix(c, uHair, mo * (0.8 + 0.2 * vn(p.xy * 1200.0)));
+      float mo = smoothstep(lim, lim - 0.006, ux) * smoothstep(lo - 0.0015, lo + 0.002, uy) * smoothstep(hi + 0.002, hi - 0.0015, uy) * step(0.1, n.z);
+      // hairs growing down and out from the lip: streaks along that direction, thinner toward the edge
+      float sx = (p.x - uMouth.x), strand = vn(vec2(sx * 2600.0 + sign(sx) * uy * 900.0, uy * 260.0));
+      float dens = smoothstep(0.25, 0.75, strand + (1.0 - smoothstep(lo, hi, uy)) * 0.35 - smoothstep(lim - 0.008, lim, ux) * 0.4);
+      c = mix(c, uHair * (0.8 + 0.5 * strand), mo * mix(0.55, 0.97, dens)); rough = mix(rough, 0.75, mo);
     }
     if (uF4.y > 0.5) {
       float jaw = smoothstep(uMouth.y + 0.004, uMouth.y - 0.004, p.y) * step(e.y - 0.12, p.y) * step(-0.25, n.z) * smoothstep(0.0, 0.01, p.z - (e.z - 0.11));
@@ -232,10 +257,14 @@ vec3 clothe(out float rough, out float metal) {
     // the scalp under the hair, with a soft hairline the hair shell's edge blends into
     if (uF6.z > 0.5) {
       float front = p.z - (e.z - 0.08), side = abs(p.x - e.x);
-      float line = front > 0.0 ? e.y + 0.05 - min(0.03, side * 0.4) : e.y + 0.012;
+      // under a real haircut the paint only fills gaps, so it starts above the haircut's own edge
+      float line = (front > 0.0 ? e.y + 0.05 - min(0.03, side * 0.4) : e.y + 0.012) + uF7.z * (front > 0.0 ? 0.016 : 0.006);
       float back = step(p.z, e.z - 0.1) * smoothstep(uMouth.y - 0.012, uMouth.y + 0.01, y);
       float sc = max(smoothstep(line - 0.004, line + 0.006, y) * (1.0 - step(0.072, side) * step(y, e.y + 0.03) * step(-0.04, front)), back);
-      c = mix(c, uHair * (0.75 + 0.25 * vn(p.xy * 700.0)), sc * 0.92);
+      // oiled and combed: dark, a little glossy, fine combing lines running back from the brow; women part it in the middle
+      float comb = 0.8 + 0.2 * vn(vec2(p.x * 1400.0, p.z * 90.0));
+      float part = uF6.x > 0.5 ? smoothstep(0.0022, 0.0008, abs(p.x - e.x)) * step(e.z - 0.09, p.z) * step(e.y + 0.05, y) : 0.0;
+      c = mix(c, uHair * comb, sc * 0.97 * (1.0 - part * 0.85)); rough = mix(rough, 0.42, sc * (1.0 - part));
     }
   }
   // ---- what is worn
@@ -331,17 +360,20 @@ export function clothingMaterial(o, d) {
     uY2: { value: new THREE.Vector4(B[7][1], B[8][1], B[2][1] + 0.13, hem) },
     uCov: { value: 0 },
     uMundu2: { value: new THREE.Vector3(0, 0, 0) },    // a mundu worn: x on, y top and z bottom of the skin it hides
+    uF7: { value: new THREE.Vector4(0, 0, 0, 0) },
   };
-  const mat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 1, envMapIntensity: 0.8 });
+  const skinT = HUMANS.skinTex?.[m.skin || 'm'] || null;
+  const mat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 1, envMapIntensity: 0.8, map: skinT, bumpMap: skinT, bumpScale: 1.6 });
+  if (skinT) U.uF7.value.x = 1;
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest; varying vec3 vRestN; flat varying float vPart; attribute float cov; uniform float uCov; uniform vec3 uMundu2; varying float vHide;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position; vRestN = normal; vPart = skinIndex.x; vHide = (int(cov + 0.5) & int(uCov + 0.5)) != 0 ? 1.0 : 0.0; if (uMundu2.x > 0.5 && position.y < uMundu2.y && position.y > uMundu2.z && skinIndex.x != 8.0 && skinIndex.x != 13.0 && skinIndex.x != 9.0 && skinIndex.x != 14.0) vHide = 1.0;');
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position; vRestN = normal; vPart = skinIndex.x; vHide = (int(cov + 0.5) & int(uCov + 0.5)) != 0 ? 1.0 : 0.0; if (uMundu2.x > 0.5 && position.y < uMundu2.y && position.y > uMundu2.z && (skinIndex.x < 4.5 || skinIndex.x > 14.5)) vHide = 1.0;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vHide;\n' + CLOTHE_GLSL)
       .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vHide > 0.5) discard;')
-      .replace('#include <map_fragment>', 'float cR, cM; diffuseColor.rgb = clothe(cR, cM);')
+      .replace('#include <map_fragment>', 'float cR, cM; vec3 skD = vec3(1.0);\n#ifdef USE_MAP\nskD = texture2D(map, vMapUv).rgb * 1.99;\n#endif\ndiffuseColor.rgb = clothe(cR, cM, skD);')
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = cR;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = cM;');
   };
@@ -447,10 +479,20 @@ function garmentMaterial(tex, c1, c2, c3, dirty, pat) {
         vec3 gc = diffuseColor.rgb;
         gc = mix(gc, uC2, gT.g); gc = mix(gc, uC3, gT.b);
         if (uPat > 0.5) {            // woven patterns, in the cloth's own texture space: 1 windowpane, 2 bold checks, 3 stripes
-          vec2 q = vMapUv * vec2(46.0, 46.0);
-          float lx = smoothstep(0.41, 0.46, abs(fract(q.x) - 0.5)), ly = smoothstep(0.41, 0.46, abs(fract(q.y) - 0.5));
-          float m = uPat < 1.5 ? max(lx, ly) * 0.85 : uPat < 2.5 ? (step(0.5, fract(q.x * 0.5)) * 0.5 + step(0.5, fract(q.y * 0.5)) * 0.5) : step(0.72, fract(q.x * 0.9));
-          gc = mix(gc, uPatC, m);
+          // edges smoothed by the pixel's own footprint; fine patterns fade to their average far away, not to moire
+          vec2 q = vMapUv * (uPat < 1.5 ? 64.0 : uPat < 2.5 ? 40.0 : 56.0), fw = max(fwidth(q), vec2(1e-4));
+          vec2 dd = abs(fract(q) - 0.5);
+          float m, avg;
+          if (uPat < 1.5) {
+            float w = 0.032;
+            float lx = smoothstep(0.5 - w - fw.x, 0.5 - w + fw.x, dd.x), ly = smoothstep(0.5 - w - fw.y, 0.5 - w + fw.y, dd.y);
+            m = max(lx, ly) * 0.5; avg = 0.5 * (4.0 * w - 4.0 * w * w);
+          } else if (uPat < 2.5) {
+            vec2 h = vec2(smoothstep(0.25 - fw.x, 0.25 + fw.x, abs(fract(q.x * 0.5) - 0.5)), smoothstep(0.25 - fw.y, 0.25 + fw.y, abs(fract(q.y * 0.5) - 0.5)));
+            m = (h.x + h.y) * 0.32; avg = 0.32;
+          } else { m = smoothstep(0.36 - fw.x, 0.36 + fw.x, dd.x) * 0.8; avg = 0.8 * 0.28; }
+          float far = smoothstep(0.25, 0.6, max(fw.x, fw.y));
+          gc = mix(gc, uPatC, mix(m, avg, far));
         }
         diffuseColor.rgb = gc * gd * (1.0 - uDirt * 0.18 * (1.0 - gd));
       #endif`);
@@ -481,6 +523,36 @@ function hairMaterial(o, d) {
   };
   m.customProgramCacheKey = () => 'kayal-hair';
   return m;
+}
+// hair, brows and lashes: alpha-cut cards with a grey strand map, dyed here (0.5 in the map = the colour given)
+const pxMats = new Map();
+function proxyMaterial(pn, kind, hex) {
+  const key = pn + '|' + hex;
+  if (pxMats.has(key)) return pxMats.get(key);
+  const t = HUMANS.pxTex?.[pn];
+  const c = new THREE.Color(hex).multiplyScalar(2);
+  const hair = kind === 'hair';
+  const m = new THREE.MeshStandardMaterial({
+    map: t, color: c, side: THREE.DoubleSide, alphaTest: hair ? 0.42 : 0.3, metalness: 0,
+    // the strand map also breaks up the shine, so highlights run along the strands instead of a plastic cap
+    roughnessMap: hair ? t : null, roughness: hair ? 1.0 : 0.7, envMapIntensity: hair ? 0.45 : 0.3,
+    alphaToCoverage: hair && !!G.renderer && QUALITY[G.quality]?.msaa > 0,
+    polygonOffset: !hair, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  });
+  pxMats.set(key, m);
+  return m;
+}
+// which haircut: asked for, or one of the fitted styles picked steadily from the person's own colours
+function hairStyle(o, d) {
+  const P = d.proxies;
+  if (!P || o.bald || o.bun || o.tuft || (o.headgear) || (o.longHair && !o.female)) return null;
+  if (o.female) return P.braid01 ? 'braid01' : null;
+  if (o.hairStyle && P[o.hairStyle]) return o.hairStyle;
+  if (o.receding && P.short01) return 'short01';
+  const opts = ['short04', 'short02', 'short01'].filter((k) => P[k]);
+  if (!opts.length) return null;
+  const seed = ((o.skin || 0) ^ ((o.shirt || 0) * 7) ^ ((o.mundu || 0) * 13) ^ ((o.trousers || 0) * 3)) >>> 0;
+  return opts[seed % opts.length];
 }
 let eyeMat = null;
 function eyeMaterial() {
@@ -521,7 +593,18 @@ export function buildBody(h, o, key) {
   { const Lm = m.landmarks, mi = new THREE.Mesh(MOUTH_GEO, MOUTH_MAT); mi.position.set(Lm.mouth[0] - B[4][0], Lm.mouth[1] - B[4][1] - 0.003, Lm.mouth[2] - B[4][2] - 0.034); mi.scale.set(0.021, 0.011, 0.016); bs[24].add(mi); }
   const hat = o.headgear && o.headgear !== 'thorthu';
   const pieces = choosePieces(o, d);
-  if (!o.bald) h.hairMesh = extra(hairGeometry(d, o.female || o.longHair ? 'long' : o.receding ? 'receding' : 'short'), hairMaterial(o, d));
+  const hairHex = o.grey ? 0xb4b0a6 : (o.hair ?? 0x15110e);
+  const style = hairStyle(o, d);
+  if (style) {
+    // a real haircut over the painted scalp (the paint fills any gap between the cards)
+    h.hairMesh = extra(d.proxies[style].g, proxyMaterial(style, 'hair', hairHex));
+    mat.userData.U.uF7.value.z = o.female ? 0 : 1; h.proxyHair = style;
+  } else if (!o.bald) h.hairMesh = extra(hairGeometry(d, o.female || o.longHair ? 'long' : o.receding ? 'receding' : 'short'), hairMaterial(o, d));
+  // brows and lashes, seen only close up
+  h.faceCards = [];
+  const brow = o.female ? 'brow3' : 'brow1';
+  if (d.proxies[brow]) { h.faceCards.push(extra(d.proxies[brow].g, proxyMaterial(brow, 'eyebrows', o.grey ? 0x8a867e : hairHex), false)); mat.userData.U.uF7.value.y = 1; }
+  if (d.proxies.lash) h.faceCards.push(extra(d.proxies.lash.g, proxyMaterial('lash', 'eyelashes', 0x0c0908), false));
   if (o.trousers == null && o.mundu != null) {
     // the mundu's own cloth, painted by the same atlas the old figures used
     const over = pieces.some((q) => q[0].endsWith('M')) ? 2 : o.shirt != null && o.style !== 'blouse' ? 1 : 0;
@@ -573,6 +656,8 @@ export function updateFace(h, dt) {
   if (h.lodIdx !== want) {
     h.lodIdx = want; h.mesh.geometry = h.lodGeos[want];
     for (const g of h.garments || []) { g.geometry = g.userData.lods[want ? 1 : 0]; g.visible = want < 2; }
+    for (const f of h.faceCards || []) f.visible = want === 0;
+    if (h.mh.mat.userData.U.uF7.value.y > 0.5 || h.mh.browOff) { h.mh.browOff = true; h.mh.mat.userData.U.uF7.value.y = want === 0 && h.faceCards?.length ? 1 : 0; }
     if (h.garPaint) { const v = want < 2 ? h.garPaint.on : h.garPaint.off, U = h.mh.mat.userData.U; U.uF1.value.x = v[0]; U.uF2.value.x = v[1]; U.uF2.value.y = v[2]; U.uCov.value = v[3]; }
   }
   const t = h.t, ex = h.expr;

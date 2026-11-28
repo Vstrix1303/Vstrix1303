@@ -600,7 +600,9 @@ export class Human {
     else if (gear === 'slouch') { onHead(hatGeo('slouch'), feltMat(gc ?? 0x4a3d2c, 0.85)).rotation.z = 0.08; onHead(bandGeo(0.0935, 0.178, 0.018), feltMat(0x2a2218, 0.7)); }
     else if (gear === 'fez') onHead(hatGeo('fez'), feltMat(gc ?? 0x8a1c1c, 0.8));
     if (o.tuft) { const t = put(head, bunGeo(), hairM, 0, 0.205, 0.066); t.scale.setScalar(0.6); t.rotation.x = 1.2; }            // the Namboothiri's forelock
-    if (o.braid) {
+    if (o.braid && this.proxyHair) {        // the fitted plait is the real hair; flowers go at its root
+      if (o.flowers) for (let i = 0; i < 3; i++) put(head, new THREE.TorusGeometry(0.026, 0.009, 6, 12), AM(0xf6f2e6, 0.9), (i - 1) * 0.024, 0.06, -0.105 * hsc).rotation.x = 0.3;
+    } else if (o.braid) {
       const br = new THREE.Group(); br.position.set(0, 0.3, -0.1); chest.add(br);
       put(br, braidGeo(), hairM);
       const kn = put(head, bunGeo(), hairM, 0, 0.07, -0.1 * hsc); kn.rotation.x = -0.6; kn.scale.set(1.1, 1.3, 0.9);

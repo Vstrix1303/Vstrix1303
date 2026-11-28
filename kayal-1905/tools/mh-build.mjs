@@ -31,7 +31,7 @@ const PIECES = {
   blouse: { src: 'fcs01', part: 'upper', crop: true, bit: 1, tex: 'fcs01', fem: true },
   chatta: { src: 'fcs01', part: 'upper', hem: true, bit: 2, tex: 'fcs01', fem: true },
 };
-const DRESSED = { m_young: 1, m_lean: 1, m_heavy: 1, m_old: 1, e_m: 1, e_old: 1, c_m: 1, f_young: 2, f_old: 2, c_f: 2 };
+const DRESSED = { m_young: 1, m_lean: 1, m_heavy: 1, m_old: 1, e_m: 1, e_old: 1, c_m: 1, p_hero: 1, f_young: 2, f_old: 2, c_f: 2 };
 const SUITED = { m_lean: 1, m_heavy: 1, e_m: 1, e_old: 1 };
 
 // the game's rig (src/body.js): bone order and leg lengths
@@ -52,7 +52,21 @@ const PRESETS = {
   c_f: { male: 0, age: 9, muscle: 0.5, weight: 0.42, race: SOUTH },
   e_m: { male: 1, age: 38, muscle: 0.5, weight: 0.52, race: EURO },
   e_old: { male: 1, age: 60, muscle: 0.4, weight: 0.72, race: EURO },
+  // the protagonist: a working man in his late twenties, broad in the shoulder, a strong jaw and cheekbones
+  p_hero: { male: 1, age: 28, muscle: 0.74, weight: 0.5, race: SOUTH, mods: {
+    'chin/chin-prominent-incr': 0.3, 'chin/chin-width-incr': 0.3, 'chin/chin-bones-incr': 0.35, 'head/head-square': 0.3,
+    'cheek/l-cheek-bones-incr': 0.45, 'cheek/r-cheek-bones-incr': 0.45, 'cheek/l-cheek-inner-decr': 0.35, 'cheek/r-cheek-inner-decr': 0.35,
+    'nose/nose-scale-vert-incr': 0.2, 'nose/nose-width1-decr': 0.25, 'nose/nose-hump-incr': 0.2, 'nose/nose-point-down': 0.15,
+    'eyebrows/eyebrows-trans-down': 0.35, 'eyebrows/eyebrows-angle-down': 0.2, 'mouth/mouth-lowerlip-volume-incr': 0.2,
+    'neck/neck-scale-horiz-incr': 0.35, 'neck/neck-scale-depth-incr': 0.2,
+    'torso/torso-vshape-incr': 0.45, 'torso/torso-muscle-pectoral-incr': 0.35, 'measure/measure-shoulder-dist-incr': 0.35,
+    'armslegs/l-upperarm-muscle-incr': 0.45, 'armslegs/r-upperarm-muscle-incr': 0.45, 'armslegs/l-lowerarm-muscle-incr': 0.35, 'armslegs/r-lowerarm-muscle-incr': 0.35 } },
 };
+// hair, brows and lashes fitted to each body (MakeHuman system assets, CC0)
+const MEN_PX = ['short04', 'short02', 'short01', 'brow1', 'lash'], WOMEN_PX = ['braid01', 'brow3', 'lash'];
+const PX_FOR = { m_young: MEN_PX, m_lean: MEN_PX, m_heavy: MEN_PX, m_old: MEN_PX, e_m: MEN_PX, e_old: MEN_PX, c_m: MEN_PX, p_hero: MEN_PX, f_young: WOMEN_PX, f_old: WOMEN_PX, c_f: WOMEN_PX };
+const PROXY = {};
+if (CLDIR) for (const n of new Set([...MEN_PX, ...WOMEN_PX])) { const f = path.join(CLDIR, 'px_' + n + '.json'); if (fs.existsSync(f)) PROXY[n] = JSON.parse(fs.readFileSync(f, 'utf8')); }
 
 // ---------------------------------------------------------------- base mesh
 const obj = fs.readFileSync(path.join(DATA, '3dobjs', 'base.obj'), 'utf8').split('\n');
@@ -67,13 +81,19 @@ for (const l of obj) {
 const NV = V.length / 3;
 console.log(`base mesh: ${NV} vertices, ${faces.length} body faces`);
 
-const readTarget = (rel) => {
-  const t = fs.readFileSync(path.join(DATA, 'targets', rel), 'utf8').split('\n'), out = [];
+const readTarget = (rel, abs) => {
+  const t = fs.readFileSync(abs || path.join(DATA, 'targets', rel), 'utf8').split('\n'), out = [];
   for (const l of t) { if (!l || l[0] === '#') continue; const p = l.trim().split(/\s+/); if (p.length >= 4) out.push(+p[0], +p[1], +p[2], +p[3]); }
   return out;
 };
 const tcache = new Map();
-const target = (rel) => { if (!tcache.has(rel)) tcache.set(rel, fs.existsSync(path.join(DATA, 'targets', rel)) ? readTarget(rel) : null); return tcache.get(rel); };
+const target = (rel) => {
+  if (!tcache.has(rel)) {
+    const own = path.join(DATA, 'targets', rel), ext = CLDIR && path.join(CLDIR, 'targets', rel);
+    tcache.set(rel, fs.existsSync(own) ? readTarget(rel) : ext && fs.existsSync(ext) ? readTarget(rel, ext) : null);
+  }
+  return tcache.get(rel);
+};
 
 // MakeHuman's macro blending
 function ageWeights(years) {
@@ -92,6 +112,7 @@ function morph(p) {
     for (const [r, rw] of Object.entries(p.race)) add(`macrodetails/${r}-${g}-${a}.target`, gw * aw * rw);
     for (const [m, mw] of Object.entries(Mu)) for (const [w, ww] of Object.entries(We)) add(`macrodetails/universal-${g}-${a}-${m}-${w}.target`, gw * aw * mw * ww);
   }
+  for (const [rel, w] of Object.entries(p.mods || {})) add(rel + '.target', w);
   return pos;
 }
 
@@ -192,6 +213,29 @@ for (const [key, p] of Object.entries(PRESETS)) {
     GF[g] = { C, gp, gi, gw };
   }
 
+  // ---- hair, brows, lashes: ride on the base mesh like the clothes; hair and brows move with the head alone
+  const PF = {};
+  for (const pn of PX_FOR[key] || []) {
+    const C = PROXY[pn]; if (!C) continue;
+    const sc = (ax, k) => { const q = C.scales[ax]; return q ? Math.abs(pos[q[0] * 3 + k] - pos[q[1] * 3 + k]) / q[2] : 1; };
+    const sx = sc('x', 0), sy = sc('y', 1), sz = sc('z', 2), n = C.refs.length;
+    const gp = new Float64Array(n * 3), gi = new Uint8Array(n * 4), gw = new Uint8Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      const r = C.refs[i], q = [0, 0, 0];
+      for (let k = 0; k < 3; k++) for (let j = 0; j < 3; j++) q[k] += pos[r[j] * 3 + k] * r[3 + j];
+      q[0] += r[6] * sx; q[1] += r[7] * sy; q[2] += r[8] * sz;
+      const t = T(q); gp[i * 3] = t[0]; gp[i * 3 + 1] = t[1]; gp[i * 3 + 2] = t[2];
+      gi[i * 4] = 4; gw[i * 4] = 255;
+      if (C.kind === 'eyelashes') {           // lashes follow the lids when they blink
+        const m = new Map();
+        for (let j = 0; j < 3; j++) if (r[3 + j] > 0) for (const [bi, w] of acc[r[j]]) m.set(bi, (m.get(bi) || 0) + w * r[3 + j]);
+        const w = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = w.reduce((a, e) => a + e[1], 0) || 1;
+        if (w.length) { const b = [0, 0, 0, 0]; w.forEach(([bi, x], k) => { gi[i * 4 + k] = bi; b[k] = Math.round(x / tot * 255); }); b[0] += 255 - (b[0] + b[1] + b[2] + b[3]); for (let k = 0; k < 4; k++) gw[i * 4 + k] = b[k]; }
+      }
+    }
+    PF[pn] = { C, gp, gi, gw };
+  }
+
   // unique (position, uv) pairs → vertices
   const map = new Map(), P = [], UV = [], SKI = [], SKW = [], SRC = [], idx0 = [];
   const vid = (vi, ti) => {
@@ -262,7 +306,7 @@ for (const [key, p] of Object.entries(PRESETS)) {
         accn.addScaledVector(n.set(NRM[k * 3], NRM[k * 3 + 1], NRM[k * 3 + 2]).applyMatrix3(nm[b]), w); }
       P[k * 3] = acc3.x; P[k * 3 + 1] = acc3.y; P[k * 3 + 2] = acc3.z; accn.normalize(); NRM[k * 3] = accn.x; NRM[k * 3 + 1] = accn.y; NRM[k * 3 + 2] = accn.z;
     }
-    for (const F of Object.values(GF)) {
+    for (const F of [...Object.values(GF), ...Object.values(PF)]) {
       const { gp, gi, gw } = F;
       for (let k = 0; k < gp.length / 3; k++) {
         acc3.set(0, 0, 0);
@@ -274,7 +318,7 @@ for (const [key, p] of Object.entries(PRESETS)) {
     // the hands' pivots moved with the arms; re-level the soles on the ground
     let minY2 = 1e9; for (let k = 0; k < N; k++) minY2 = Math.min(minY2, P[k * 3 + 1]);
     for (let k = 0; k < N; k++) P[k * 3 + 1] -= minY2; bones = bones.map((b) => [b[0], b[1] - minY2, b[2]]); lift = minY2;
-    for (const F of Object.values(GF)) for (let k = 1; k < F.gp.length; k += 3) F.gp[k] -= minY2;
+    for (const F of [...Object.values(GF), ...Object.values(PF)]) for (let k = 1; k < F.gp.length; k += 3) F.gp[k] -= minY2;
   }
 
   // ---- the eyes: MakeHuman's eye mesh rides on helper vertices of the base mesh, so it follows every body shape
@@ -305,6 +349,41 @@ for (const [key, p] of Object.entries(PRESETS)) {
     if (SKI[v * 4] === 4 && SKW[v * 4] > 200) { top = Math.max(top, y); if (Math.abs(x) < 0.01) { front = Math.max(front, z); } }
   }
   L.top = top; L.front = front;
+
+  // ---- proxy geometry: unique (vertex, uv) pairs; hair normals bent out from the skull's centre so the
+  // cards shade as one soft mass instead of as separate planes
+  const pxOut = {};
+  for (const [pn, F] of Object.entries(PF)) {
+    const { C, gp, gi, gw } = F, nv = gp.length / 3;
+    const hc = [bones[4][0], L.eyeL[1] + 0.035, bones[4][2] - 0.01];
+    const na = new Float64Array(nv * 3);
+    for (const t of C.tris) {
+      const [a, b, c] = t, ux = gp[b * 3] - gp[a * 3], uy = gp[b * 3 + 1] - gp[a * 3 + 1], uz = gp[b * 3 + 2] - gp[a * 3 + 2];
+      const vx = gp[c * 3] - gp[a * 3], vy = gp[c * 3 + 1] - gp[a * 3 + 1], vz = gp[c * 3 + 2] - gp[a * 3 + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      for (const q of [a, b, c]) { na[q * 3] += nx; na[q * 3 + 1] += ny; na[q * 3 + 2] += nz; }
+    }
+    const radialW = C.kind === 'hair' ? 0.7 : 0.4;
+    const vm = new Map(), GP = [], GN = [], GU = [], GI = [], GW = [], GX = [];
+    const id = (vi, ti) => {
+      const k2 = vi * 65536 + ti; if (vm.has(k2)) return vm.get(k2);
+      const n2 = GP.length / 3; vm.set(k2, n2);
+      const x = gp[vi * 3], y = gp[vi * 3 + 1], z = gp[vi * 3 + 2];
+      GP.push(x, y, z);
+      let rx = x - hc[0], ry = y - hc[1], rz = z - hc[2]; const rl = Math.hypot(rx, ry, rz) || 1; rx /= rl; ry /= rl; rz /= rl;
+      let nx = na[vi * 3], ny = na[vi * 3 + 1], nz = na[vi * 3 + 2]; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+      if (nx * rx + ny * ry + nz * rz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+      nx = nx * (1 - radialW) + rx * radialW; ny = ny * (1 - radialW) + ry * radialW; nz = nz * (1 - radialW) + rz * radialW;
+      const l2 = Math.hypot(nx, ny, nz) || 1; GN.push(nx / l2, ny / l2, nz / l2);
+      GU.push(C.uv[ti][0], C.uv[ti][1]); for (let j = 0; j < 4; j++) { GI.push(gi[vi * 4 + j]); GW.push(gw[vi * 4 + j]); }
+      return n2;
+    };
+    // the plait's modern side fringe goes: hair in 1957 was parted in the middle and oiled flat (the painted
+    // scalp shows that), with only the plait and the hair gathered into it behind
+    const cut = pn === 'braid01' ? (t) => (gp[t[0] * 3 + 2] + gp[t[1] * 3 + 2] + gp[t[2] * 3 + 2]) / 3 > hc[2] - 0.01 && (gp[t[0] * 3 + 1] + gp[t[1] * 3 + 1] + gp[t[2] * 3 + 1]) / 3 > L.mouth[1] - 0.03 : () => false;
+    for (const t of C.tris) if (!cut(t)) GX.push(id(t[0], t[3]), id(t[1], t[4]), id(t[2], t[5]));
+    pxOut[pn] = { p: new Float32Array(GP), n: new Float32Array(GN), u: new Float32Array(GU), i: new Uint8Array(GI), w: new Uint8Array(GW), x: new Uint16Array(GX) };
+  }
 
   // ---- garment pieces: split each garment into its connected parts, upper or lower by where they sit
   const pieceOut = {}, cov = new Uint8Array(N), hipY = bones[0][1], kneeY = bones[16][1];
@@ -372,16 +451,27 @@ for (const [key, p] of Object.entries(PRESETS)) {
   // write: header json + typed arrays
   const parts = { eyeP: new Float32Array(eyeP), eyeUV: new Float32Array(eyeUV), eyeI: new Uint16Array(eyeI), pos: pos32, nrm: NRM, uv: new Float32Array(UV), ski: new Uint8Array(SKI), skw: new Uint8Array(SKW), i0: N < 65536 ? new Uint16Array(i0) : i0, i1: N < 65536 ? new Uint16Array(i1) : i1, i2: N < 65536 ? new Uint16Array(i2) : i2, cov };
   for (const [pn, q] of Object.entries(pieceOut)) for (const [k, a] of Object.entries(q)) parts[pn + '_' + k] = a;
+  for (const [pn, q] of Object.entries(pxOut)) for (const [k, a] of Object.entries(q)) parts['px_' + pn + '_' + k] = a;
   const layout = {}; let off = 0; const bufs = [];
   for (const [k, a] of Object.entries(parts)) { const pad = (4 - (off % 4)) % 4; if (pad) { bufs.push(Buffer.alloc(pad)); off += pad; } layout[k] = { off, len: a.length, type: a.constructor.name }; bufs.push(Buffer.from(a.buffer, a.byteOffset, a.byteLength)); off += a.byteLength; }
   fs.writeFileSync(path.join(OUT, key + '.bin'), Buffer.concat(bufs));
   manifest.presets[key] = { verts: N, tris: [i0.length / 3, i1.length / 3, i2.length / 3], layout, bones, landmarks: L, scale: s * 10,
-    garments: Object.fromEntries(Object.keys(pieceOut).map((pn) => [pn, { bit: PIECES[pn].bit, tex: PIECES[pn].tex, tris: [pieceOut[pn].x0.length / 3, pieceOut[pn].x1.length / 3] }])) };
+    garments: Object.fromEntries(Object.keys(pieceOut).map((pn) => [pn, { bit: PIECES[pn].bit, tex: PIECES[pn].tex, tris: [pieceOut[pn].x0.length / 3, pieceOut[pn].x1.length / 3] }])),
+    proxies: Object.fromEntries(Object.keys(pxOut).map((pn) => [pn, { kind: PROXY[pn].kind, tris: pxOut[pn].x.length / 3 }])),
+    skin: key[0] === 'e' ? 'e' : key === 'm_old' ? 'mo' : key === 'f_old' ? 'fo' : key[0] === 'f' || key === 'c_f' ? 'f' : 'm' };
   console.log(`${key}: ${N} verts, tris ${i0.length / 3} / ${i1.length / 3} / ${i2.length / 3}, scale ${(s).toFixed(4)}, height ${(top).toFixed(3)} m`);
 }
 if (unknown.size) console.log('unmapped bones:', [...unknown].join(' '));
 fs.copyFileSync(path.join(DATA, 'eyes', 'materials', 'brown_eye.png'), path.join(OUT, 'eye.png'));
 for (const g of Object.keys(CLOTHES)) if (CLOTHES[g].tex) fs.copyFileSync(path.join(CLDIR, CLOTHES[g].tex), path.join(OUT, 'cl_' + CLOTHES[g].tex));
+// detail maps for skin and hair
+if (CLDIR) {
+  manifest.skinTex = ['m', 'f', 'mo', 'fo', 'e'].filter((k) => fs.existsSync(path.join(CLDIR, 'skin_' + k + '.jpg')));
+  for (const k of manifest.skinTex) fs.copyFileSync(path.join(CLDIR, 'skin_' + k + '.jpg'), path.join(OUT, 'skin_' + k + '.jpg'));
+  manifest.proxyTex = Object.keys(PROXY);
+  for (const k of manifest.proxyTex) fs.copyFileSync(path.join(CLDIR, PROXY[k].tex), path.join(OUT, PROXY[k].tex));
+  manifest.extras = 'MakeHuman system skins, hair, eyebrows and eyelashes (CC0) — skins reduced to detail and laid over each complexion; hair dyed in game';
+}
 if (CLDIR) manifest.clothes = 'MakeHuman system clothes (CC0): male_casualsuit01, male_elegantsuit01, shoes03, female_casualsuit01 — fitted per body, dyed in game';
 fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 1));
 const mb = fs.readdirSync(OUT).reduce((a, f) => a + fs.statSync(path.join(OUT, f)).size, 0) / 1048576;

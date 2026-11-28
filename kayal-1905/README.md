@@ -15,6 +15,20 @@ every texture, model, animation, sound effect and note of music is generated pro
 > **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
+## Version 20 — better-looking people
+
+- **Real skin.** MakeHuman's photographic skins, reduced to their detail (pores, creases, lips, nails, paler palms
+  and soles, an old face's wrinkles) and laid over each person's own complexion, with a matching surface relief.
+- **Real hair.** Fitted haircuts in place of the painted shell: the oiled side parting (the protagonist's), a soft
+  fringe and a close crop for men, picked steadily per person; women wear their hair parted in the middle and oiled
+  flat into a long plait. Grey for the old. Hats and the bun keep the old hair.
+- **Eyebrows and eyelashes** as real cards up close (painted far away); the lashes blink with the lids.
+- **The protagonist has his own body:** broader shoulders and arms, a stronger jaw and cheekbones, a straighter nose.
+  His lungi now reaches the ankle; the charm cord is gone from his everyday look. The barber offers three haircuts.
+- Shirt checks and stripes are finer and smoothed at the edges, fading to their average colour far away.
+- Painted moustaches have strands; skin is less shiny.
+- Fixed: forearms vanishing at the wrists under a long mundu.
+
 ## Version 19 — a steadier, smoother picture
 
 - **Shadows no longer crawl as you walk.** The shadow map now follows the player in whole steps of its own grid,
