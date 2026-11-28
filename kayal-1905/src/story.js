@@ -324,7 +324,7 @@ export class Story {
         if (who !== 'M' && who !== other) { other = who; turn(); dir.side = 0; }
         if (h) { faces.add(h); h.setExpression(ex || moodOf(text)); h.talking = true; }
         const me = p.worldPos().clone(); me.scale = 1;
-        if (other) { const op = other.pos.clone(); op.scale = other.h?.S || 1; p.setCine(dir.shot(me, op, who === 'M' ? 'a' : 'b')); }
+        if (other) { const op = other.pos.clone(); op.scale = other.h?.S || 1; p.setCine(dir.shot(me, op, who === 'M' ? 'a' : 'b', text)); }
         try {
           if (who === 'M') { const po = p.poseOverride; if (!po && p.mode === 'foot') p.poseOverride = 'talk'; try { await ui.say('Madhavan', text); } finally { p.poseOverride = po; } }
           else { who.talkT = 6; await ui.say(who.name, text, who.h?.preset); }
@@ -332,8 +332,12 @@ export class Story {
         chk();
       }
       for (const h of faces) h.setExpression('neutral');
+      if (o.keep) return;                      // a choice follows: hold the shot
       ui.letterbox(false); p.locked = false; S.busy = false; p.setCine(null);
     };
+    const release = () => { ui.letterbox(false); p.locked = false; S.busy = false; p.setCine(null); };
+    // a line or two, then a choice, without leaving the scene
+    const ask = async (lines, options) => { await dialog(lines, { keep: true }); try { const c = await ui.choose(options); chk(); return c; } finally { release(); } };
     const title = async (line) => {
       G.audio?.sfx('chapter');
       const def = MISSIONS[S.mi];
@@ -354,7 +358,7 @@ export class Story {
     const spawn = (name, preset, x, z, yaw, opts) => temp(new NPC(scene, name, preset, x, z, yaw, opts));
     const pickup = (pos, kind) => temp(makePickup(scene, pos, kind));
     return {
-      chk, until, wait, fade, card, obj, dist, reach, interact, hotspot, narrate, dialog, title, begin, spawn, pickup, temp, focus,
+      chk, until, wait, fade, card, obj, dist, reach, interact, hotspot, narrate, dialog, ask, release, title, begin, spawn, pickup, temp, focus,
       toast: (t, d) => ui.toast(t, d), bark: (n, t, d) => ui.bark(n, t, d), checkpoint: (n) => S.checkpoint(n),
     };
   }

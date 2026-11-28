@@ -151,8 +151,7 @@ export function setupEncounters(scene) {
         vic.pose = 'idle'; vic.facePlayer = true;
         await waitAt(en, A, vic.pos, 2.6, `Talk to ${vic.name}`);
         ui().setMarker(null);
-        await A.dialog([[vic, 'You caught him! Is it — is the purse there?']]);
-        const c = await ui().choose(['Give back the purse', 'Keep it for your trouble']);
+        const c = await A.ask([[vic, 'You caught him! Is it — is the purse there?']], ['Give back the purse', 'Keep it for your trouble']);
         if (c === 0) {
           await A.dialog([['M', 'Here. Count it, it is all there.'], [vic, 'Eight annas for the ration shop, and the bus fare home. God bless you. Take this — no, take it.']]);
           reward(12, 'a reward from ' + vic.name); honour(2, 'returned a purse');
@@ -174,8 +173,7 @@ export function setupEncounters(scene) {
       },
       async talk(en, A) {
         const man = en.man, wife = en.caller;
-        await A.dialog([[wife, 'A snake, in the bund grass — a krait, I think, all black and white bands. The vaidyan is in the bazaar, it is too far!'], ['M', 'Let me see the bite.']]);
-        const c = await ui().choose(['Cut, draw the poison and bind his leg', 'Run to the vaidyasala for medicine', 'Walk on']);
+        const c = await A.ask([[wife, 'A snake, in the bund grass — a krait, I think, all black and white bands. The vaidyan is in the bazaar, it is too far!'], ['M', 'Let me see the bite.']], ['Cut, draw the poison and bind his leg', 'Run to the vaidyasala for medicine', 'Walk on']);
         if (c === 2) { await A.dialog([['M', 'I am sorry. I cannot help him.'], [wife, 'Then go! Go!']]); honour(-1, 'left a dying man'); return; }
         if (c === 0) {
           A.toast('Press <b>E</b> quickly to draw the poison and tie the cloth tight.', 5);
@@ -214,8 +212,7 @@ export function setupEncounters(scene) {
       },
       async talk(en, A) {
         const mum = en.caller;
-        await A.dialog([[mum, 'My son — Unni, he is six. He went to watch the buses and now he is gone. Please, sir, please find him.'], ['M', 'Which way did he go?'], [mum, 'Towards the canal… I don\'t know!']]);
-        const c = await ui().choose(['I will find him', 'Ask the police, not me']);
+        const c = await A.ask([[mum, 'My son — Unni, he is six. He went to watch the buses and now he is gone. Please, sir, please find him.'], ['M', 'Which way did he go?'], [mum, 'Towards the canal… I don\'t know!']], ['I will find him', 'Ask the police, not me']);
         if (c === 1) { await A.dialog([[mum, 'The police! They will take till Vishu.']]); return; }
         const at = openSpot(mum.pos.x, mum.pos.z, 45, 80); if (!at) return;
         const kid = en.spawn('Unni', { ...CAST.child, shirt: 0xa83a2a, mundu: undefined, trousers: 0x5a5040, shorts: true }, at.x, at.z, 0, {}); kid.pose = 'cower';
@@ -246,8 +243,7 @@ export function setupEncounters(scene) {
       },
       async talk(en, A) {
         const d = en.caller; d.wander = 0;
-        await A.dialog([[d, 'You think you are better than me? Hm? Because you have a shirt with buttons?']]);
-        const c = await ui().choose(['Calm him down', 'Give him two annas for the bus home', 'Shove him out of the way']);
+        const c = await A.ask([[d, 'You think you are better than me? Hm? Because you have a shirt with buttons?']], ['Calm him down', 'Give him two annas for the bus home', 'Shove him out of the way']);
         if (c === 1) {
           if (!S().canPay(2)) { await A.dialog([['M', 'I have nothing on me.'], [d, 'Then you are worse off than me!']]); return; }
           reward(-2, 'bus fare for a drunk');
@@ -314,8 +310,7 @@ export function setupEncounters(scene) {
       },
       async talk(en, A) {
         const m = en.caller; m.pose = 'idle';
-        await A.dialog([[m, 'The chain has come off and jammed. Two cans of milk for the tea shops, and they wait for no one. Can you hold the wheel while I work it?']]);
-        const c = await ui().choose(['Help him fix it', 'Walk on']);
+        const c = await A.ask([[m, 'The chain has come off and jammed. Two cans of milk for the tea shops, and they wait for no one. Can you hold the wheel while I work it?']], ['Help him fix it', 'Walk on']);
         if (c === 1) return;
         A.toast('Press <b>E</b> quickly to work the chain back on.', 4);
         const ok = await mash(A, 'Fixing the chain', 0.09, 0.12, 10);
@@ -337,8 +332,7 @@ export function setupEncounters(scene) {
       },
       async talk(en, A) {
         const m = en.caller;
-        await A.dialog([[m, en.red ? 'Comrade, three walls along this road still have no poster. My arm is bad. Two annas a poster — the Party pays, eventually.' : 'Son, I have three posters and these knees. Paste them on the walls down the road and I will see you right.']]);
-        const c = await ui().choose(['Paste the posters', 'Not my party']);
+        const c = await A.ask([[m, en.red ? 'Comrade, three walls along this road still have no poster. My arm is bad. Two annas a poster — the Party pays, eventually.' : 'Son, I have three posters and these knees. Paste them on the walls down the road and I will see you right.']], ['Paste the posters', 'Not my party']);
         if (c === 1) { await A.dialog([[m, en.red ? 'Every man is in the Party, comrade. Some just don\'t know it yet.' : 'Everyone was Congress in \'47. Remember that.']]); return; }
         const spots = [];
         for (let k = 0; k < 3; k++) { const s = openSpot(m.pos.x, m.pos.z, 18 + k * 12, 30 + k * 14); if (s) spots.push(s); }
@@ -378,8 +372,7 @@ export function setupEncounters(scene) {
         const who = G.npcs.filter((n) => n.active && n.lines && !n.hostile && dist(n.pos) > 60 && dist(n.pos) < 260 && !en.npcs.includes(n));
         if (!who.length) { await A.dialog([[m, 'Never mind — I will walk it.']]); return; }
         const to = pick(who);
-        await A.dialog([[m, `A wire for ${to.name}, from Madras. My tyre is flat and it is marked urgent. You know the way? I will give you two annas of my own.`]]);
-        const c = await ui().choose(['Deliver the telegram', 'Sorry, I am busy']);
+        const c = await A.ask([[m, `A wire for ${to.name}, from Madras. My tyre is flat and it is marked urgent. You know the way? I will give you two annas of my own.`]], ['Deliver the telegram', 'Sorry, I am busy']);
         if (c === 1) return;
         obj(`Deliver the telegram to ${to.name}`, to.pos);
         await waitAt(en, A, to.pos, 2.6, `Give ${to.name} the telegram`);
