@@ -7,7 +7,7 @@ const { pathToFileURL } = require('url');
 
 // the game is served from app://kayal/ rather than file://, so its texture files count as the
 // page's own (WebGL refuses images it considers foreign) and saves have a stable home
-protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 const GAME = path.join(__dirname, 'game');
 
 // prefer the discrete GPU on laptops. Chromium's GPU blocklist is respected, exactly as in Chrome or

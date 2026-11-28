@@ -5,7 +5,7 @@ import { G, QUALITY } from './state.js';
 import { UI, EQUIP } from './ui.js';
 import { setupWheel } from './wheel.js';
 import { setupBlobs } from './blobs.js';
-import { hush } from './voice.js';
+import { hush, loadMalayalam } from './voice.js';
 import { Input } from './input.js';
 import { AudioSys } from './audio.js';
 import { Player } from './player.js';
@@ -101,6 +101,7 @@ async function boot() {
   ui.loading(0.02, 'Loading surfaces');
   if (compat < 2) await loadRealTextures(renderer, (p) => ui.loading(0.02 + p * 0.08, 'Loading surfaces'));
   if (compat < 1) await loadHumans((p) => ui.loading(0.1 + p * 0.04, 'Loading people'));
+  await loadMalayalam();
   const player = G.player = new Player(scene, camera);
 
   await nextFrame();
@@ -219,6 +220,12 @@ async function boot() {
   };
   $('btnResume').onclick = () => setPaused(false);
   $('btnRestart').onclick = () => { setPaused(false); ui.fade(1, 0.6).then(() => (story.mode === 'mission' ? story.startMission(story.mi, story.cp) : story.enterFree({ fresh: true }))); };
+  // voices: Malayalam recordings, the system's English voices, or none
+  { const b = document.createElement('button'); b.className = 'small'; b.id = 'btnVoice';
+    const lab = () => { b.textContent = 'Voices: ' + ({ ml: 'Malayalam', en: 'English', off: 'Off' }[G.voiceLang]); };
+    try { G.voiceLang = localStorage.getItem('raapakal.voice') || 'ml'; } catch (e) { G.voiceLang = 'ml'; }
+    lab(); b.onclick = () => { G.voiceLang = { ml: 'en', en: 'off', off: 'ml' }[G.voiceLang]; try { localStorage.setItem('raapakal.voice', G.voiceLang); } catch (e) { /* ignore */ } lab(); };
+    $('btnMute').after(b); }
   $('btnMute').onclick = () => { audio.enabled = !audio.enabled; if (audio.master) audio.master.gain.value = audio.enabled ? 0.8 : 0; $('btnMute').textContent = audio.enabled ? 'Sound: On' : 'Sound: Off'; };
   $('btnTitle').onclick = () => location.reload();
   // running as the desktop application: offer fullscreen and a way out

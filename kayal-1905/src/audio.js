@@ -236,7 +236,7 @@ export class AudioSys {
     sm(this.water.g.gain, s.nearWater * 0.07 * (0.6 + 0.4 * Math.sin(G.time * 0.9)), 0.2);
     sm(this.crick.gain, s.night * (1 - s.rain * 0.7) * 0.012);
     const musicOn = this.mood !== 'none' && !s.muted;
-    sm(this.droneG.gain, musicOn ? 1 : 0, 1.5);
+    sm(this.droneG.gain, 0, 1.5);
     sm(this.musicBus.gain, this.musicVol * (s.paused ? 0.4 : 1), 0.5);
     // ambient creatures
     this.nextBird -= dt;
@@ -245,37 +245,111 @@ export class AudioSys {
       if (s.night > 0.6) { if (s.rain > 0.3 || s.nearWater > 0.5) this.sfx('frog', 1); }
       else if (s.rain < 0.6) { const r = Math.random(); this.sfx(r < 0.3 ? 'koel' : r < 0.5 ? 'crow' : 'chirp', 0.6 + Math.random() * 0.5); }
     }
-    // ---- the score
+    // ---- the score (see score() below)
     if (!musicOn) return;
-    const song = SONGS[this.mood] || SONGS.calm, scale = RAGAS[this.mood] || RAGAS.calm;
-    const beat = 60 / song.bpm, q = this.seq;
-    if (q.mood !== this.mood) { q.mood = this.mood; q.pi = 0; q.ni = 0; q.t = now + 0.6; q.last = 0; this.beatT = now + 0.6; this.beatI = 0; }
-    // tanpura: Pa, Sa, Sa, low Sa — one string every 1.3 s
-    if (now >= this.tanT) {
-      const str = [0.75, 1, 1, 0.5][this.tanI++ % 4];
-      this.tanpura(this.tonic * str, 0.02);
-      this.tanT = Math.max(now, this.tanT) + (this.mood === 'chase' ? 0.87 : 1.3);
-    }
-    if (song.drums) {
-      while (this.beatT < now + 0.15) {
-        const pat = [1, 0, 0.5, 0.5, 1, 0, 0.5, 0, 1, 0.5, 0, 0.5, 1, 0.5, 0.5, 0.5][this.beatI++ % 16];
-        if (pat > 0) this.drum(Math.max(0, this.beatT - now), pat === 1);
-        this.beatT += beat / 2;
+    this.score(now);
+  }
+
+  // ================================================================ RAAPAKAL's score
+  // A live band in the manner of a 1950s Malayalam film orchestra meeting a Kerala temple ensemble:
+  // chenda and veekku drum, maddalam, ilathalam cymbals, a walking bass, harmonium chords, a nadaswaram-like
+  // reed lead (and a veena at night), brass stabs in a fight. Chords and melody are generated bar by bar.
+  // Moods: explore (free roam by day), action (a fight, a chase, the police), night, rain, dawn.
+  musicMood() {
+    const m = this.mood;
+    if (G.combatHeat > 0.5 || m === 'chase') return 'action';
+    if (m === 'night') return 'night';
+    if (m === 'rain') return 'rain';
+    return 'explore';
+  }
+  // ---- instruments
+  chenda(when, v, open) {          // the stick on the drum head: a dry crack with a pitched ring
+    this.burst('bandpass', open ? 1400 : 2600, open ? 2 : 3.5, v * 0.5, 0.001, open ? 0.12 : 0.05, this.musicBus, when);
+    this.tone('triangle', open ? 420 : 560, open ? 300 : 460, v * 0.18, 0.001, open ? 0.12 : 0.05, when, this.musicBus);
+  }
+  veekku(when, v) { this.tone('sine', 120, 48, v * 0.9, 0.003, 0.32, when, this.musicBus); this.burst('lowpass', 500, 0.7, v * 0.25, 0.002, 0.08, this.musicBus, when); }
+  maddalam(when, v, hi) { this.tone('sine', hi ? 240 : 150, hi ? 180 : 95, v * 0.55, 0.002, hi ? 0.12 : 0.22, when, this.musicBus); }
+  tabla(when, v, hi) { this.tone('sine', hi ? 520 : 180, hi ? 500 : 110, v * 0.35, 0.002, hi ? 0.14 : 0.18, when, this.musicBus); this.burst('bandpass', hi ? 3000 : 700, 4, v * 0.12, 0.001, 0.04, this.musicBus, when); }
+  ilathalam(when, v) { this.burst('highpass', 6500, 0.8, v * 0.22, 0.001, 0.22, this.musicBus, when); for (const f of [3980, 5210]) this.tone('square', f, null, v * 0.012, 0.001, 0.18, when, this.musicBus); }
+  bass(freq, when, dur, v) {
+    const c = this.ctx, t = c.currentTime + when, o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+    o.type = 'sawtooth'; o.frequency.value = freq; f.type = 'lowpass'; f.Q.value = 3; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(220, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.95);
+    o.connect(f); f.connect(g); g.connect(this.musicBus); o.start(t); o.stop(t + dur + 0.05);
+  }
+  harmonium(freqs, when, dur, v) {          // reeds through a soft filter, a slow bellows swell
+    const c = this.ctx, t = c.currentTime + when, g = c.createGain(), f = c.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = 1500; f.Q.value = 0.6;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.12); g.gain.setValueAtTime(v * 0.85, t + dur - 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.15);
+    f.connect(g); g.connect(this.musicBus);
+    for (const fr of freqs) for (const det of [-3, 4]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.detune.value = det; const og = c.createGain(); og.gain.value = 0.12; o.connect(og); og.connect(f); o.start(t); o.stop(t + dur + 0.2); }
+  }
+  reed(freq, when, dur, v, from) {          // the nadaswaram: a buzzing double reed, slides between notes, a wide late vibrato
+    const c = this.ctx, t = c.currentTime + when, o = c.createOscillator(), o2 = c.createOscillator(), f = c.createBiquadFilter(), f2 = c.createBiquadFilter(), g = c.createGain();
+    o.type = 'sawtooth'; o2.type = 'square';
+    for (const os of [o, o2]) { os.frequency.setValueAtTime(from || freq, t); if (from) os.frequency.exponentialRampToValueAtTime(freq, t + Math.min(0.09, dur * 0.4)); }
+    const vib = c.createOscillator(), vg = c.createGain(); vib.frequency.value = 5.6; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(freq * 0.012, t + Math.min(dur, 0.45));
+    vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
+    f.type = 'bandpass'; f.frequency.value = Math.min(3200, freq * 3); f.Q.value = 1.4; f2.type = 'lowpass'; f2.frequency.value = 4200;
+    const m2 = c.createGain(); m2.gain.value = 0.35;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.035); g.gain.setValueAtTime(v * 0.92, t + Math.max(0.05, dur - 0.06)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
+    o.connect(f); o2.connect(m2); m2.connect(f); f.connect(f2); f2.connect(g); g.connect(this.musicBus);
+    for (const os of [o, o2, vib]) { os.start(t); os.stop(t + dur + 0.2); }
+  }
+  brass(freqs, when, v) { for (const fr of freqs) { this.tone('sawtooth', fr * 0.98, fr, v * 0.09, 0.02, 0.28, when, this.musicBus); } this.burst('bandpass', 1200, 1, v * 0.08, 0.01, 0.2, this.musicBus, when); }
+
+  score(now) {
+    const mood = this.musicMood();
+    const SC = { explore: { bpm: 112, scale: [0, 2, 4, 5, 7, 9, 11], prog: [0, 5, 3, 4], lead: 'reed' },     // major, I–vi–IV–V
+      action: { bpm: 150, scale: [0, 2, 3, 5, 7, 8, 10], prog: [0, 5, 6, 0, 0, 5, 3, 4], lead: 'reed' },              // minor, i–VI–VII–i
+      night: { bpm: 78, scale: [0, 2, 3, 7, 9], prog: [0, 3, 0, 4], lead: 'veena' },
+      rain: { bpm: 96, scale: [0, 2, 3, 5, 7, 9, 10], prog: [0, 3, 6, 4], lead: 'reed' } }[mood];
+    const q = this.sq || (this.sq = { t: now + 0.3, step: 0, bar: 0, mood: '', last: 0, ph: null, phI: 0 });
+    if (q.mood !== mood) { q.mood = mood; q.t = Math.max(q.t, now + 0.05); q.step = 0; q.bar = 0; q.ph = null; if (mood === 'action') this.brass([this.tonic, this.tonic * 1.5, this.tonic * 2], 0.02, 1); }
+    const s16 = 60 / SC.bpm / 4, T = this.tonic * (mood === 'night' ? 1 : 1);
+    const deg = (d, oct = 0) => { const n = SC.scale.length, o = Math.floor(d / n), k = ((d % n) + n) % n; return T * Math.pow(2, (SC.scale[k] + 12 * (o + oct)) / 12); };
+    while (q.t < now + 0.2) {
+      const when = Math.max(0, q.t - now), st = q.step % 16, beat = st % 4 === 0;
+      const root = SC.prog[q.bar % SC.prog.length];
+      // ---- percussion
+      if (mood === 'action') {
+        const roll = [1, .5, .7, .5, 1, .5, .7, .6, 1, .5, .7, .5, 1, .6, .8, .9][st];
+        this.chenda(when, 0.5 * roll, st % 8 === 0); if (st % 2 === 1 && Math.random() < 0.4) this.chenda(when + s16 * 0.5, 0.25, false);
+        if (st === 0 || st === 6 || st === 8 || st === 11) this.veekku(when, 0.55);
+        if (st % 4 === 2) this.ilathalam(when, 0.6);
+      } else if (mood === 'explore' || mood === 'rain') {
+        if (st === 0 || st === 7 || st === 10) this.maddalam(when, mood === 'rain' ? 0.35 : 0.5, false);
+        if (st === 4 || st === 12) this.tabla(when, 0.45, true);
+        if (st % 2 === 0 && st !== 0) this.tabla(when, 0.16, st % 4 === 2);
+        if (st === 8 && q.bar % 2 === 1) this.chenda(when, 0.3, true);
+        if (st % 4 === 2 && mood === 'explore') this.ilathalam(when, 0.3);
+      } else if (mood === 'night') {
+        if (st === 0) this.maddalam(when, 0.22, false); if (st === 8) this.tabla(when, 0.12, true);
       }
-    }
-    // melody: schedule a little ahead, phrase by phrase
-    while (q.t < now + 0.25) {
-      const ph = PHRASES[song.form[q.pi % song.form.length]];
-      const [deg, beats] = ph[q.ni];
-      const dur = beats * beat, when = Math.max(0, q.t - now);
-      if (deg != null) {
-        const f = this.tonic * 2 * Math.pow(2, (scale[deg % 5] + 12 * Math.floor(deg / 5)) / 12);
-        if (song.voice === 'flute') this.flute(f, 0.085, when, dur * 0.96, q.last && q.ni > 0 ? q.last : null);
-        else this.pluck(f, this.mood === 'chase' ? 0.15 : 0.2, when, q.last && q.ni > 0 && this.mood !== 'chase' ? q.last : null);
+      // ---- bass and chords
+      if (mood !== 'night') {
+        if (st === 0 || st === 6 || st === 10 || (mood === 'action' && st % 4 === 0)) this.bass(deg(root, -2), when, s16 * (st === 0 ? 4 : 2.5), mood === 'action' ? 0.2 : 0.16);
+        if (st === 14 && mood === 'explore') this.bass(deg(root + 1, -2), when, s16 * 2, 0.12);
+      } else if (st === 0) this.bass(deg(root, -2), when, s16 * 14, 0.08);
+      if (st === 0) this.harmonium([deg(root, -1), deg(root + 2, -1), deg(root + 4, -1)], when, s16 * 16 * 0.98, mood === 'action' ? 0.045 : 0.06);
+      if (mood === 'action' && (st === 0 || st === 10) && q.bar % 4 === 3) this.brass([deg(root), deg(root + 2), deg(root + 4)], when, 0.9);
+      // ---- the lead: a phrase every other bar, chord tones on the beat, slides between notes
+      if (st === 0 && q.bar % 2 === 0) {
+        const len = mood === 'action' ? 8 : mood === 'night' ? 3 : 5, ph = [];
+        let d = root + [0, 2, 4][Math.floor(Math.random() * 3)];
+        for (let i = 0; i < len; i++) { ph.push(d); d += [-2, -1, -1, 1, 1, 2, 0, 3][Math.floor(Math.random() * 8)]; d = Math.max(root - 2, Math.min(root + 9, d)); }
+        q.ph = ph; q.phI = 0;
+      }
+      const rhythm = mood === 'action' ? [0, 2, 4, 6, 8, 10, 12, 14] : mood === 'night' ? [0, 6, 12] : [0, 3, 6, 8, 12];
+      if (q.ph && q.bar % 2 === 0 && rhythm.includes(st) && q.phI < q.ph.length) {
+        const nx = rhythm[rhythm.indexOf(st) + 1] ?? 16, dur = (nx - st) * s16, f = deg(q.ph[q.phI++], mood === 'night' ? 0 : 1);
+        if (SC.lead === 'veena') this.pluck(f, 0.16, when, q.last || null);
+        else this.reed(f, when, dur * (mood === 'action' ? 0.85 : 0.95), mood === 'action' ? 0.07 : 0.06, q.last && Math.random() < 0.6 ? q.last : null);
         q.last = f;
       }
-      q.t += dur;
-      if (++q.ni >= ph.length) { q.ni = 0; q.pi++; q.t += song.gap * beat; q.last = 0; }
+      if (q.bar % 2 === 1 && st === 0) q.last = 0;
+      q.t += s16; q.step++;
+      if (q.step % 16 === 0) q.bar++;
     }
   }
 }

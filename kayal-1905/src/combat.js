@@ -128,6 +128,10 @@ export class Combat {
       if (u >= 1) { this.scene.remove(b.m); this.blasts.splice(i, 1); }
     }
     if (this.lightT > 0) { this.lightT -= dt; this.light.intensity = Math.max(0, this.lightT / 0.4) * 60; }
+    // how hot things are, for the score: an enemy close by, or a gun just fired
+    { const pl = G.player, pp = pl.pos; let hot = G.time - (pl.combatT || -99) < 6 && pl.drawn && !!pl.wdef?.gun;
+      if (!hot) for (const n of G.npcs) if (n.hostile && !n.ko && n.active && Math.abs(n.pos.x - pp.x) < 35 && Math.abs(n.pos.z - pp.z) < 35) { hot = true; break; }
+      G.combatHeat = Math.max(0, Math.min(1, (G.combatHeat || 0) + (hot ? dt * 2 : -dt / 10))); }
     // the frightened get up again
     for (const n of G.npcs) if (n.scaredT > 0) { n.scaredT -= dt; if (n.scaredT <= 0) n.pose = n.prevPose || 'idle'; }
   }

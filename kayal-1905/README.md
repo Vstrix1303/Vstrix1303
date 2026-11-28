@@ -15,6 +15,34 @@ every texture, model, animation, sound effect and note of music is generated pro
 > **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
+## Version 17 — Malayalam voices, a new score, and street life
+
+- **People speak Malayalam:**
+  - The street chatter, shopkeepers, strangers' encounters, greetings, police, traffic and the narration (163 lines)
+    have been translated into colloquial Malayalam and voiced. English stays on screen as the subtitle.
+  - Each line comes in a man's, a woman's and a child's voice. Elders speak slower and lower, and every speaker's
+    pitch is nudged from their name, so two villagers rarely sound the same.
+  - Lines without a recording are shown as subtitles only, never read by a computer English voice.
+  - The pause menu switches **Voices: Malayalam / English / Off**.
+  - The voices are made with Meta's MMS text-to-speech for Malayalam (CC-BY-NC 4.0: free for non-commercial use)
+    by `tools/voice/make.py` from the translations in `tools/voice/ml.json`.
+- **A new score:**
+  - It is played live, in the manner of a 1950s Malayalam film band meeting a temple ensemble: chenda rolls and
+    veekku drum, maddalam and tabla, ilathalam cymbals, a walking bass, harmonium chords, a nadaswaram-like reed
+    lead, and brass stabs.
+  - Chords and melody are composed bar by bar.
+  - It is an upbeat groove by day, a minor groove in the rain, a quiet veena at night, and a 150 bpm chenda melam
+    the moment a fight starts, enemies close in, or the police come for you.
+- **Street life and crime:**
+  - Take any bus, lorry, car, jeep or bicycle off the road. Its driver is pulled down and runs, or swings at you.
+  - Punch, strike or shoot anyone. Some fight back, the rest run, and the police come.
+- **Fixes:**
+  - The walk no longer dips at every step, and the legs no longer twist on turns.
+  - Legs never show through the mundu.
+  - The police constables' wrists are back.
+  - The pepper vines are leafy instead of green columns.
+  - Small props and trim fade out at a distance.
+
 ## Version 16 — stairs you climb, doors that open, a name that matters
 
 - **Walk up the stairs.**
