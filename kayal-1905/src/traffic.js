@@ -58,8 +58,8 @@ let barkT = 0;
 const bark = (name, set, preset) => { if (barkT > 0 || G.story?.busy || G.ui.subResolve) return; barkT = 9; G.ui.bark(name, SAY[set][(Math.random() * SAY[set].length) | 0], 3.6, preset); };
 
 // ---------------------------------------------------------------- one traveller
-const WIDE = ['main', 'north', 'hill', 'south', 'quay', 'coast', 'bar', 'estate'];
-const ANY = [...WIDE, 'home', 'temple', 'towpath', 'hamlet', 'laneE', 'laneS', 'laneW'];
+const WIDE = ['main', 'north', 'hill', 'south', 'quay', 'coast', 'bar', 'estate', 'ptMain', 'ptCross', 'ptEast'];
+const ANY = [...WIDE, 'home', 'temple', 'towpath', 'hamlet', 'laneE', 'laneS', 'laneW', 'ptNorth', 'kvLane', 'mkLane', 'chLane'];
 class Traveller {
   constructor(scene, kind, o) {
     this.kind = kind; this.name = o.name; this.roads = o.roads; this.max = o.speed; this.half = o.half; this.reach = o.reach; this.lane = o.lane; this.turn = o.turn; this.far = o.far || 150;

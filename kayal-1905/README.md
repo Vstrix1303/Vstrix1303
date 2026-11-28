@@ -15,6 +15,27 @@ every texture, model, animation, sound effect and note of music is generated pro
 > **RAAPAKAL (രാപ്പകൽ, "night and day") — Kerala, 1957.** The game has a new name and has moved fifty years on. The 1905 game, with its nine missions,
 > is kept complete on the `kayal-1905-final` branch. The 1957 game is free roam for now, and the story will come later.
 
+## Version 18 — towns, big and small
+
+- **Puthenthura is a proper port town now.** The levelled ground reaches north of the old quay, and a tarred bazaar
+  street runs from the quay, crossed by a second tarred street and an eastern one, with a residential lane
+  behind. About fifty two-storey shophouses, houses and three offices (the panchayat and both party rooms) stand
+  there, with electric poles along every street.
+- **Thekkumkara** gains a west bazaar on the trunk road toward the jetty.
+- **Three small towns on the roads:**
+  - **Kavalam**, where the south road meets the coast road among the paddy
+  - **Mukkadu**, a junction town on the hill road
+  - **Chettuva**, a market town on the coast road
+
+  Each has a shop street, a lane of houses and a panchayat office.
+- **Every town:**
+  - is named on the map and announced when you arrive
+  - has keepers in its shops (in about half of the town shops) and a few customers
+  - is served by traffic: the new streets join the road network, and the main ones are tarred
+- **Cutscenes:** conversations are shot like the big westerns. They open on a low establishing shot, then cut
+  between two-shots, over-the-shoulder singles, long-lens close-ups for the hard lines, and cutaways to the
+  listener, with slow push-ins and a handheld breath. Dialogue choices stay inside the scene.
+
 ## Version 17 — Malayalam voices, a new score, and street life
 
 - **People speak Malayalam:**

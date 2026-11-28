@@ -273,11 +273,12 @@ export async function buildWorld(scene, progress) {
     const SELLS = { provisions: ['provisions', 'Shop — food for the road'], cloth: ['cloth', 'Shop — clothes'], vaidyasala: ['vaidyasala', 'Shop — medicines'], vessels: ['kollan', 'Blacksmith — blades'] };
     const shopOK = () => G.story?.mode === 'free' && G.player.mode === 'foot' && !G.activity;
         (SPOTS.shops || []).forEach((sh, i) => {
+      if (sh.town && sh.ti % 2) return;              // town shops: a keeper in every other one keeps the crowd affordable
       const ky = sh.keeper.y + 0.95 - 0.85;
       amb(['Shopkeeper', 'Cloth merchant', 'Blacksmith', 'Vaidyan', 'Anchal clerk', 'Grocer', 'Potter'][['provisions', 'cloth', 'vessels', 'vaidyasala', 'anchal', 'provisions2', 'pottery'].indexOf(sh.kind)] || 'Shopkeeper',
         keepers[i % keepers.length], sh.keeper.x, sh.keeper.z, sh.ry, { y: ky, pose: 'bench', facePlayer: true, lines: say[sh.kind] || BARKS.village,
           ...(SELLS[sh.kind] ? { talkLabel: SELLS[sh.kind][1], onTalk: (n) => (shopOK() ? G.act.shop(SELLS[sh.kind][0], n) : n.speak()) } : {}) });
-      if (i % 3 !== 2) amb(i % 2 ? 'Customer' : 'Villager', buyers[i % buyers.length], sh.customer.x, sh.customer.z, sh.ry + Math.PI + (i % 2 ? 0.25 : -0.2), { pose: 'talk', lines: BARKS.bazaar });
+      if (sh.town ? sh.ti % 6 === 0 : i % 3 !== 2) amb(i % 2 ? 'Customer' : 'Villager', buyers[i % buyers.length], sh.customer.x, sh.customer.z, sh.ry + Math.PI + (i % 2 ? 0.25 : -0.2), { pose: 'talk', lines: BARKS.bazaar });
     });
   }
   // ---- the market: women and men behind the stalls, buyers in front

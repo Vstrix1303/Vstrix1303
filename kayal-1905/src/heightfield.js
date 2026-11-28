@@ -63,9 +63,9 @@ export function heightFn(x, z) {
   // village core: gently levelled
   d = Math.hypot(x - 0, z - 5);
   if (d < 190) h = lerp(h, 2.6, 0.75 * smoothstep(190, 100, d));
-  // port town
-  d = Math.hypot((x + 440) / 1.6, z + 362);
-  if (d < 110) h = lerp(h, 2.3, smoothstep(110, 60, d));
+  // port town (Puthenthura has grown north of the old quay since the war)
+  d = Math.hypot((x + 420) / 1.6, z + 392);
+  if (d < 150) h = lerp(h, 2.3, smoothstep(150, 85, d));
   // cutcherry plateau
   d = Math.hypot(x - LOC.cutcherry.x, z - LOC.cutcherry.z);
   if (d < 85) h = lerp(h, cutH, smoothstep(85, 44, d));
@@ -159,6 +159,15 @@ export function getSlope(x, z) {
 
 // ---- roads ---------------------------------------------------------------
 export const ROADS = {};
+// the towns: a big port town, the home village, and three small ones on the new roads.
+// streets: [road key, from metre, to metre, lining] — 'shops' (two-storey shophouses both sides), 'houses'
+export const TOWNS = [
+  { id: 'puthenthura', name: 'Puthenthura', size: 'big', at: [-400, -440], streets: [['ptMain', 8, 115, 'shops'], ['ptCross', 4, 132, 'shops'], ['ptEast', 6, 62, 'shops'], ['ptNorth', 4, 128, 'houses']], offices: 3 },
+  { id: 'thekkumkara', name: 'Thekkumkara', size: 'medium', at: [-120, 28], streets: [['main', 46, 98, 'shops']], offices: 0 },
+  { id: 'kavalam', name: 'Kavalam', size: 'small', at: [-30, 470], streets: [['south', 410, 470, 'shops'], ['kvLane', 4, 64, 'houses'], ['coast', 6, 70, 'houses']], offices: 1 },
+  { id: 'mukkadu', name: 'Mukkadu', size: 'small', at: [80, -272], streets: [['hill', 150, 230, 'shops'], ['mkLane', 6, 58, 'houses']], offices: 1 },
+  { id: 'chettuva', name: 'Chettuva', size: 'small', at: [-250, 486], streets: [['coast', 172, 250, 'shops'], ['chLane', 6, 48, 'houses']], offices: 1 },
+];
 export function initRoads() {
   const jx = LOC.villageJetty.x, pz = LOC.portJetty.z;
   const raw = {
@@ -178,6 +187,14 @@ export function initRoads() {
     laneE: [[4.4, 2.6], [4.5, -20], [2.5, -42], [16, -52]],
     laneS: [[6.4, 2.3], [8, 20], [9, 40], [-6, 52], [-33, 54]],
     laneW: [[-64, 16.5], [-62, -12], [-58, -34], [-50, -43]],
+    // the towns' own streets (see TOWNS and towns.js)
+    ptMain: [[-400, -384], [-401, -420], [-402, -462], [-403, -500]],
+    ptCross: [[-470, -441], [-440, -441], [-400, -441], [-370, -442], [-338, -441]],
+    ptEast: [[-338, -398], [-337, -430], [-336, -462]],
+    ptNorth: [[-460, -480], [-430, -481], [-403, -481], [-370, -482], [-336, -462]],
+    kvLane: [[-30, 452], [0, 450], [36, 455]],
+    mkLane: [[72, -269], [75, -240], [70, -210]],
+    chLane: [[-252, 487], [-249, 462], [-246, 438]],
   };
   for (const k in raw) ROADS[k] = smoothPath(raw[k], 5);
 }

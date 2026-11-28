@@ -9,7 +9,7 @@ import { REAL, hasReal, realMaterial } from './assets.js';
 import { addCircle } from './physics.js';
 import { makeRng } from './util.js';
 
-const TAR = { main: 5.0, north: 4.2, quay: 5.0 };
+const TAR = { main: 5.0, north: 4.2, quay: 5.0, ptMain: 5.0, ptCross: 4.2, ptEast: 3.8 };
 
 // a drawn asphalt for the browser build: dark grain, patches, cracks
 function drawnAsphalt() {

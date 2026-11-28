@@ -10,6 +10,7 @@ import { makeRng, TAU } from './util.js';
 import { house, kettu, spiceHouse, nasraniHouse, wall, hall, F, P, olakkuda, barrel, toolbox, castNet, poles, compound, creeper } from './houses.js';
 import { buildVillage } from './village.js';
 import { buildEra57 } from './era57.js';
+import { buildTowns } from './towns.js';
 import { roadDist } from './heightfield.js';
 
 export const SPOTS = {};   // named world positions used by the story
@@ -887,6 +888,7 @@ export function buildStructures(scene) {
   }
 
   // 1957: what fifty years added to the village (placed last, around everything else)
+  buildTowns(b, rng, SPOTS);
   buildEra57(b, rng, SPOTS, scene, lampPost);
   const meshes = b.finish(scene, mats);
   // far tiles are hidden outright (they are a few pixels across, and fogged)

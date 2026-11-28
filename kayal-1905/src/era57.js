@@ -11,7 +11,7 @@ import { house, wall, hall, stair, holed, holedPlatform, F, P } from './houses.j
 import { shop } from './village.js';
 
 const TAU = Math.PI * 2;
-const ROAD_HALF = { main: 3, north: 2.3, hill: 2.1, south: 1.6, home: 1.5, quay: 3, temple: 2, laneE: 1.4, laneS: 1.4, laneW: 1.3, coast: 1.5, bar: 1.5, estate: 1.7, towpath: 1.2, hamlet: 1.5 };
+const ROAD_HALF = { ptMain: 3, ptCross: 2.5, ptEast: 2.3, ptNorth: 1.8, kvLane: 1.5, mkLane: 1.5, chLane: 1.5, main: 3, north: 2.3, hill: 2.1, south: 1.6, home: 1.5, quay: 3, temple: 2, laneE: 1.4, laneS: 1.4, laneW: 1.3, coast: 1.5, bar: 1.5, estate: 1.7, towpath: 1.2, hamlet: 1.5 };
 
 // the nearest point of any road: where, how far, and which way it runs
 function nearestRoad(x, z) {
@@ -66,7 +66,7 @@ function flag(b, x, z, kind, h = 6) {
 // A public building of the fifties: a plastered block on a raised plinth, a verandah of square
 // columns under a flat concrete slab across the front, and a parapet with a raised centre panel
 // that carries the board. Two storeys for the panchayat, one for the party offices.
-function office57(b, x, z, ry, w, d, o = {}) {
+export function office57(b, x, z, ry, w, d, o = {}) {
   b.place(x, z, ry);
   const y0 = 0.6, hw = w / 2, hd = d / 2, h1 = 3.0, col = o.col || [0.94, 0.9, 0.8], trim = o.trim || [0.55, 0.32, 0.22];
   const dado = col.map((c) => c * 0.6), wo = { col, dado, shutter: o.shutter || [0.2, 0.32, 0.5] }, vd = 1.9;
@@ -281,7 +281,7 @@ export function buildEra57(b, rng, SPOTS, scene, lampPost) {
   // ---- electricity: poles every 32 m along the village roads and the port road, wires between them
   {
     const wires = [];
-    const RUNS = { main: [-160, 75], laneE: null, laneS: null, laneW: null, home: null };
+    const RUNS = { main: [-160, 75], laneE: null, laneS: null, laneW: null, home: null, ptMain: null, ptCross: null, ptEast: null, ptNorth: null, south: null, hill: [-120, 160] };
     for (const key in RUNS) {
       const pts = ROADS[key]; if (!pts) continue;
       const lim = RUNS[key], half = ROAD_HALF[key] ?? 2;
